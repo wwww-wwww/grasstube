@@ -1,0 +1,6 @@
+<script type="text/javascript" src="https://cdn.jsdelivr.net/clappr/latest/clappr.min.js"></script>
+<script src="/cached/includes/subtitles-octopus.js"></script>
+<script type="text/javascript" id="www-widgetapi-script" src="https://s.ytimg.com/yts/jsbin/www-widgetapi-vflXFLqZz/www-widgetapi.js" async=""></script>
+<script type="text/javascript" src="https://ewwink.github.io/clappr-youtube-plugin/clappr-youtube-plugin.js"></script>
+
+<div id="player"></div>
