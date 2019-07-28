@@ -5,9 +5,9 @@ let channel = null
 let is_mod = false
 let myid = -1
 
-function init(socket) {
-	console.log("polls: connecting")
-	channel = socket.channel("polls:0", {})
+function init(socket, room) {
+	console.log("polls: connecting to room " + room)
+	channel = socket.channel("polls:" + room, {})
 	channel.join()
 	.receive("ok", resp => {
 		console.log("polls: connected", resp) 

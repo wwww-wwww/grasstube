@@ -9,13 +9,13 @@ let octopusInstance = undefined
 let seek = 0
 let current_video = null
 
-function init(socket) {
-	fetch("/cached/fonts/list.txt", { headers: { "Content-Type": "text/plain; charset=utf-8" }})
+function init(socket, room) {
+	fetch("/fonts/list.txt", { headers: { "Content-Type": "text/plain; charset=utf-8" }})
 		.then(res => res.text())
 		.then(data => {
-			data.split("\n").forEach(font => { if (font.length > 0) fonts.push("/cached/fonts/" + font) })
+			data.split("\n").forEach(font => { if (font.length > 0) fonts.push("/fonts/" + font) })
 			console.log("fonts: fetched")
-			connect(socket)
+			connect(socket, room)
 		})
 		.catch(err => {
 			console.log("fonts: error fetching", err)
@@ -25,9 +25,9 @@ function init(socket) {
 	modal_set_title(modal, "this is for autoplay")
 }
 
-function connect(socket) {
-	console.log("video: connecting")
-	channel = socket.channel("video:0", {})
+function connect(socket, room) {
+	console.log("video: connecting to room " + room)
+	channel = socket.channel("video:" + room, {})
 	channel.join()
 		.receive("ok", resp => {
 			console.log("video: connected", resp) 
@@ -199,7 +199,7 @@ function player_change_source(type, file_video, file_subs, options={}) {
 			video: video,
 			subUrl: file_subs,
 			fonts: fonts,
-			workerUrl: '/cached/includes/subtitles-octopus-worker.js'
+			workerUrl: '/includes/subtitles-octopus-worker.js'
 		}
 		octopusInstance = new SubtitlesOctopus(options)
 	}

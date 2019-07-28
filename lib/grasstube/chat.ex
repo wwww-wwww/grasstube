@@ -15,18 +15,25 @@ defmodule GrasstubeWeb.ChatAgent do
 
   defstruct users: [],
             mods: [],
-            history: []
+            history: [],
+            room_name: ""
 
+  @control_password "523"
   @max_history_size 20
 
-  def start_link(_opts) do
+  def start_link(opts) do
     Logger.info("Starting chat agent.")
-    Agent.start_link(fn -> %__MODULE__{} end, name: __MODULE__)
+    [room_name: room_name] ++ _ = opts
+    Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 
-  def chat(socket, msg) do
+  def via_tuple(room_name) do
+    Grasstube.ProcessRegistry.via_tuple({room_name, :chat})
+  end
+
+  def chat(channel, socket, msg) do
     if is_command?(msg) do
-      do_command(socket, msg)
+      do_command(channel, socket, msg)
     else
       escaped =
         msg
@@ -35,9 +42,9 @@ defmodule GrasstubeWeb.ChatAgent do
       
       new_msg = AutoLinker.link(escaped) |> do_emote()
 
-      add_to_history(socket.id, new_msg)
+      add_to_history(channel, socket.id, new_msg)
       
-      Endpoint.broadcast("chat:0", "chat", %{id: socket.id, content: new_msg})
+      Endpoint.broadcast(socket.topic, "chat", %{id: socket.id, content: new_msg})
     end
 
     {:noreply}
@@ -50,37 +57,37 @@ defmodule GrasstubeWeb.ChatAgent do
     end
   end
 
-  defp command(socket, "controls", pass) do
-    if pass == Application.get_env(:grasstube, :controls_password) do
-      set_mod(socket.id)
-      Endpoint.broadcast("chat:0", "userlist", %{list: get_userlist()})
+  defp command(channel, socket, "controls", pass) do
+    if pass == @control_password do
+      set_mod(channel, socket.id)
+      Endpoint.broadcast(socket.topic, "userlist", %{list: get_userlist(channel)})
       Phoenix.Channel.push(socket, "controls", %{})
     end
   end
 
-  defp command(socket, cmd, _) do
-    command(socket, cmd)
+  defp command(channel, socket, cmd, _) do
+    command(channel, socket, cmd)
   end
 
-  defp command(socket, cmd) do
+  defp command(_channel, socket, cmd) do
     Phoenix.Channel.push(socket, "chat", %{id: "sys", content: "no command " <> cmd})
   end
 
-  defp do_command(socket, msg) do
+  defp do_command(channel, socket, msg) do
     case Regex.run(~r/\/([^ ]+)(?: (.+))?/, msg) do
       [_, cmd] ->
-        command(socket, cmd)
+        command(channel, socket, cmd)
 
       [_, cmd, args] ->
-        command(socket, cmd, args)
+        command(channel, socket, cmd, args)
 
       nil ->
         nil
     end
   end
 
-  def add_to_history(id, msg) do
-    Agent.update(__MODULE__, fn val ->
+  def add_to_history(pid, id, msg) do
+    Agent.update(pid, fn val ->
       user = val.users |> Enum.find(:not_found, fn user -> user.id == id end)
       new_history = [%{name: user.name, msg: msg}] ++ val.history
 
@@ -92,30 +99,31 @@ defmodule GrasstubeWeb.ChatAgent do
     end)
   end
 
-  def get_history() do
-    Agent.get(__MODULE__, fn val -> val.history end)
+  def get_history(pid) do
+    Agent.get(pid, fn val -> val.history end)
   end
 
-  def get_users() do
-    Agent.get(__MODULE__, fn val -> val.users end)
+  def get_users(pid) do
+    Agent.get(pid, fn val -> val.users end)
   end
 
-  def get_mods() do
-    Agent.get(__MODULE__, fn val -> val.mods end)
+  def get_mods(pid) do
+    Agent.get(pid, fn val -> val.mods end)
   end
 
-  def set_mod(id) do
-    Agent.update(__MODULE__, fn val ->
+  def set_mod(pid, id) do
+    Agent.update(pid, fn val ->
       %{val | mods: val.mods ++ [id]}
     end)
   end
 
-  def mod?(id) do
-    get_mods() |> Enum.any?(fn mod -> mod == id end)
+  def mod?(room, id) do
+    chat = Grasstube.ProcessRegistry.lookup(room, :chat)
+    get_mods(chat) |> Enum.any?(fn mod -> mod == id end)
   end
 
-  def flush_mods() do
-    Agent.update(__MODULE__, fn val ->
+  def flush_mods(pid) do
+    Agent.update(pid, fn val ->
       new_mods =
         val.mods
         |> Enum.filter(fn id ->
@@ -126,16 +134,16 @@ defmodule GrasstubeWeb.ChatAgent do
     end)
   end
 
-  def get_user(id) do
-    get_users() |> Enum.find(:not_found, fn user -> user.id == id end)
+  def get_user(pid, id) do
+    get_users(pid) |> Enum.find(:not_found, fn user -> user.id == id end)
   end
 
-  def add_user(user) do
-    Agent.update(__MODULE__, fn val -> %{val | users: val.users ++ [user]} end)
+  def add_user(pid, user) do
+    Agent.update(pid, fn val -> %{val | users: val.users ++ [user]} end)
   end
 
-  def remove_user(id) do
-    Agent.update(__MODULE__, fn val ->
+  def remove_user(pid, id) do
+    Agent.update(pid, fn val ->
       case val.users |> Enum.find(:not_found, fn user -> user.id == id end) do
         :not_found -> val
         user = %User{} -> %{val | users: List.delete(val.users, user)}
@@ -143,10 +151,10 @@ defmodule GrasstubeWeb.ChatAgent do
     end)
   end
 
-  def get_userlist() do
-    mods = get_mods()
+  def get_userlist(pid) do
+    mods = get_mods(pid)
 
-    get_users()
+    get_users(pid)
     |> Enum.map(fn user ->
       %{
         id: user.id,
@@ -156,8 +164,8 @@ defmodule GrasstubeWeb.ChatAgent do
     end)
   end
 
-  def set_name(id, name) do
-    Agent.update(__MODULE__, fn val ->
+  def set_name(pid, id, name) do
+    Agent.update(pid, fn val ->
       new_users =
         Enum.map(val.users, fn user ->
           cond do

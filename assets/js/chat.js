@@ -6,7 +6,9 @@ import init_chat from "./grasschat"
 import {reload_emotes} from "./metadata"
 import {create_modal, modal_set_title} from "./modals"
 
-init_chat(socket)
+const room = document.getElementById("room").dataset.room
+
+init_chat(socket, room)
 
 btn_show_emotes.addEventListener("click", () => {
 	const modal = create_modal()

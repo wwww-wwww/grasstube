@@ -11,12 +11,12 @@ let myid = ""
 const users = {}
 let last_chat_user = -1
 
-function init(socket, on_controls) {
+function init(socket, room, on_controls) {
 
 	const cookie = get_cookie()
 	
-	console.log("chat: connecting")
-	channel = socket.channel("chat:0", {})
+	console.log("chat: connecting to room " + room)
+	channel = socket.channel("chat:" + room, {})
 	channel.join()
 	.receive("ok", resp => {
 		if (cookie.username || false) set_name(cookie.username)

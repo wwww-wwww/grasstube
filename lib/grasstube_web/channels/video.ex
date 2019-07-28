@@ -1,16 +1,23 @@
 defmodule GrasstubeWeb.VideoChannel do
   use Phoenix.Channel
-  require Logger
 
   alias GrasstubeWeb.VideoAgent
 
-  def join("video:0", _message, socket) do
-    send(self(), {:after_join, nil})
-    {:ok, socket}
+  def join("video:" <> room_name, _message, socket) do
+    case Grasstube.ProcessRegistry.lookup(room_name, :video) do
+      :not_found ->
+        {:error, "no room"}
+      _channel ->
+        send(self(), {:after_join, nil})
+        {:ok, socket}
+    end
   end
 
   def handle_info({:after_join, _}, socket) do
-    current = VideoAgent.get_current_video()
+    "video:" <> room_name = socket.topic
+    video = Grasstube.ProcessRegistry.lookup(room_name, :video)
+    
+    current = VideoAgent.get_current_video(video)
 
     if current != :nothing do
       push(socket, "setvid", %{
@@ -21,10 +28,10 @@ defmodule GrasstubeWeb.VideoChannel do
         small: current.small
       })
 
-      current_time = VideoAgent.get_time()
+      current_time = VideoAgent.get_time(video)
       push(socket, "seek", %{t: current_time})
       
-      push(socket, "playing", %{playing: VideoAgent.playing?()})
+      push(socket, "playing", %{playing: VideoAgent.playing?(video)})
     end
 
     {:noreply, socket}

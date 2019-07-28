@@ -2,5 +2,5 @@
 <script src="/cached/includes/subtitles-octopus.js"></script>
 <script type="text/javascript" id="www-widgetapi-script" src="https://s.ytimg.com/yts/jsbin/www-widgetapi-vflXFLqZz/www-widgetapi.js" async=""></script>
 <script type="text/javascript" src="https://ewwink.github.io/clappr-youtube-plugin/clappr-youtube-plugin.js"></script>
-
+<div style="display: none" id="room" data-room="<%= @room %>"></div>
 <div id="player"></div>

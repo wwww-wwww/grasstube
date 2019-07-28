@@ -8,21 +8,30 @@ defmodule GrasstubeWeb.ChatChannel do
 
   @max_name_length 24
   
-  def join("chat:0", _message, socket) do
-    :ok = ChannelWatcher.monitor(:rooms, self(), {__MODULE__, :leave, [socket.id]})
+  def join("chat:" <> room_name, _message, socket) do
+    case Grasstube.ProcessRegistry.lookup(room_name, :chat) do
+      :not_found ->
+        {:error, "no room"}
+        
+      channel ->
+        :ok = ChannelWatcher.monitor(:rooms, self(), {__MODULE__, :leave, [socket.id, socket.topic]})
 
-    user = %User{id: socket.id, socket: socket, name: "anon#{socket.id}"}
-    ChatAgent.add_user(user)
+        user = %User{id: socket.id, socket: socket, name: "anon#{socket.id}"}
+        ChatAgent.add_user(channel, user)
 
-    send(self(), {:after_join, nil})
-    {:ok, socket}
+        send(self(), {:after_join, nil})
+        {:ok, socket}
+    end
   end
 
   def handle_info({:after_join, _}, socket) do
-    push(socket, "id", %{"id" => socket.id})
-    Endpoint.broadcast("chat:0", "userlist", %{list: ChatAgent.get_userlist()})
+    "chat:" <> room_name = socket.topic
+    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
-    history = ChatAgent.get_history()
+    push(socket, "id", %{"id" => socket.id})
+    Endpoint.broadcast(socket.topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
+
+    history = ChatAgent.get_history(chat)
     if length(history) > 0 do
       push(socket, "history", %{"list" => history})
     end
@@ -39,20 +48,26 @@ defmodule GrasstubeWeb.ChatChannel do
     {:noreply, socket}
   end
   
-  def leave(user_id) do
-    case ChatAgent.get_user(user_id) do
+  def leave(user_id, topic) do
+    "chat:" <> room_name = topic
+    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
+
+    case ChatAgent.get_user(chat, user_id) do
       :not_found ->
         nil
 
       _ ->
-        ChatAgent.remove_user(user_id)
+        ChatAgent.remove_user(chat, user_id)
         Logger.info(user_id <> " left")
-        ChatAgent.flush_mods()
-        Endpoint.broadcast("chat:0", "userlist", %{list: ChatAgent.get_userlist()})
+        ChatAgent.flush_mods(chat)
+        Endpoint.broadcast(topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
     end
   end
-  
+
   def handle_in("chat", %{"msg" => msg}, socket) do
+    "chat:" <> room_name = socket.topic
+    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    
     cond do
       String.length(msg) <= 0 ->
         nil
@@ -61,20 +76,22 @@ defmodule GrasstubeWeb.ChatChannel do
         push(socket, "chat", %{id: "sys", content: "message must be 250 characters or less"})
 
       true ->
-        ChatAgent.chat(socket, msg)
+        ChatAgent.chat(chat, socket, msg)
     end
 
     {:noreply, socket}
   end
 
   def handle_in("setname", %{"name" => name}, socket) do
+    "chat:" <> room_name = socket.topic
+    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
     if String.length(name) > 0 and String.length(name) <= @max_name_length do
       newname =
         cond do
           String.downcase(name) == "anon" ->
             "anon#{socket.id}"
 
-            ChatAgent.get_users()
+            ChatAgent.get_users(chat)
           |> Enum.any?(fn s -> String.downcase(s.name) == String.downcase(name) end) ->
             name <> "0"
 
@@ -82,8 +99,8 @@ defmodule GrasstubeWeb.ChatChannel do
             name
         end
 
-      ChatAgent.set_name(socket.id, newname)
-      Endpoint.broadcast("chat:0", "userlist", %{list: ChatAgent.get_userlist()})
+      ChatAgent.set_name(chat, socket.id, newname)
+      Endpoint.broadcast(socket.topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
     else
       push(socket, "chat", %{
         id: "sys",

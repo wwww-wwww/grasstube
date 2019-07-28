@@ -13,15 +13,20 @@ defmodule GrasstubeWeb.VideoAgent do
             playing: false,
             time_started: :not_started,
             time_seek: 0,
-            time_set: 0
+            room_name: ""
 
-  def start_link(_opts) do
+  def start_link(opts) do
     Logger.info("Starting video agent.")
-    Agent.start_link(fn -> %__MODULE__{} end, name: __MODULE__)
+    [room_name: room_name] ++ _ = opts
+    Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 
-  def toggle_playing() do
-    Agent.update(__MODULE__, fn val ->
+  def via_tuple(room_name) do
+    Grasstube.ProcessRegistry.via_tuple({room_name, :video})
+  end
+
+  def toggle_playing(pid) do
+    Agent.update(pid, fn val ->
       %{
         val
         | playing: !val.playing,
@@ -29,26 +34,28 @@ defmodule GrasstubeWeb.VideoAgent do
           time_started: DateTime.to_unix(DateTime.utc_now())
       }
     end)
-    Endpoint.broadcast("video:0", "playing", %{playing: playing?()})
-    Endpoint.broadcast("video:0", "seek", %{t: get_time()})
+
+    room_name = Agent.get(pid, fn val -> val.room_name end)
+
+    scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+    GrasstubeWeb.VideoScheduler.cancel_play(scheduler)
+
+    Endpoint.broadcast("video:" <> room_name, "playing", %{playing:  playing?(pid)})
+    Endpoint.broadcast("video:" <> room_name, "seek", %{t: get_time(pid)})
   end
 
-  def set_playing(playing) do
-    Agent.update(__MODULE__, fn val ->
+  def set_playing(pid, playing) do
+    Agent.update(pid, fn val ->
       %{ val | playing: playing }
     end)
   end
 
-  def get_time_set() do
-    Agent.get(__MODULE__, fn val -> val.time_set end)
+  def playing?(pid) do
+    Agent.get(pid, fn val -> val.playing end)
   end
 
-  def playing?() do
-    Agent.get(__MODULE__, fn val -> val.playing end)
-  end
-
-  def get_time() do
-    Agent.get(__MODULE__, fn val -> actual_get_time(val) end)
+  def get_time(pid) do
+    Agent.get(pid, fn val -> actual_get_time(val) end)
   end
 
   defp actual_get_time(val) do
@@ -60,53 +67,61 @@ defmodule GrasstubeWeb.VideoAgent do
     end
   end
 
-  def set_seek(t) do
-    Agent.update(__MODULE__, fn val ->
+  def set_seek(pid, t) do
+    Agent.update(pid, fn val ->
       %{val | time_seek: t, time_started: DateTime.to_unix(DateTime.utc_now())}
     end)
   end
 
-  def set_time_started(t) do
-    Agent.update(__MODULE__, fn val -> %{val | time_started: t} end)
+  def set_time_started(pid, t) do
+    Agent.update(pid, fn val -> %{val | time_started: t} end)
   end
 
-  def set_current_video(next) do
-    set_playing(false)
-
-    now = :os.system_time(:millisecond)
-
-    Agent.update(__MODULE__, fn val ->
+  def set_current_video(pid, next) do
+    Agent.update(pid, fn val ->
       %{
         val
         | current_video: next,
           playing: false,
           time_started: :not_started,
-          time_seek: 0,
-          time_set: now
+          time_seek: 0
       }
     end)
 
+    room_name = Agent.get(pid, fn val -> val.room_name end)
+
+    scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+
+    GrasstubeWeb.VideoScheduler.cancel_set(scheduler)
+    GrasstubeWeb.VideoScheduler.cancel_play(scheduler)
+    
     if next == :nothing do
-      Endpoint.broadcast("video:0", "playing", %{playing: false})
-      Endpoint.broadcast("video:0", "setvid", %{id: -1, type: "default", url: "", sub: "", small: ""})
-      Endpoint.broadcast("playlist:0", "current", %{id: -1})
+      Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
+      Endpoint.broadcast("video:" <> room_name, "setvid", %{id: -1, type: "default", url: "", sub: "", small: ""})
+      Endpoint.broadcast("playlist:" <> room_name, "current", %{id: -1})
+      GrasstubeWeb.VideoScheduler.stop_timer(scheduler)
     else
-      Endpoint.broadcast("video:0", "setvid", %{
+      Endpoint.broadcast("video:" <> room_name, "setvid", %{
         id: next.id,
         type: next.type,
         url: next.url,
         sub: next.sub,
         small: next.small
       })
-      Endpoint.broadcast("playlist:0", "current", %{id: next.id})
+      Endpoint.broadcast("playlist:" <> room_name, "current", %{id: next.id})
+      GrasstubeWeb.VideoScheduler.start_timer(scheduler, 0)
     end
-
-    now
   end
 
-  def get_current_video() do
-    Agent.get(__MODULE__, fn val ->
+  def get_current_video(pid) do
+    Agent.get(pid, fn val ->
       val.current_video
+    end)
+  end
+
+  def get_current_video_and_time(pid) do
+    Agent.get(pid, fn val ->
+      {val.current_video, actual_get_time(val)}
     end)
   end
 
@@ -123,65 +138,124 @@ defmodule GrasstubeWeb.VideoScheduler do
   @time_to_next 5
   @time_to_start 5
 
-  def start_link(_) do
+  def start_link(opts) do
     Logger.info("Starting video scheduler.")
-    GenServer.start_link(__MODULE__, :nothing, name: __MODULE__)
+    [room_name: room_name] ++ _ = opts
+    GenServer.start_link(__MODULE__, %{sync_time: 0, room_name: room_name, sync_task: :nothing, set_task: :nothing, play_task: :nothing}, name: via_tuple(room_name))
+  end
+
+  def via_tuple(room_name) do
+    Grasstube.ProcessRegistry.via_tuple({room_name, :video_scheduler})
   end
 
   def init(state) do
-    Process.send_after(self(), :sync, 2000)
     {:ok, state}
   end
 
-  def delayed_start(time) do
-    Process.send_after(__MODULE__, {:delayed_start, time}, @time_to_start * 1000)
+  def handle_info(:delayed_start, state) do
+    if state.play_task != :nothing do
+      Process.cancel_timer(state.play_task)
+    end
+    video = Grasstube.ProcessRegistry.lookup(state.room_name, :video)
+    VideoAgent.set_seek(video, VideoAgent.get_time(video))
+    VideoAgent.set_playing(video, true)
+    start_timer(self(), 0)
+    Endpoint.broadcast("video:" <> state.room_name, "playing", %{playing: true})
+    {:noreply, %{state | play_task: :nothing}}
   end
 
-  def handle_info({:delayed_start, time}, state) do
-    if time == VideoAgent.get_time_set() do
-      VideoAgent.set_seek(VideoAgent.get_time())
-      VideoAgent.set_playing(true)
-      Endpoint.broadcast("video:0", "playing", %{playing: true})
-    end
+  def handle_info({:delayed_set, playlist}, state) do
+    PlaylistAgent.next_video(playlist)
     {:noreply, state}
   end
 
   def handle_info(:sync, state) do
-    current = VideoAgent.get_current_video()
+    if state.sync_task != :nothing do
+      Process.cancel_timer(state.sync_task)
+    end
+
+    video = Grasstube.ProcessRegistry.lookup(state.room_name, :video)
+    {current, current_time} = VideoAgent.get_current_video_and_time(video)
 
     new_state = if current != :nothing do
-      current_time = VideoAgent.get_time()
-      Endpoint.broadcast("video:0", "seek", %{t: current_time})
-      Endpoint.broadcast("video:0", "playing", %{playing: VideoAgent.playing?()})
+      Endpoint.broadcast("video:" <> state.room_name, "seek", %{t: current_time})
+      Endpoint.broadcast("video:" <> state.room_name, "playing", %{playing: VideoAgent.playing?(video)})
+      scheduler = Grasstube.ProcessRegistry.lookup(state.room_name, :video_scheduler)
 
       case current.duration do
         :unset ->
-          :nothing
-
+          %{state | sync_task: :nothing}
         duration ->
-
           cond do
-            current_time - duration > 0 and state != :waiting ->
-              Endpoint.broadcast("chat:0", "chat", %{
+            current_time - duration > 0 ->
+              playlist = Grasstube.ProcessRegistry.lookup(state.room_name, :playlist)
+      
+              Endpoint.broadcast("chat:" <> state.room_name, "chat", %{
                 id: "sys",
                 content: "playing next video in #{@time_to_next + @time_to_start} seconds"
               })
-
-              :waiting
-
-            current_time - duration > @time_to_next ->
-              PlaylistAgent.next_video()
-              :nothing
-
+              %{state | set_task: Process.send_after(scheduler, {:delayed_set, playlist}, 5000), sync_task: :nothing}
+              
             true ->
-              state
+              %{state | sync_task: start_timer(scheduler, 2000)}
           end
       end
-    else
-      :nothing
     end
-
-    Process.send_after(self(), :sync, 2000)
     {:noreply, new_state}
+  end
+
+  def handle_cast({:delayed_start, time}, state) do
+    new_state = %{state | play_task: Process.send_after(self(), :delayed_start, time)}
+    {:noreply, new_state}
+  end
+
+  def handle_cast(:cancel_play, state) do
+    new_state = if state.play_task != :nothing do
+      Process.cancel_timer(state.play_task)
+      %{state | play_task: :nothing}
+    else
+      state
+    end
+    {:noreply, new_state}
+  end
+
+  def handle_cast(:cancel_set, state) do
+    new_state = if state.set_task != :nothing do
+      Process.cancel_timer(state.set_task)
+      %{state | set_task: :nothing}
+    else
+      state
+    end
+    {:noreply, new_state}
+  end
+
+  def handle_cast(:stop_sync, state) do
+    new_state = if state.sync_task != :nothing do
+      Process.cancel_timer(state.sync_task)
+      %{state | sync_task: :nothing}
+    else
+      state
+    end
+    {:noreply, new_state}
+  end
+
+  def delayed_start(scheduler, time) do
+    GenServer.cast(scheduler, {:delayed_start, time})
+  end
+
+  def start_timer(scheduler, delay) do
+    Process.send_after(scheduler, :sync, delay)
+  end
+
+  def stop_timer(scheduler) do
+    GenServer.cast(scheduler, :stop_sync)
+  end
+
+  def cancel_set(scheduler) do
+    GenServer.cast(scheduler, :cancel_set)
+  end
+
+  def cancel_play(scheduler) do
+    GenServer.cast(scheduler, :cancel_play)
   end
 end

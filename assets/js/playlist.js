@@ -9,12 +9,12 @@ let is_mod = false
 
 let get_clappr_instance = void 0
 
-function init(socket, clappr) {
+function init(socket, room, clappr) {
 
 	get_clappr_instance = clappr
 
-	console.log("playlist: connecting")
-	channel = socket.channel("playlist:0", {})
+	console.log("playlist: connecting to room " + room)
+	channel = socket.channel("playlist:" + room, {})
 	channel.join()
 	.receive("ok", resp => {
 		console.log("playlist: connected", resp) 

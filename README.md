@@ -1,9 +1,11 @@
 # grasstube
-### Single channel synchronized player written in Elixir / Phoenix
+## ~~Single~~ Multi channel synchronized player written in Elixir / Phoenix
+
+Includes soft subtitle rendering using [SubtitlesOctopus](https://github.com/Dador/JavascriptSubtitlesOctopus)
 
 [o.okea.moe](https://o.okea.moe)
 
-## getting started
+### getting started
 
 ```
 git clone https://github.com/wwww-wwww/grasstube.git

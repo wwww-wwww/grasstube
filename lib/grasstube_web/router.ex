@@ -16,7 +16,8 @@ defmodule GrasstubeWeb.Router do
   scope "/", GrasstubeWeb do
     pipe_through(:browser)
     get("/", PageController, :index)
-    get("/chat", PageController, :chat)
-    get("/video", PageController, :video)
+    get("/r/:room/chat", PageController, :chat)
+    get("/r/:room/video", PageController, :video)
+    get("/r/:room", PageController, :room)
   end
 end
