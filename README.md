@@ -1,5 +1,5 @@
 # grasstube
-## ~~Single~~ Multi channel synchronized player written in Elixir / Phoenix
+## Multi channel synchronized player written in Elixir / Phoenix
 
 Includes soft subtitle rendering using [SubtitlesOctopus](https://github.com/Dador/JavascriptSubtitlesOctopus)
 
@@ -13,3 +13,9 @@ cd grasstube && mix deps.get
 cd assets && npm install && cd ..
 iex -S mix phx.server
 ```
+
+### todo
+- custom player
+- authentication
+  - user created rooms
+  - user provided list of emotes
