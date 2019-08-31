@@ -1,0 +1,35 @@
+<link href="https://fonts.googleapis.com/css?family=Varela+Round&display=swap" rel="stylesheet"> 
+
+<style>
+	.btn_room {
+		text-decoration: none;
+		display: block;
+		text-align: left;
+		padding: 4px 14px;
+		border: 1px solid rgba(255, 255, 255, 0.4);
+		border-radius: 1000px;
+		width: 12em;
+	}
+
+	.btn_room > div > span {
+		font-family: 'Varela Round', sans-serif;
+	}
+
+</style>
+
+<div style="padding: auto; text-align: center; font-size: 1.3em;">
+	<div style="padding: 10px 10px 2px 10px; font-family: 'Varela Round', sans-serif;">Rooms:</div>
+		<%= for {room_name, num_users} <- @rooms do %>
+		<div style="margin-bottom: 8px;">
+			<div class="room" style="display: inline-block">
+				<a class="btn_room" href="/r/<%= room_name %>">
+					<div>
+						<span><%= room_name %></span><span style="float: right;"><%= num_users %> 🙍</span>
+					</div>
+				</a>
+			</div>
+		</div>
+	<% end %>
+</div>
+
+<script src="/js/index.js"></script>

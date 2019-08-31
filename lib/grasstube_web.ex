@@ -5,6 +5,7 @@ defmodule GrasstubeWeb do
 
       import Plug.Conn
       import GrasstubeWeb.Gettext
+      import Phoenix.LiveView.Controller, only: [live_render: 3]
       alias GrasstubeWeb.Router.Helpers, as: Routes
     end
   end
@@ -24,6 +25,8 @@ defmodule GrasstubeWeb do
       import GrasstubeWeb.ErrorHelpers
       import GrasstubeWeb.Gettext
       alias GrasstubeWeb.Router.Helpers, as: Routes
+
+      import Phoenix.LiveView, only: [live_render: 2, live_render: 3, live_link: 1, live_link: 2]
     end
   end
 

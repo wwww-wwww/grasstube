@@ -10,7 +10,6 @@ defmodule GrasstubeWeb.Supervisor do
       {Task.Supervisor, name: Tasks},
       GrasstubeWeb.Counter,
       Grasstube.ProcessRegistry,
-      {GrasstubeWeb.Registry, name: GrasstubeWeb.Registry},
       {DynamicSupervisor, name: Grasstube.DynamicSupervisor, strategy: :one_for_one},
       Grasstube.DefaultRooms,
       worker(ChannelWatcher, [:rooms])
@@ -23,86 +22,27 @@ end
 defmodule GrasstubeWeb.RoomSupervisor do
   use Supervisor
   
-  def start_link(room_name) do
-    Supervisor.start_link(__MODULE__, room_name)
+  def start_link(opts) do
+    room_name = opts |> Keyword.get(:room_name)
+    Supervisor.start_link(__MODULE__, opts, name: via_tuple(room_name))
   end
 
-  def init(room_name) do
+  def init(opts) do
+    room_name = opts |> Keyword.get(:room_name)
+
     children = [
-      {GrasstubeWeb.ChatAgent, room_name},
+      {GrasstubeWeb.ChatAgent, opts},
       {GrasstubeWeb.VideoAgent, room_name},
       {GrasstubeWeb.VideoScheduler, room_name},
-      {GrasstubeWeb.PlaylistAgent, room_name},
-      {GrasstubeWeb.PollsAgent, room_name}
+      {GrasstubeWeb.PlaylistAgent, room_name}#,
+      #{GrasstubeWeb.PollsAgent, room_name}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
-end
-
-defmodule GrasstubeWeb.Registry do
-  use GenServer
-
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, :ok, opts)
-  end
-
-  def init(:ok) do
-    names = %{}
-    refs = %{}
-    {:ok, {names, refs}}
-  end
   
-  def handle_call({:lookup, name}, _from, state) do
-    {names, _} = state
-    {:reply, Map.fetch(names, name), state}
-  end
-
-  def handle_call({:list}, _from, state) do
-    {names, _} = state
-    {:reply, Map.keys(names), state}
-  end
-
-  def handle_cast({:create, name}, {names, refs}) do
-    if Map.has_key?(names, name) do
-      {:noreply, {names, refs}}
-    else
-      {:ok, pid} = DynamicSupervisor.start_child(Grasstube.DynamicSupervisor, {GrasstubeWeb.RoomSupervisor, room_name: name})
-      ref = Process.monitor(pid)
-      refs = Map.put(refs, ref, name)
-      names = Map.put(names, name, pid)
-      {:noreply, {names, refs}}
-    end
-  end
-
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, {names, refs}) do
-    {name, refs} = Map.pop(refs, ref)
-    names = Map.delete(names, name)
-    {:noreply, {names, refs}}
-  end
-  
-  def handle_info(_msg, state) do
-    {:noreply, state}
-  end
-
-  @doc """
-  Looks up the bucket pid for `name` stored in `server`.
-
-  Returns `{:ok, pid}` if the bucket exists, `:error` otherwise.
-  """
-  def lookup(name) do
-    GenServer.call(__MODULE__, {:lookup, name})
-  end
-
-  def list() do
-    GenServer.call(__MODULE__, {:list})
-  end
-
-  @doc """
-  Ensures there is a bucket associated with the given `name` in `server`.
-  """
-  def create(name) do
-    GenServer.cast(__MODULE__, {:create, name})
+  def via_tuple(room_name) do
+    Grasstube.ProcessRegistry.via_tuple({room_name, :supervisor})
   end
 end
 
@@ -131,7 +71,15 @@ defmodule GrasstubeWeb.UserSocket do
   channel("playlist:*", GrasstubeWeb.PlaylistChannel)
   channel("polls:*", GrasstubeWeb.PollsChannel)
 
-  def connect(_params, socket, _connect_info) do
+  def connect(%{"token" => token}, socket, _) do
+    case Guardian.Phoenix.Socket.authenticate(socket, Grasstube.Guardian, token) do
+      {:ok, authed_socket} ->
+        {:ok, authed_socket}
+      _ -> :error
+    end
+  end
+
+  def connect(_params, socket, _) do
     {:ok, socket}
   end
 

@@ -16,9 +16,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
   @yt_timeout 10000
   @ffprobe_timeout 10000
 
-  def start_link(opts) do
-    Logger.info("Starting playlist agent.")
-    [room_name: room_name] ++ _ = opts
+  def start_link(room_name) do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 

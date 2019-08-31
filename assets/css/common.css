@@ -23,11 +23,12 @@ button, input, select {
 	border: 1px solid rgba(255, 255, 255, 0.4);
 	background: rgb(0, 0, 0);
 	color: rgba(255, 255, 255, 0.7);
-	transition: color 0.1s, background-color 0.1s;
+	transition: color 0.05s, background-color 0.05s;
 }
 
 button:focus, input:focus, select:focus {
-	outline: 1px solid rgba(255, 255, 255, 0.6);
+	/*outline: 1px solid rgba(255, 255, 255, 0.6);*/
+	box-shadow: 0 0 0 1pt rgba(255, 255, 255, 0.6);
 }
 
 button:hover {
@@ -68,7 +69,7 @@ a {
 	justify-content: center;
 	align-items: center;
 	position: absolute;
-	z-index: 1;
+	z-index: 100;
 	padding: 20px;
 	left: 0;
 	top: 0;
@@ -76,11 +77,7 @@ a {
 	height: 100%;
 	overflow: hidden;
 	background-color: rgba(0,0,0,0.7);
-    -webkit-animation: fadein 0.2s;
-       -moz-animation: fadein 0.2s;
-        -ms-animation: fadein 0.2s;
-         -o-animation: fadein 0.2s;
-			animation: fadein 0.2s;
+	animation: fadein 0.2s;
 }
 
 .modal-title {
@@ -105,11 +102,7 @@ a {
 	text-align: left;
 	max-width: 100%;
 	max-height: 100%;
-    -webkit-animation: fadein2 0.2s;
-       -moz-animation: fadein2 0.2s;
-        -ms-animation: fadein2 0.2s;
-         -o-animation: fadein2 0.2s;
-            animation: fadein2 0.2s;
+	animation: fadein2 0.2s;
 }
 
 .modal-content {
@@ -133,7 +126,7 @@ a {
 	display: block;
 	width: 100%;
 	margin-right: 20px;
-	margin-bottom: 6px;
+	padding: 3px;
 	line-height: 20px;
 }
 

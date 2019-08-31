@@ -1,5 +1,5 @@
 defmodule GrasstubeWeb.User do
-  defstruct id: 0, socket: nil, name: ""
+  defstruct id: 0, socket: nil, username: "", nickname: ""
 end
 
 defmodule GrasstubeWeb.ChatAgent do
@@ -8,23 +8,26 @@ defmodule GrasstubeWeb.ChatAgent do
   alias GrasstubeWeb.Endpoint
   alias GrasstubeWeb.User
   
+  alias Grasstube.Repo
+
   alias Phoenix.HTML
 
   require Logger
   require AutoLinker
 
-  defstruct users: [],
+  defstruct admin: "",
             mods: [],
+            users: [],   
             history: [],
-            room_name: ""
+            room_name: "",
+            emotelists: []
 
-  @control_password "523"
   @max_history_size 20
 
   def start_link(opts) do
-    Logger.info("Starting chat agent.")
-    [room_name: room_name] ++ _ = opts
-    Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
+    room_name = opts |> Keyword.get(:room_name)
+    admin = opts |> Keyword.get(:admin)
+    Agent.start_link(fn -> %__MODULE__{room_name: room_name, admin: admin} end, name: via_tuple(room_name))
   end
 
   def via_tuple(room_name) do
@@ -40,11 +43,12 @@ defmodule GrasstubeWeb.ChatAgent do
         |> HTML.html_escape()
         |> HTML.safe_to_string()
       
-      new_msg = AutoLinker.link(escaped) |> do_emote()
+      new_msg = do_emote(channel, AutoLinker.link(escaped))
 
       add_to_history(channel, socket.id, new_msg)
+      sender = get_user(channel, socket.id)
       
-      Endpoint.broadcast(socket.topic, "chat", %{id: socket.id, content: new_msg})
+      Endpoint.broadcast(socket.topic, "chat", %{sender: sender.username, name: sender.nickname, content: new_msg})
     end
 
     {:noreply}
@@ -57,20 +61,12 @@ defmodule GrasstubeWeb.ChatAgent do
     end
   end
 
-  defp command(channel, socket, "controls", pass) do
-    if pass == @control_password do
-      set_mod(channel, socket.id)
-      Endpoint.broadcast(socket.topic, "userlist", %{list: get_userlist(channel)})
-      Phoenix.Channel.push(socket, "controls", %{})
-    end
-  end
-
   defp command(channel, socket, cmd, _) do
     command(channel, socket, cmd)
   end
 
   defp command(_channel, socket, cmd) do
-    Phoenix.Channel.push(socket, "chat", %{id: "sys", content: "no command " <> cmd})
+    Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "no command " <> cmd})
   end
 
   defp do_command(channel, socket, msg) do
@@ -89,7 +85,7 @@ defmodule GrasstubeWeb.ChatAgent do
   def add_to_history(pid, id, msg) do
     Agent.update(pid, fn val ->
       user = val.users |> Enum.find(:not_found, fn user -> user.id == id end)
-      new_history = [%{name: user.name, msg: msg}] ++ val.history
+      new_history = [%{name: user.nickname, msg: msg}] ++ val.history
 
       if length(new_history) > @max_history_size do
         %{val | history: new_history |> Enum.reverse() |> tl() |> Enum.reverse()}
@@ -107,31 +103,40 @@ defmodule GrasstubeWeb.ChatAgent do
     Agent.get(pid, fn val -> val.users end)
   end
 
+  def get_admin(pid) do
+    Agent.get(pid, fn val -> val.admin end)
+  end
+
   def get_mods(pid) do
     Agent.get(pid, fn val -> val.mods end)
   end
 
-  def set_mod(pid, id) do
+  def add_emotelist(pid, user) do
     Agent.update(pid, fn val ->
-      %{val | mods: val.mods ++ [id]}
+      %{val | emotelists: [user | val.emotelists]}
     end)
   end
 
-  def mod?(room, id) do
+  def add_mod(pid, user) do
+    Agent.update(pid, fn val ->
+      %{val | mods: [user | val.mods]}
+    end)
+  end
+
+  def remove_mod(pid, user) do
+    Agent.update(pid, fn val ->
+      %{val | mods: List.delete(val.mods, user.username)}
+    end)
+  end
+
+  def mod?(pid, user) do
+    get_mods(pid) |> Enum.any?(fn mod -> mod == user.username end)
+    || get_admin(pid) == user.username
+  end
+
+  def room_mod?(room, user) do
     chat = Grasstube.ProcessRegistry.lookup(room, :chat)
-    get_mods(chat) |> Enum.any?(fn mod -> mod == id end)
-  end
-
-  def flush_mods(pid) do
-    Agent.update(pid, fn val ->
-      new_mods =
-        val.mods
-        |> Enum.filter(fn id ->
-          Enum.any?(val.users, fn user -> user.id == id end)
-        end)
-
-      %{val | mods: new_mods}
-    end)
+    mod?(chat, user)
   end
 
   def get_user(pid, id) do
@@ -152,25 +157,23 @@ defmodule GrasstubeWeb.ChatAgent do
   end
 
   def get_userlist(pid) do
-    mods = get_mods(pid)
-
     get_users(pid)
     |> Enum.map(fn user ->
       %{
-        id: user.id,
-        name: user.name,
-        mod: Enum.find(mods, false, fn mod -> mod == user.id end)
+        username: user.username,
+        nickname: user.nickname,
+        mod: mod?(pid, user)
       }
     end)
   end
 
-  def set_name(pid, id, name) do
+  def update_name(pid, socket, name) do
     Agent.update(pid, fn val ->
       new_users =
         Enum.map(val.users, fn user ->
           cond do
-            user.id == id ->
-              %User{user | name: name}
+            user.id == socket.id ->
+              %User{user | nickname: name}
 
             true ->
               user
@@ -181,14 +184,38 @@ defmodule GrasstubeWeb.ChatAgent do
     end)
   end
 
-  defp get_emotes() do
-    with {:ok, body} <- File.read("/home/w/grasstube/emotes.json"),
-          json <- Jason.decode!(body),
-          do: json
+  def set_name(pid, socket, name) do
+    if Guardian.Phoenix.Socket.authenticated?(socket) do
+      user = Guardian.Phoenix.Socket.current_resource(socket)
+      changeset = Repo.get(Grasstube.User, user.username)
+        |> Ecto.Changeset.change(nickname: name)
+      case Repo.update(changeset) do
+        {:ok, _} ->
+          update_name(pid, socket, name)
+          Endpoint.broadcast(socket.topic, "userlist", %{list: get_userlist(pid)})
+        {:error, changeset} ->
+          IO.inspect(changeset)
+      end
+    else
+      update_name(pid, socket, name)
+      Endpoint.broadcast(socket.topic, "userlist", %{list: get_userlist(pid)})
+    end
   end
 
-  defp do_emote(msg) do
-    emotes = get_emotes()
+  defp get_emotelists(pid) do
+    Agent.get(pid, fn val -> val.emotelists end)
+  end
+
+  def get_emotes(pid) do
+    get_emotelists(pid) |> Enum.reduce([], fn username, acc ->
+      user = Repo.get(Grasstube.User, username) |> Repo.preload(:emotes)
+      emotes = user.emotes |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, url: emote.url} | acc] end)
+      emotes ++ acc
+    end)
+  end
+
+  defp do_emote(pid, msg) do
+    emotes = get_emotes(pid)
     parse_emote(msg, "", emotes)
   end
 
@@ -197,9 +224,9 @@ defmodule GrasstubeWeb.ChatAgent do
   end
 
   defp process_emote(input, emotes) do
-    case emotes |> Map.fetch(String.downcase(input)) do
-      {:ok, emote} -> "<img src=\"" <> emote <> "\" alt=\"" <> String.downcase(input) <> "\" title=\"" <> String.downcase(input) <> "\">"
-      :error -> :not_emote
+    case emotes |> Enum.find(:not_emote, fn emote -> String.downcase(input) == ":" <> emote.emote <> ":" end) do
+      :not_emote -> :not_emote
+      emote -> Phoenix.HTML.Tag.img_tag(emote.url, alt: String.downcase(input), title: String.downcase(input)) |> Phoenix.HTML.safe_to_string()
     end
   end
 

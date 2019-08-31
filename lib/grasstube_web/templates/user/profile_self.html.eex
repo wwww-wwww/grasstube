@@ -1,0 +1,27 @@
+<style>
+	.form_delete_emote {
+		display: inline;
+	}
+</style>
+
+<%= @username %>'s emotes: 
+<br>
+<%= for %{id: id, emote: emote, url: url} <- get_emotes(@username) do %>
+	<div>
+		<%= img_tag(url, alt: emote, title: emote, style: "width: 2em; vertical-align: middle;") %> <span>:<%= emote %>:</span>
+		<%= form_for(@conn, Routes.user_path(@conn, :delete_emote), [class: "form_delete_emote"], fn f -> %>
+			<div style="display: inline;">
+				<input name="id" type="hidden" value="<%= id %>">
+				<%= submit "delete" %>
+			</div>
+		<%= end) %>
+	</div>
+<%= end %>
+
+<%= form_for(@conn, Routes.user_path(@conn, :add_emote), [class: "form"], fn f -> %>
+	<div>
+		<%= text_input(f, :emote, placeholder: "emote") %>
+		<%= text_input(f, :url, placeholder: "url") %>
+		<%= submit "add" %>
+	</div>
+<% end) %>

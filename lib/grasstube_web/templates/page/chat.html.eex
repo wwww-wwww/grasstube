@@ -1,5 +1,5 @@
 <div style="display: none" id="room" data-room="<%= @room %>"></div>
-<div id="chat_div" style="position: relative; width: 100%; height: 100%;">
+<div id="chat_div">
 	<div id="header">
 		<button id="btn_userlist_toggle" class="square">👨‍👦</button>
 		<button id="btn_chat_settings" class="square">⚙</button>
@@ -16,3 +16,5 @@
 		<button id="btn_show_emotes" class="square">🙂</button>
 	</div>
 </div>
+
+<script src="/js/chat.js"></script>

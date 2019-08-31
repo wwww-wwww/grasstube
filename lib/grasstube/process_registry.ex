@@ -16,12 +16,19 @@ defmodule Grasstube.ProcessRegistry do
   end
 
   def lookup(room_name, channel) do
-    case GrasstubeWeb.Registry.lookup(room_name) do
-      {:ok, _} ->
-        [{pid, _}] = Registry.lookup(__MODULE__, {room_name, channel})
+    case Registry.lookup(__MODULE__, {room_name, channel}) do
+      [{pid, _}] ->
         pid
       _ ->
         :not_found
     end
+  end
+
+  def list_rooms() do
+    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", :"$3"}, [], [:"$1"]}])
+  end
+
+  def create_room(room_name, admin) do
+    DynamicSupervisor.start_child(Grasstube.DynamicSupervisor, {GrasstubeWeb.RoomSupervisor, room_name: room_name, admin: admin})
   end
 end

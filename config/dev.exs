@@ -1,5 +1,17 @@
 use Mix.Config
 
+config :grasstube, Grasstube.Repo,
+  username: "grasstube",
+  password: "grasstube",
+  database: "grasstube",
+  hostname: "192.168.1.51",
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
+config :grasstube, Grasstube.Guardian,
+  issuer: "Grasstube",
+  secret_key: ""
+
 config :grasstube, GrasstubeWeb.Endpoint,
   http: [port: 17001],
   debug_errors: true,

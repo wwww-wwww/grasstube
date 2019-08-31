@@ -5,6 +5,8 @@ defmodule GrasstubeWeb.Endpoint do
     websocket: true,
     longpoll: false
   )
+  
+  socket("/live", Phoenix.LiveView.Socket)
 
   # Serve at "/" the static files from "priv/static" directory.
   #

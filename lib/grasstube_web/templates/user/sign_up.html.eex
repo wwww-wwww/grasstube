@@ -1,0 +1,58 @@
+<style>
+	.outer {
+		margin: auto;
+		text-align: center;
+	}
+
+	.inner {
+		display: inline-block;
+		font-size: 1.5em;
+	}
+
+	.form {
+		display: block;
+		text-align: center;
+		margin-top: 12px;
+	}
+
+	.form > div > input {
+		display: block;
+		margin: 12px;
+		padding: 0 12px;
+		font-size: 0.8em;
+		height: 2em;
+		border-radius: 100px;
+	}
+
+	.form > div {
+		display: inline-block;
+	}
+	
+	.form > div > button {
+		padding: 0 12px;
+		font-size: 1em;
+		height: 1.5em;
+		border-radius: 100px;
+		cursor: pointer;
+	}
+
+	.sign_in {
+		display: block;
+		margin-top: 20px;
+		font-size: 0.8em;
+	}
+</style>
+
+<div class="outer">
+	<div class="inner">
+		<%= form_for @changeset, Routes.user_path(@conn, :sign_up), [class: "form"], fn f -> %>
+			<div>
+				<%= text_input(f, :username, placeholder: "username") %>
+				<%= text_input(f, :password, placeholder: "password", type: "password") %>
+				<%= submit "sign up" %>
+			</div>
+		<% end %>
+
+		<span class="sign_in">already have an account? sign in <%= link("here", to: "/sign_in") %></span>
+	</div>
+</div>

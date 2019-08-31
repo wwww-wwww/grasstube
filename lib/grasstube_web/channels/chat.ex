@@ -16,8 +16,14 @@ defmodule GrasstubeWeb.ChatChannel do
       channel ->
         :ok = ChannelWatcher.monitor(:rooms, self(), {__MODULE__, :leave, [socket.id, socket.topic]})
 
-        user = %User{id: socket.id, socket: socket, name: "anon#{socket.id}"}
-        ChatAgent.add_user(channel, user)
+        new_user = if Guardian.Phoenix.Socket.authenticated?(socket) do
+            user = Guardian.Phoenix.Socket.current_resource(socket)
+            %User{id: socket.id, socket: socket, username: user.username, nickname: user.nickname}
+          else
+            %User{id: socket.id, socket: socket, nickname: "anon#{socket.id}"}
+          end
+          
+        ChatAgent.add_user(channel, new_user)
 
         send(self(), {:after_join, nil})
         {:ok, socket}
@@ -28,7 +34,6 @@ defmodule GrasstubeWeb.ChatChannel do
     "chat:" <> room_name = socket.topic
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
-    push(socket, "id", %{"id" => socket.id})
     Endpoint.broadcast(socket.topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
 
     history = ChatAgent.get_history(chat)
@@ -59,7 +64,6 @@ defmodule GrasstubeWeb.ChatChannel do
       _ ->
         ChatAgent.remove_user(chat, user_id)
         Logger.info(user_id <> " left")
-        ChatAgent.flush_mods(chat)
         Endpoint.broadcast(topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
     end
   end
@@ -73,7 +77,7 @@ defmodule GrasstubeWeb.ChatChannel do
         nil
 
       String.length(msg) > 250 ->
-        push(socket, "chat", %{id: "sys", content: "message must be 250 characters or less"})
+        push(socket, "chat", %{sender: "sys", name: "System", content: "message must be 250 characters or less"})
 
       true ->
         ChatAgent.chat(chat, socket, msg)
@@ -91,20 +95,21 @@ defmodule GrasstubeWeb.ChatChannel do
           String.downcase(name) == "anon" ->
             "anon#{socket.id}"
 
-            ChatAgent.get_users(chat)
-          |> Enum.any?(fn s -> String.downcase(s.name) == String.downcase(name) end) ->
-            name <> "0"
+          #ChatAgent.get_users(chat)
+          #|> Enum.any?(fn s -> String.downcase(s.nickname) == String.downcase(name) end) ->
+          #  name <> "0"
 
           true ->
             name
         end
 
-      ChatAgent.set_name(chat, socket.id, newname)
-      Endpoint.broadcast(socket.topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
+        # TODO: check for reserved names
+
+      ChatAgent.set_name(chat, socket, newname)
     else
       push(socket, "chat", %{
         id: "sys",
-        content: "name must be between 1 and #{@max_name_length} characters"
+        content: "nickname must be between 1 and #{@max_name_length} characters"
       })
     end
 

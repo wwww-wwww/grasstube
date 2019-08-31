@@ -23,8 +23,15 @@ defmodule GrasstubeWeb.PollsChannel do
   end
 
   def handle_info({:after_join, _}, socket) do
-    IO.inspect(socket.topic)
     "polls:" <> room_name = socket.topic
+
+    if Guardian.Phoenix.Socket.authenticated?(socket) do
+      user = Guardian.Phoenix.Socket.current_resource(socket)
+      if ChatAgent.room_mod?(room_name, user) do
+        push(socket, "controls", %{})
+      end
+    end
+
     polls = Grasstube.ProcessRegistry.lookup(room_name, :polls)
 
 		push(socket, "id", %{id: socket.id})

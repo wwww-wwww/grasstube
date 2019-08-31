@@ -6,9 +6,7 @@ defmodule GrasstubeWeb.PollsAgent do
             current_id: 0,
             room_name: ""
 
-  def start_link(opts) do
-    Logger.info("Starting polls agent.")
-    [room_name: room_name] ++ _ = opts
+  def start_link(room_name) do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 

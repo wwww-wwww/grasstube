@@ -1,11 +1,16 @@
 use Mix.Config
 
+config :grasstube,
+  ecto_repos: [Grasstube.Repo]
+
 config :grasstube, GrasstubeWeb.Endpoint,
   url: [host: "localhost"],
-  secret_key_base: "ZKtq7lNDUyfDV6qD4l6QFKE32vzhDVkqISXPILhTOVmV2Wa+Ika03py04c1bix7i",
+  secret_key_base: "",
   render_errors: [view: GrasstubeWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: Grasstube.PubSub, adapter: Phoenix.PubSub.PG2],
-  controls_password: "password"
+  live_view: [
+    signing_salt: ""
+  ]
 
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

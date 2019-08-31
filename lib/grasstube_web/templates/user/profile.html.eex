@@ -1,0 +1,7 @@
+<%= @username %>'s emotes: 
+<br>
+<%= for %{id: id, emote: emote, url: url} <- get_emotes(@username) do %>
+	<div>
+		<%= img_tag(url, alt: emote, title: emote, style: "width: 2em; vertical-align: middle;") %> <span>:<%= emote %>:</span>
+	</div>
+<%= end %>

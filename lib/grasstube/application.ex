@@ -8,10 +8,9 @@ defmodule Grasstube.Application do
   def start(_type, _args) do
     # List all child processes to be supervised
     children = [
+      Grasstube.Repo,
       GrasstubeWeb.Supervisor,
       GrasstubeWeb.Endpoint
-      # Starts a worker by calling: Grasstube.Worker.start_link(arg)
-      # {Grasstube.Worker, arg},
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

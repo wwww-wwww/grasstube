@@ -4,13 +4,61 @@
 		<meta charset="utf-8"/>
 		<meta name="theme-color" content="#000000"/>
 		<link rel="icon" type="image/x-icon" href="/favicon.ico"/>
-		<title>grasstube 2.2</title>
+		<title>grasstube 2.4</title>
 		<link rel="stylesheet" type="text/css" href="/css/common.css">
 		<link rel="stylesheet" type="text/css" href="/css/<%= @name %>.css">
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+		<%= if Guardian.Plug.current_token(@conn) do %>
+			<meta name="guardian_token" content="<%= Guardian.Plug.current_token(@conn) %>">
+		<% end %>
+		<style>
+			body {
+				font-size: 1em;
+			}
+			header {
+				width: 100%;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+				height: 2em;
+				z-index: 99;
+			}
+			header > section > nav > span > a {
+				margin: 4px;
+				line-height: 2em;
+			}
+			main {
+				width: 100%;
+				height: calc(100% - 2em);
+			}
+			.alerts {
+				text-align: center;
+				width: 100%;
+			}
+			.alert {
+				font-size: 1.5em;
+			}
+
+			.alert-danger {
+
+			}
+		</style>
 	</head>
 	<body id="body">
-		<%= render @view_module, @view_template, assigns %>
+		<header>
+			<section>
+				<nav role="navigation">
+					<span style="float: left"><%= link("grasstube", to: "/") %></span>
+					<span style="float: right">
+						<%= get_user(@conn) %>
+					</span>
+				</nav>
+			</section>
+		</header>
+		<main role="main">
+			<div class="alerts">
+				<p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+				<p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+			</div>
+			<%= render @view_module, @view_template, assigns %>
+		</main>
 	</body>
-	<script src="/js/<%= @name %>.js"></script>
 </html>

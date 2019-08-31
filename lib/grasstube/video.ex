@@ -15,9 +15,7 @@ defmodule GrasstubeWeb.VideoAgent do
             time_seek: 0,
             room_name: ""
 
-  def start_link(opts) do
-    Logger.info("Starting video agent.")
-    [room_name: room_name] ++ _ = opts
+  def start_link(room_name) do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 
@@ -25,11 +23,11 @@ defmodule GrasstubeWeb.VideoAgent do
     Grasstube.ProcessRegistry.via_tuple({room_name, :video})
   end
 
-  def toggle_playing(pid) do
+  def set_playing(pid, playing) do
     Agent.update(pid, fn val ->
       %{
         val
-        | playing: !val.playing,
+        | playing: playing,
           time_seek: actual_get_time(val),
           time_started: DateTime.to_unix(DateTime.utc_now())
       }
@@ -138,9 +136,7 @@ defmodule GrasstubeWeb.VideoScheduler do
   @time_to_next 5
   @time_to_start 5
 
-  def start_link(opts) do
-    Logger.info("Starting video scheduler.")
-    [room_name: room_name] ++ _ = opts
+  def start_link(room_name) do
     GenServer.start_link(__MODULE__, %{sync_time: 0, room_name: room_name, sync_task: :nothing, set_task: :nothing, play_task: :nothing}, name: via_tuple(room_name))
   end
 
