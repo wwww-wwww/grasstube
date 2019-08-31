@@ -6,46 +6,39 @@ import {get_cookie, set_cookie} from "./cookies"
 
 let channel = null
 
-let myid = ""
+let users = []
+let last_chat_user = ""
 
-const users = {}
-let last_chat_user = -1
-
-function init(socket, room, on_controls) {
-
-	const cookie = get_cookie()
+function init(socket, room) {
 	
 	console.log("chat: connecting to room " + room)
 	channel = socket.channel("chat:" + room, {})
 	channel.join()
 	.receive("ok", resp => {
-		if (cookie.username || false) set_name(cookie.username)
+		const nickname = get_cookie("nickname")
+		if (nickname || false) set_name(nickname)
 		console.log("chat: connected", resp) 
 	})
 	.receive("error", resp => {
 		console.log("chat: failed to connect", resp)
 	})
 
-	channel.on("id", data => {
-		myid = data.id
-		console.log("chat: id", data)
-	})
-
 	channel.on("userlist", data => {
 		console.log("chat: userlist", data)
 
-		for (const user in users) delete users[user]
+		users = []
 		while (userlist.firstChild) userlist.removeChild(userlist.firstChild)
 
 		data.list.forEach(user => {
-			users[user.id] = user
+			users.push(user)
 			const e = document.createElement("div")
 			e.className = "user"
 
 			const user_name = document.createElement("span")
 			user_name.className = "user_name"
-			user_name.textContent = user.name
+			user_name.textContent = user.nickname
 			user_name.classList.toggle("mod", user.mod)
+			user_name.classList.toggle("guest", user.username.length == 0)
 
 			e.appendChild(user_name)
 			userlist.appendChild(e)
@@ -62,19 +55,12 @@ function init(socket, room, on_controls) {
 		userlist.classList.toggle("hidden")
 	})
 
-	btn_chat_settings.addEventListener("click", make_change_username)
-
-	channel.on("controls", data => {
-		console.log("chat: controls", data)
-		on_controls(data)
-	})
+	btn_chat_settings.addEventListener("click", make_change_nickname)
 }
 
-function make_change_username() {
-	const cookie = get_cookie()
-
+function make_change_nickname() {
 	const modal = create_modal(chat_div)
-	modal_set_title(modal, "change your name")
+	modal_set_title(modal, "change your nickname")
 
 	const modal_body = modal_get_body(modal)
 	modal_body.style.textAlign = "right"
@@ -83,7 +69,7 @@ function make_change_username() {
 	modal_body.appendChild(textfield)
 
 	textfield.style.display = "block"
-	textfield.value = cookie.username || "anon"
+	textfield.value = get_cookie("nickname") || "anon"
 
 	const btn_set = document.createElement("button")
 	modal_body.appendChild(btn_set)
@@ -130,18 +116,18 @@ function on_chat(data) {
 	const separator = document.createElement("span")
 	separator.textContent = ": "
 	username.className = "message_user"
+	username.textContent = data.name
 
-	if (data.id == "sys") {
+	if (data.sender == "sys") {
 		msg.style.fontStyle = "italic"
-		username.textContent = "system"
 		msg.appendChild(username)
 		msg.appendChild(separator)
 	}
 
-	if (last_chat_user != data.id) {
+	if (data.name != last_chat_user) {
 		msg.style.marginTop = "4px"
 		
-		if (data.id != "sys") {
+		if (data.sender != "sys") {
 			const d = new Date()
 			const timestamp = document.createElement("span")
 			timestamp.className = "message_timestamp"
@@ -149,18 +135,17 @@ function on_chat(data) {
 				+ pad(d.getHours(), 2) + ":"
 				+ pad(d.getMinutes(), 2) + ":"
 				+ pad(d.getSeconds(), 2) + "] "
-			
-			username.textContent = users[data.id].name
 
 			msg.appendChild(timestamp)
 			msg.appendChild(username)
 			msg.appendChild(separator)
 		}
+	last_chat_user = data.name
 	}
 
-	last_chat_user = data.id
 
-	const message_content = document.createElement("message_content")
+	const message_content = document.createElement("span")
+	message_content.className = "message_content"
 	msg.appendChild(message_content)
 	
 	if (data.content.indexOf("&gt;") == 0) {
@@ -194,7 +179,8 @@ function on_history(data) {
 
 		last_chat_user = message.name
 
-		const message_content = document.createElement("message_content")
+		const message_content = document.createElement("span")
+		message_content.className = "message_content"
 		msg.appendChild(message_content)
 		
 		if (message.msg.indexOf("&gt;") == 0) {
@@ -214,9 +200,7 @@ function on_history(data) {
 function set_name(name) {
 	if (name.length > 0) {
 		if (name != "anon") {
-			const cookie = get_cookie()
-			cookie.username = name
-			set_cookie(cookie)
+			set_cookie("nickname", name)
 		}
 		
 		channel.push("setname", {name: name})

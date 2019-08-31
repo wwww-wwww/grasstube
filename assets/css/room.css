@@ -5,7 +5,6 @@ html, body {
 	background: black;
 	color: rgba(255, 255, 255, 0.7);
 	overflow: hidden;
-	font-size: 14px;
 }
 
 #container1 {
@@ -15,19 +14,18 @@ html, body {
 }
 
 #container2 {
-	width: 100%;
+	position: relative;
 	height: 100%;
 	overflow-y: scroll;
-	padding-right: 0px;
 }
 
 #maincontent {
+	position: relative;
 	display: flex;
 	justify-content: space-between;
 	flex-direction: row;
 	height: 80%;
 	width: 100%;
-	position: relative;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -35,6 +33,7 @@ html, body {
 	height: 100%;
 	width: 100%;
 	position: relative;
+	overflow-x: hidden;
 }
 
 #container_chat {
@@ -73,17 +72,6 @@ html, body {
 	width: 50%;
 }
 
-#seekbar {
-	width: 100%;
-	display: block;
-	height: 20px;
-	position: relative;
-}
-
-#btn_playpause, #btn_next {
-	display: inline-block;
-}
-
 #dragbar_h {
 	background-color: rgba(255, 255, 255, 0.2);
 	height: 100%;
@@ -95,9 +83,10 @@ html, body {
 
 #dragbar_v {
 	background-color: rgba(255, 255, 255, 0.2);
-	width: 100%;
 	height: 3px;
+	width: 100%;
 	cursor: row-resize;
+	position: absolute;
 	z-index: 2;
 }
 
@@ -112,38 +101,6 @@ html, body {
 #user_settings {
 	display: inline-block;
 	transition: opacity 0.1s;
-}
-
-input[type="range"] {
-	width: 100%;
-	background: none;
-	border-radius: 0;
-	border: none;
-	outline: none;
-	cursor: pointer;
-}
-
-input[type="range"]::-moz-range-track {
-	width: 100%;
-	height: 2px;
-	cursor: pointer;
-	background: rgba(255, 255, 255, 0.7);
-	border-radius: 0;
-	border: none;
-}
-  
-input[type="range"]::-webkit-slider-thumb,
-input[type="range"]::-moz-range-thumb {
-	-webkit-appearance: none;
-	-moz-appearance: none;
-	appearance: none;
-	width: 4px;
-	height: 12px;
-	background: rgba(255, 255, 255, 0.8);
-	border-radius: 0;
-	border: none;
-	outline: none;
-	cursor: pointer;
 }
 
 #polls_list {
@@ -193,10 +150,6 @@ input[type="range"]::-moz-range-thumb {
 	cursor: pointer;
 }
 
-#seekbar.hidden {
-	display: none;
-}
-
 .playlist_outer {
 	display: inline-block;
 	margin-top: 4px;
@@ -238,17 +191,20 @@ input[type="range"]::-moz-range-thumb {
 	background-color: rgb(60, 60, 60);
 	color: rgb(220, 220, 220);
 }
-
 .user_name {
-	color: rgb(180, 180, 180);
+	color: rgb(200, 200, 200);
 }
 
 .mod {
-	color: rgb(230, 230, 230);
 	text-decoration: underline;
+	text-decoration-color: rgb(150, 150, 150);
 }
 
-#header {
+.guest {
+	color: rgb(150, 150, 150);
+}
+
+.chat_header {
 	width: 100%;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 	vertical-align: middle;
@@ -336,7 +292,9 @@ input[type="range"]::-moz-range-thumb {
 	display: none;
 }
 
-#player, .container[data-container] > div {
+#player {
 	width: 100%;
 	height: 100%;
 }
+
+@import url("video.css");

@@ -1,17 +1,13 @@
 import "phoenix_html"
 import {create_modal, modal_set_title, modal_get_body} from "./modals"
 import {reload_hosted_videos} from "./metadata"
-import {seconds_to_hms} from "./extras"
+import {seconds_to_hms, enter} from "./extras"
 
 let channel = null
 const playlist = []
-let is_mod = false
+let has_controls = false
 
-let get_clappr_instance = void 0
-
-function init(socket, room, clappr) {
-
-	get_clappr_instance = clappr
+function init(socket, room) {
 
 	console.log("playlist: connecting to room " + room)
 	channel = socket.channel("playlist:" + room, {})
@@ -67,8 +63,8 @@ function init(socket, room, clappr) {
 				vid.q_set.addEventListener("click", queue_set)
 				vid.q_del.addEventListener("click", queue_remove)
 		
-				vid.q_del.classList.toggle("hidden", !is_mod)
-				vid.q_set.classList.toggle("hidden", !is_mod)
+				vid.q_del.classList.toggle("hidden", !has_controls)
+				vid.q_set.classList.toggle("hidden", !has_controls)
 
 				e.prepend(vid.q_del)
 				e.append(vid.duration_e)
@@ -93,11 +89,20 @@ function init(socket, room, clappr) {
 			vid.e.classList.toggle("isactive", current_video == vid.id)
 		})
 	})
+
+	channel.on("controls", data => {
+		console.log("playlist: controls", data)
+		has_controls = true
+	
+		playlist_controls.classList.toggle("hidden", false)
+
+		playlist.forEach(vid => {
+			vid.q_set.classList.toggle("hidden", false)
+			vid.q_del.classList.toggle("hidden", false)
+		})
+	})
 	
 	playlist_add.addEventListener("click", queue_add)
-	btn_playpause.addEventListener("click", toggle_playing)
-	seekbar.addEventListener("change", set_seek)
-	btn_next.addEventListener("click", queue_next)
 
 	add_url.addEventListener("keyup", event => { enter(event, () => { queue_add() }) })
 	add_sub.addEventListener("keyup", event => { enter(event, () => { queue_add() }) })
@@ -125,6 +130,7 @@ function add_ss(e) {
 	e.target.selectedIndex = 0
 }
 
+/*
 function toggle_playing() {
 	channel.push("toggle_playing")
 }
@@ -133,6 +139,8 @@ function set_seek() {
 	if (get_clappr_instance() != null)
 		channel.push("seek", {t: (seekbar.value / 1000) * get_clappr_instance().getDuration() })
 }
+*/
+
 function queue_add() {
 	channel.push("q_add", {
 		url: add_url.value,
@@ -161,25 +169,10 @@ function queue_remove(e) {
 	}
 }
 
+/*
 function queue_next() {
 	channel.push("q_next")
 }
-
-function playlist_on_controls() {
-	if (document.getElementById("playlist_controls")) {
-		is_mod = true
-
-		playlist_controls.classList.toggle("hidden", false)
-		
-		seekbar.classList.toggle("hidden", false)
-		btn_create_poll.classList.toggle("hidden", false)
-
-		playlist.forEach(vid => {
-			vid.q_set.classList.toggle("hidden", false)
-			vid.q_del.classList.toggle("hidden", false)
-		})
-	}
-}
+*/
 
 export default init
-export {playlist_on_controls}

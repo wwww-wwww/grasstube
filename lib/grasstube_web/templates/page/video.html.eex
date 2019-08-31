@@ -1,6 +1,33 @@
-<script type="text/javascript" src="https://cdn.jsdelivr.net/clappr/latest/clappr.min.js"></script>
-<script src="/cached/includes/subtitles-octopus.js"></script>
-<script type="text/javascript" id="www-widgetapi-script" src="https://s.ytimg.com/yts/jsbin/www-widgetapi-vflXFLqZz/www-widgetapi.js" async=""></script>
-<script type="text/javascript" src="https://ewwink.github.io/clappr-youtube-plugin/clappr-youtube-plugin.js"></script>
+<script src="/includes/subtitles-octopus.js"></script>
 <div style="display: none" id="room" data-room="<%= @room %>"></div>
+
+<style>
+	#player, #player_overlay {
+		width: 100%;
+		height: 100%;
+		position: absolute;
+	}
+
+	header {
+		background-color: rgba(0, 0, 0, 0.6);
+		z-index: 1;
+		opacity: 0;
+	}
+	
+	main {
+		height: 100%;
+	}
+
+	header:hover {
+		opacity: 1;
+	}
+
+	main {
+		position: absolute;
+		top: 0;
+	}
+</style>
+
 <div id="player"></div>
+
+<script src="/js/video.js"></script>

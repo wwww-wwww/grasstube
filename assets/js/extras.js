@@ -10,10 +10,12 @@ function enter(event, cb) {
 	cb()
 }
 
-function seconds_to_hms(seconds) {
+function seconds_to_hms(seconds, hide_hours = false) {
 	const hours = Math.floor(seconds / 3600)
 	const minutes = Math.floor(seconds / 60) % 60
 	seconds = Math.ceil(seconds % 60)
+	if (hide_hours && hours <= 0) 
+		return `${pad(minutes, 2)}:${pad(seconds, 2)}`
 	return `${pad(hours, 2)}:${pad(minutes, 2)}:${pad(seconds, 2)}`
 }
 

@@ -1,7 +1,5 @@
 <div id="playlist_div">
 	<div id="playlist_controls" class="hidden">
-		<button id="btn_playpause">play</button>
-		<button id="btn_next">next</button>
 		<input id="add_url" placeholder="url"/>
 		<input id="add_sub" placeholder="subtitles"/>
 		<button id="playlist_add">add</button>
