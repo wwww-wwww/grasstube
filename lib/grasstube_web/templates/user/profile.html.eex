@@ -1,7 +1,41 @@
+<style>
+	.form_delete_emote {
+		display: inline;
+	}
+	.emote {
+		width: 2em;
+		vertical-align: middle;
+		transition: width 0.2s;
+	}
+	.emote:hover {
+		width: 100px;
+	}
+</style>
+
 <%= @username %>'s emotes: 
 <br>
 <%= for %{id: id, emote: emote, url: url} <- get_emotes(@username) do %>
 	<div>
-		<%= img_tag(url, alt: emote, title: emote, style: "width: 2em; vertical-align: middle;") %> <span>:<%= emote %>:</span>
+		<%= img_tag(url, alt: emote, title: emote, class: "emote") %> <span>:<%= emote %>:</span>
+			<%= if Guardian.Plug.current_resource(@conn) != nil and Guardian.Plug.current_resource(@conn).username == @username do %>
+			<%= form_for(@conn, Routes.user_path(@conn, :delete_emote), [class: "form_delete_emote"], fn f -> %>
+				<div style="display: inline;">
+					<input name="id" type="hidden" value="<%= id %>">
+					<%= submit "delete" %>
+				</div>
+			<%= end) %>
+		<%= end %>
 	</div>
 <%= end %>
+
+<%= if Guardian.Plug.current_resource(@conn) != nil and Guardian.Plug.current_resource(@conn).username == @username do %>
+	<%= form_for(@conn, Routes.user_path(@conn, :add_emote), [class: "form"], fn f -> %>
+		<div>
+			<%= text_input(f, :emote, placeholder: "emote") %>
+			<%= text_input(f, :url, placeholder: "url") %>
+			<%= submit "add" %>
+		</div>
+	<% end) %>
+<%= end %>
+
+<link rel="stylesheet" type="text/css" href="/css/profile.css">

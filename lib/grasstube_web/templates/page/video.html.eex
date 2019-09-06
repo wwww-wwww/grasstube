@@ -30,4 +30,5 @@
 
 <div id="player"></div>
 
+<link rel="stylesheet" type="text/css" href="/css/video.css">
 <script src="/js/video.js"></script>

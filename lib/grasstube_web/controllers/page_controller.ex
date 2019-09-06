@@ -12,7 +12,7 @@ defmodule GrasstubeWeb.PageController do
       :not_found ->
         text(conn, "room not found")
       _ ->
-        render(conn, "chat.html", room: room, name: "chat")
+        render(conn, "chat.html", room: room)
     end
   end
 
@@ -21,7 +21,7 @@ defmodule GrasstubeWeb.PageController do
       :not_found ->
         text(conn, "room not found")
       _ ->
-        render(conn, "video.html", room: room, name: "video")
+        render(conn, "video.html", room: room)
     end
   end
 
@@ -30,7 +30,7 @@ defmodule GrasstubeWeb.PageController do
       :not_found ->
         text(conn, "room not found")
       _ ->
-        render(conn, "room.html", room: room, name: "room")
+        render(conn, "room.html", room: room)
     end
   end
 

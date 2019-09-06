@@ -6,7 +6,6 @@
 		<link rel="icon" type="image/x-icon" href="/favicon.ico"/>
 		<title>grasstube 2.4</title>
 		<link rel="stylesheet" type="text/css" href="/css/common.css">
-		<link rel="stylesheet" type="text/css" href="/css/<%= @name %>.css">
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 		<%= if Guardian.Plug.current_token(@conn) do %>
 			<meta name="guardian_token" content="<%= Guardian.Plug.current_token(@conn) %>">
@@ -28,6 +27,7 @@
 			main {
 				width: 100%;
 				height: calc(100% - 2em);
+				overflow: auto;
 			}
 			.alerts {
 				text-align: center;
@@ -48,7 +48,7 @@
 				<nav role="navigation">
 					<span style="float: left"><%= link("grasstube", to: "/") %></span>
 					<span style="float: right">
-						<%= get_user(@conn) %>
+						<%= get_user_links(@conn) %>
 					</span>
 				</nav>
 			</section>

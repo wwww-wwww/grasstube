@@ -41,7 +41,7 @@
 	</div>
 </div>
 
-<div class="poll_item" id="poll_item_template">
+<div class="poll_item hidden" id="poll_item_template">
 	<div class="poll_item-inner">
 		<span class="poll-item-remove">&times;</span>
 		<span class="poll_item_title"></span>
@@ -49,9 +49,10 @@
 	</div>
 </div>
 
-<div class="poll_choice" id="poll_item_choice_template">
+<div class="poll_choice hidden" id="poll_item_choice_template">
 	<button class="poll_button"></button>
 	<span></span>
 </div>
 
+<link rel="stylesheet" type="text/css" href="/css/room.css">
 <script src="/js/room.js"></script>

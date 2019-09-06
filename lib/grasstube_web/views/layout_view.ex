@@ -3,8 +3,8 @@ defmodule GrasstubeWeb.LayoutView do
 
   alias Grasstube.Guardian
 
-  def get_user(conn) do
-    if Guardian.Plug.authenticated?(conn) do
+  def get_user_links(conn) do
+    if Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil do
       user = Guardian.Plug.current_resource(conn)
       [
         link(user.username, to: "/user/#{user.username}"),

@@ -56,3 +56,5 @@
 		<span class="sign_in">already have an account? sign in <%= link("here", to: "/sign_in") %></span>
 	</div>
 </div>
+
+<link rel="stylesheet" type="text/css" href="/css/sign_up.css">
