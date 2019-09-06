@@ -10,21 +10,21 @@ defmodule GrasstubeWeb.UserController do
 
   def sign_up_page(conn, _params) do
     changeset = User.changeset(%User{})
-    render(conn, "sign_up.html", changeset: changeset, name: "sign_up")
+    render(conn, "sign_up.html", changeset: changeset)
   end
 
   def sign_in_page(conn, _params) do
-    render(conn, "sign_in.html", name: "sign_in")
+    render(conn, "sign_in.html")
   end
 
   def sign_in(conn, %{"username" => username, "password" => password}) do
-    case Repo.get_by(User, username: username) do
+    case Repo.get_by(User, username: username |> to_string()) do
       nil ->
         conn
         |> put_flash(:error, "Incorrect username or password")
         |> redirect(to: "/sign_in")
       user ->
-        if Bcrypt.verify_pass(password, user.password) do
+        if Bcrypt.verify_pass(password |> to_string(), user.password) do
           conn
           |> Guardian.Plug.sign_in(user)
           |> redirect(to: "/")
@@ -32,6 +32,29 @@ defmodule GrasstubeWeb.UserController do
           conn
           |> put_flash(:error, "Incorrect username or password")
           |> redirect(to: "/sign_in")
+        end
+    end
+  end
+
+  def auth(conn, %{"username" => username, "password" => password}) do
+    case Repo.get_by(User, username: username |> to_string()) do
+      nil ->
+        conn
+        |> put_status(200)
+        |> json(%{success: false})
+      user ->
+        if Bcrypt.verify_pass(password |> to_string(), user.password) do
+          token = conn
+            |> Guardian.Plug.sign_in(user)
+            |> Guardian.Plug.current_token()
+
+          conn
+          |> put_status(200)
+          |> json(%{success: true, token: token})
+        else
+          conn
+          |> put_status(200)
+          |> json(%{success: false})
         end
     end
   end
@@ -63,17 +86,18 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def show_user(conn, %{"username" => username}) do
-    user = Guardian.Plug.current_resource(conn)
-    if user != nil and user.username == username do
-      render(conn, "profile_self.html", username: username, name: "profile")
+    if Repo.get(Grasstube.User, username) != nil do
+        render(conn, "profile.html", username: username)
     else
-      render(conn, "profile.html", username: username, name: "profile")
+      conn
+      |> put_flash(:info, "user does not exist")
+      |> render(GrasstubeWeb.ErrorView, "404.html")
     end
   end
 
   def add_emote(conn, %{"emote" => emote, "url" => url}) do
     user = Guardian.Plug.current_resource(conn)
-    new_emote = Ecto.build_assoc(user, :emotes, emote: String.downcase(emote), url: url)
+    new_emote = Ecto.build_assoc(user, :emotes, emote: emote |> String.downcase() |> String.trim(":"), url: url)
     case Repo.insert(new_emote) do
       {:ok, emote} ->
         conn
