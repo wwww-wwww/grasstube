@@ -3,17 +3,21 @@ import {get_cookie} from "./cookies"
 const fonts = []
 
 function init(socket, room, player) {
-	fetch("/fonts/list.txt", { headers: { "Content-Type": "text/plain; charset=utf-8" }})
-		.then(res => res.text())
-		.then(data => {
-			data.split("\n").forEach(font => { if (font.length > 0) fonts.push("/fonts/" + font) })
-			console.log("fonts: fetched")
-			player.set_fonts(fonts)
-			connect(socket, room, player)
-		})
-		.catch(err => {
-			console.log("fonts: error fetching", err)
+	fetch("https://res.cloudinary.com/okea/raw/list/font.json")
+	.then(res => res.json())
+	.then(data => {
+		data.resources.forEach(font => {
+			fonts.push(`https://res.cloudinary.com/okea/raw/upload/v${font.version}/${font.public_id}`)
 		});
+		console.log("fonts: fetched")
+		player.set_fonts(fonts)
+	})
+	.catch(err => {
+		console.log("fonts: error fetching", err)
+	})
+	.finally(() => {
+		connect(socket, room, player)
+	})
 }
 
 function connect(socket, room, player) {
