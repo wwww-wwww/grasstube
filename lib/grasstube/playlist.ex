@@ -50,7 +50,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
       %{id: id, title: vid.title, url: url, duration: vid.duration}
     end)
   end
-
+  
   def add_queue(pid, title, url, sub, small, type, duration) do
     Agent.update(pid, fn val ->
       new_videos =
