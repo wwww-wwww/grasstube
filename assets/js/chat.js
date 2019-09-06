@@ -13,5 +13,5 @@ init_chat(socket, room)
 btn_show_emotes.addEventListener("click", () => {
 	const modal = create_modal()
 	modal_set_title(modal, "emotes")
-	reload_emotes(modal, chat_input)
+	reload_emotes(room, modal, chat_input)
 })
