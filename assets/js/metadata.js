@@ -9,11 +9,12 @@ function reload_emotes(room, modal, chatbox, refresh = true) {
 
 	const modal_body = modal_get_body(modal)
 	modal_body.style.textAlign = "center"
-	for	(const emote in emotes) {
+	const sorted_keys = Object.keys(emotes).sort()
+	sorted_keys.forEach(emote => {
 		const emote_img = document.createElement("img")
 		emote_img.src = emotes[emote]
-		emote_img.alt = emote
-		emote_img.title = emote
+		emote_img.alt = `:${emote}:`
+		emote_img.title = `:${emote}:`
 		emote_img.style.padding = "4px"
 		emote_img.style.maxHeight = "100px"
 		emote_img.addEventListener("click", () => {
@@ -22,7 +23,7 @@ function reload_emotes(room, modal, chatbox, refresh = true) {
 			chatbox.focus()
 		})
 		modal_body.appendChild(emote_img)
-	}
+	})
 
 	if (refresh) {
 		fetch(`/api/emotes/r/${room}`, { headers: { "Content-Type": "application/json; charset=utf-8" }})
