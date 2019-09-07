@@ -28,12 +28,12 @@ class GrassPlayer {
 		this.settings.default_quality = get_cookie("video_quality") || "big"
 		this.settings.volume = get_cookie("video_volume") || 20
 		
-		const playing_message = document.createElement("div")
-		playing_message.textContent = "nothing is playing"
-		playing_message.style.position = "absolute"
-		playing_message.style.textAlign = "center"
-		playing_message.style.width = "100%"
-		attach.appendChild(playing_message)
+		this.playing_message = document.createElement("div")
+		this.playing_message.textContent = "nothing is playing"
+		this.playing_message.style.position = "absolute"
+		this.playing_message.style.textAlign = "center"
+		this.playing_message.style.width = "100%"
+		attach.appendChild(this.playing_message)
 
 		this.video = document.createElement("video")
 		this.video.id = "video"
@@ -147,7 +147,10 @@ class GrassPlayer {
 						workerUrl: '/includes/subtitles-octopus-worker.js'
 					})
 				} else {
-					this.octopusInstance.dispose()
+					try{
+						this.octopusInstance.dispose()
+					}
+					catch(e) {}
 					this.octopusInstance = null
 				}
 			}
@@ -234,9 +237,13 @@ class GrassPlayer {
 		this.seekbar.dial.style.left = "0%"
 		this.seekbar.current.style.width = "0%"
 		this.lbl_time.textContent = "00:00 / 00:00"
+		this.playing_message.textContent = "nothing is playing"
 
 		if (this.octopusInstance) {
-			this.octopusInstance.dispose()
+			try{
+				this.octopusInstance.dispose()
+			}
+			catch(e) {}
 			this.octopusInstance = null
 		}
 
@@ -250,6 +257,7 @@ class GrassPlayer {
 			return
 		}
 
+		this.playing_message.textContent = ""
 		this.btn_play.disabled = false
 
 		if (type == "yt") {
@@ -509,26 +517,6 @@ function seekbar_mouse_move(e, player) {
 	const t = Math.min(Math.max(((e.clientX - player.seekbar.getBoundingClientRect().left) / (player.seekbar.getBoundingClientRect().width)), 0), 1)
 	seek_local(player, t)
 	return t * player.duration()
-}
-
-const yt_quality_to = {
-	"highres":"big",
-	"hd1080":"1080p",
-	"hd720"	:"720p",
-	"large"	:"480p",
-	"medium":"360p",
-	"small"	:"240p",
-	"tiny"	:"144p"
-}
-
-const yt_quality_from = {
-	"big"	:"highres",
-	"1080p"	:"hd1080",
-	"720p"	:"hd720",
-	"480p"	:"large",
-	"360p"	:"medium",
-	"240p"	:"small",
-	"144p"	:"tiny"
 }
 
 export default GrassPlayer
