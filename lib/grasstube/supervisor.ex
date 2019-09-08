@@ -1,4 +1,4 @@
-defmodule GrasstubeWeb.Supervisor do
+defmodule Grasstube.Supervisor do
   use Supervisor
 
   def start_link(opts) do
@@ -19,7 +19,7 @@ defmodule GrasstubeWeb.Supervisor do
   end
 end
 
-defmodule GrasstubeWeb.RoomSupervisor do
+defmodule Grasstube.RoomSupervisor do
   use Supervisor
   
   def start_link(opts) do

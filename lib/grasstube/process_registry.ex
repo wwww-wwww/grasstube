@@ -29,6 +29,6 @@ defmodule Grasstube.ProcessRegistry do
   end
 
   def create_room(room_name, admin) do
-    DynamicSupervisor.start_child(Grasstube.DynamicSupervisor, {GrasstubeWeb.RoomSupervisor, room_name: room_name, admin: admin})
+    DynamicSupervisor.start_child(Grasstube.DynamicSupervisor, {Grasstube.RoomSupervisor, room_name: room_name, admin: admin})
   end
 end
