@@ -26,7 +26,7 @@ class GrassPlayer {
 		
 		this.settings = {}
 		this.settings.default_quality = get_cookie("video_quality") || "big"
-		this.settings.volume = get_cookie("video_volume") || 20
+		this.settings.volume = (Math.pow(10, (get_cookie("video_volume") || 20) / 100) - 1) / 9
 		
 		this.playing_message = document.createElement("div")
 		this.playing_message.textContent = "nothing is playing"
@@ -38,7 +38,7 @@ class GrassPlayer {
 		this.video = document.createElement("video")
 		this.video.id = "video"
 		this.video.className = "player_video"
-		this.video.volume = this.settings.volume / 100
+		this.video.volume = this.settings.volume
 
 		this.video2 = document.createElement("div")
 		this.video2.id = "video2"
@@ -93,14 +93,14 @@ class GrassPlayer {
 		this.slider_volume.min = 0
 		this.slider_volume.max = 100
 		this.slider_volume.step = 1
-		this.slider_volume.value = this.settings.volume
+		this.slider_volume.value = (get_cookie("video_volume") || 20)
 		bottom_shade.appendChild(this.slider_volume)
 
 		this.slider_volume.addEventListener("input", () => {
 			set_cookie("video_volume", this.slider_volume.value)
-			this.settings.volume = this.slider_volume.value
-			if (this.current_video.yt) this.current_video.yt.setVolume(this.settings.volume)
-			this.video.volume = this.settings.volume / 100
+			this.settings.volume = (Math.pow(10, this.slider_volume.value / 100) - 1) / 9
+			if (this.current_video.yt) this.current_video.yt.setVolume(this.settings.volume * 100)
+			this.video.volume = this.settings.volume
 		})
 
 		this.lbl_time = document.createElement("span")
@@ -349,7 +349,7 @@ class GrassPlayer {
 			videoId: video_id,
 			events: {
 				"onStateChange": e => {
-					e.target.setVolume(this.settings.volume)
+					e.target.setVolume(this.settings.volume * 100)
 					const options = e.target.getOptions()
 
 					options.forEach(option => {
