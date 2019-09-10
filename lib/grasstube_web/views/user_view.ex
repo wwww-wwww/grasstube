@@ -1,8 +1,6 @@
 defmodule GrasstubeWeb.UserView do
   use GrasstubeWeb, :view
 
-  import Ecto.Query, only: [from: 2]
-
   alias Grasstube.Guardian
   alias Grasstube.Repo
 

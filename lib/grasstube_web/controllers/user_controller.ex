@@ -1,8 +1,6 @@
 defmodule GrasstubeWeb.UserController do
   use GrasstubeWeb, :controller
 
-  import Ecto.Query, only: [from: 2]
-
   alias Grasstube.Guardian
   alias Grasstube.Repo
   alias Grasstube.User
@@ -99,9 +97,8 @@ defmodule GrasstubeWeb.UserController do
     user = Guardian.Plug.current_resource(conn)
     new_emote = Ecto.build_assoc(user, :emotes, emote: emote |> String.downcase() |> String.trim(":"), url: url)
     case Repo.insert(new_emote) do
-      {:ok, emote} ->
-        conn
-        |> redirect(to: "/user/#{user.username}")
+      {:ok, _} ->
+        redirect(conn, to: "/user/#{user.username}")
       {:error, _} ->
         conn
         |> redirect(to: "/user/#{user.username}")
@@ -116,8 +113,8 @@ defmodule GrasstubeWeb.UserController do
       emote ->
         if emote.user_username == user.username do
           case Repo.delete(emote) do
-            {:ok, struct} -> redirect(conn, to: "/user/#{user.username}")
-            {:error, changeset} -> redirect(conn, to: "/user/#{user.username}")
+            {:ok, _} -> redirect(conn, to: "/user/#{user.username}")
+            {:error, _} -> redirect(conn, to: "/user/#{user.username}")
           end
         else
           redirect(conn, to: "/user/#{user.username}")
