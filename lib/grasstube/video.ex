@@ -42,12 +42,6 @@ defmodule GrasstubeWeb.VideoAgent do
     Endpoint.broadcast("video:" <> room_name, "seek", %{t: get_time(pid)})
   end
 
-  def set_playing(pid, playing) do
-    Agent.update(pid, fn val ->
-      %{ val | playing: playing }
-    end)
-  end
-
   def playing?(pid) do
     Agent.get(pid, fn val -> val.playing end)
   end
@@ -187,7 +181,8 @@ defmodule GrasstubeWeb.VideoScheduler do
               playlist = Grasstube.ProcessRegistry.lookup(state.room_name, :playlist)
       
               Endpoint.broadcast("chat:" <> state.room_name, "chat", %{
-                id: "sys",
+                sender: "sys",
+				name: "System",
                 content: "playing next video in #{@time_to_next + @time_to_start} seconds"
               })
               %{state | set_task: Process.send_after(scheduler, {:delayed_set, playlist}, 5000), sync_task: :nothing}
