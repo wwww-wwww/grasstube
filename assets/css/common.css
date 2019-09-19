@@ -18,10 +18,11 @@ html, body {
 }
 
 button, input, select {
-	height: 21px;
-	padding: 0 3px 1px 3px;
+	font-size: 1em;
+	height: 2em;
+	padding: 0 0.5em;
 	border: 1px solid rgba(255, 255, 255, 0.4);
-	background: rgb(0, 0, 0);
+	background: none;
 	color: rgba(255, 255, 255, 0.7);
 	transition: color 0.05s, background-color 0.05s;
 }
@@ -33,6 +34,7 @@ button:focus, input:focus, select:focus {
 
 button:hover {
 	background: rgba(255, 255, 255, 0.3);
+	cursor: pointer;
 }
 
 button:active {
@@ -54,6 +56,7 @@ option {
 }
 
 .square {
+	padding: 0;
 	font-size: 1em;
 	height: 1.5em;
 	width: 1.5em;
@@ -80,10 +83,15 @@ a {
 	animation: fadein 0.2s;
 }
 
+.modal-header {
+	font-size: 1em;
+	height: 2em;
+}
+
 .modal-title {
 	display: inline-block;
-	padding-right: 8px;
-	margin: 4px;
+	padding: 0 8px;
+	line-height: 2em;
 }
 
 .modal-back {
@@ -96,7 +104,7 @@ a {
 	position: relative;
 	display: inline-block;
 	background-color: rgba(0, 0, 0, 0.7);
-	padding: 6px;
+	padding: 0;
 	margin: auto;
 	border: 1px solid rgba(255, 255, 255, 0.4);
 	text-align: left;
@@ -109,17 +117,18 @@ a {
 	display: block;
 	max-height: calc(100vh - 90px);
 	overflow: auto;
-	padding: 4px;
+	padding: 0.5em;
+	border-top: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .modal-close {
 	float: right;
-	color: rgba(255, 255, 255, 0.7);
 	text-align: center;
 	font-weight: bold;
-	font-size: 20px;
-	line-height: 13px;
-	margin: 4px;
+	line-height: 2em;
+	width: 2em;
+	height: 2em;
+	border: none;
 }
 
 .list-item {
@@ -128,13 +137,6 @@ a {
 	margin-right: 20px;
 	padding: 3px;
 	line-height: 20px;
-}
-
-.modal-close:hover,
-.modal-close:focus {
-	color: white;
-	text-decoration: none;
-	cursor: pointer;
 }
 
 @keyframes fadein {

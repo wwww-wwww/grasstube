@@ -1,4 +1,4 @@
-import {create_modal, modal_set_title, modal_get_body} from "./modals"
+import {create_modal} from "./modals"
 import "phoenix_html"
 
 let channel = null
@@ -105,8 +105,8 @@ function create_choice(choices, choices_list) {
 
 function create_poll_modal() {
 	const modal = create_modal()
-	modal_set_title(modal, "create a poll")
-	const modal_body = modal_get_body(modal)
+	modal.label.textContent = "create a poll"
+	const modal_body = modal.get_body()
 
 	const poll_title = document.createElement("input")
 	poll_title.placeholder = "title"

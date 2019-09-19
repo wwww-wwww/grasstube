@@ -12,7 +12,7 @@ import init_drag from "./drag"
 import init_settings from "./settings"
 
 import {reload_emotes} from "./metadata"
-import {create_modal, modal_set_title} from "./modals"
+import {create_modal} from "./modals"
 
 const room = document.getElementById("room").dataset.room
 
@@ -25,7 +25,7 @@ const wplayer = new GrassPlayer(player)
 init_chat(socket, room)
 
 const modal = create_modal(player)
-modal_set_title(modal, "this is for autoplay")
+modal.label.textContent = "this is for autoplay"
 init_video(socket, room, wplayer)
 
 init_playlist(socket, room)
@@ -36,6 +36,6 @@ init_drag()
 
 btn_show_emotes.addEventListener("click", () => {
 	const modal = create_modal()
-	modal_set_title(modal, "emotes")
+	modal.label.textContent = "emotes"
 	reload_emotes(room, modal, chat_input)
 })

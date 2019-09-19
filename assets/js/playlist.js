@@ -1,5 +1,5 @@
 import "phoenix_html"
-import {create_modal, modal_set_title, modal_get_body} from "./modals"
+import {create_modal} from "./modals"
 import {reload_hosted_videos} from "./metadata"
 import {seconds_to_hms, enter} from "./extras"
 
@@ -109,13 +109,13 @@ function init(socket, room) {
 
 	btn_show_hosted_videos.addEventListener("click", () => {
 		const modal = create_modal()
-		modal_set_title(modal, "hosted videos")
+		modal.label.textContent = "hosted videos"
 		reload_hosted_videos(modal, channel, "https://okea.moe/video/list.json")
 	})
 
 	btn_show_ss.addEventListener("click", () => {
 		const modal = create_modal()
-		modal_set_title(modal, "ss")
+		modal.label.textContent = "ss"
 		reload_hosted_videos(modal, channel, "https://okea.moe/ss/list.json")
 	})
 }

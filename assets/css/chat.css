@@ -12,11 +12,11 @@
 }
 
 #btn_userlist_toggle {
-	margin-top: 1px;
+	margin: 1px 0 0 3px;
 }
 
 .message_timestamp {
-	font-size: 10px;
+	font-size: 0.75em;
 	line-height: 14px;
 }
 
@@ -46,7 +46,6 @@
 	background: none;
 	width: 100%;
 	vertical-align: middle;
-	font-size: 1.5em;
 	line-height: 2em;
 	height: 2em;
 }
@@ -56,14 +55,12 @@
 	display: flex;
 	width: 100%;
 	height: 100%;
-	font-size: 1.5em;
 	padding: 2em 0 2em 0;
 }
 
 #userlist {
 	background: none;	
 	right: 0px;
-	font-size: 0.75em;
 	top: 1em;
 	padding: 4px;
 	overflow-y: auto;
@@ -81,7 +78,6 @@
 
 #messages {
 	height: 100%;
-	font-size: 0.75em;
 	overflow-y: auto;
 	padding: 4px;
 	word-wrap: break-word;
@@ -96,7 +92,7 @@
 	background: none;
 	width: 100%;
 	vertical-align: middle;
-	font-size: 1.5em;
+	font-size: 1em;
 	line-height: 2em;
 	height: 2em;
 }
@@ -113,28 +109,4 @@
 	width: 2em;
 	height: 2em;
 	padding: auto;
-}
-
-@media (min-width: 768px) {
-
-	#header {
-		font-size: 1em;
-	}
-	
-	#userlist {
-		font-size: 1em;
-	}
-	
-	#messages {
-		font-size: 1em;
-	}
-	
-	#input_area {
-		font-size: 1em;
-	}
-
-	.chat_main_area {
-		font-size: 1em;
-	}
-	
 }

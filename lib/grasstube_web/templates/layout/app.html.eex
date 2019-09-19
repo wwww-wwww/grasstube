@@ -12,8 +12,9 @@
 		<% end %>
 		<style>
 			body {
-				font-size: 1em;
+				font-size: 1.5em;
 			}
+
 			header {
 				width: 100%;
 				border-bottom: 1px solid rgba(255, 255, 255, 0.4);
@@ -39,6 +40,14 @@
 
 			.alert-danger {
 
+			}
+			
+			@media (min-width: 768px) {
+
+				body {
+					font-size: 1em;
+				}
+				
 			}
 		</style>
 	</head>

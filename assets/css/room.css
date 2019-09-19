@@ -187,6 +187,10 @@ html, body {
 	padding: 4px 0 4px;
 }
 
+#playlist_controls, #btn_user_settings {
+	font-size: 0.8em;
+}
+
 .isactive, .isactive > a {
 	background-color: rgb(60, 60, 60);
 	color: rgb(220, 220, 220);

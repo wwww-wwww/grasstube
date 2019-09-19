@@ -1,5 +1,5 @@
 import css from "../css/video.css"
-import {create_modal, modal_set_title} from "./modals"
+import {create_modal} from "./modals"
 import GrassPlayer from "./grassplayer"
 import socket from "./socket"
 
@@ -14,6 +14,6 @@ const wplayer = new GrassPlayer(player)
 //wplayer.set_videos({"yt": piacere})
 
 const modal = create_modal(player)
-modal_set_title(modal, "this is for autoplay")
+modal.label.textContent = "this is for autoplay"
 
 init_video(socket, room, wplayer)

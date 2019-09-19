@@ -1,4 +1,4 @@
-import {create_modal, modal_set_title, modal_get_body} from "./modals"
+import {create_modal} from "./modals"
 import {get_cookie, set_cookie} from "./cookies"
 import {change_layout} from "./drag"
 
@@ -8,8 +8,8 @@ function init() {
 
 function make_settings() {
 	const modal = create_modal()
-	const modal_body = modal_get_body(modal)
-	modal_set_title(modal, "settings")
+	const modal_body = modal.get_body()
+	modal.label.textContent = "settings"
 	
 	let row = document.createElement("div")
 	row.style.display = "block"

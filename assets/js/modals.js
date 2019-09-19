@@ -1,5 +1,4 @@
 function create_modal(root) {
-
 	root = root || body
 
 	const modal = document.createElement("div")
@@ -10,42 +9,41 @@ function create_modal(root) {
 	modal_back.onclick = e => {
 		root.removeChild(modal)
 	}
+	modal.appendChild(modal_back)
 
-	const modal_inner = document.createElement("div")
-	modal_inner.className = "modal-inner"
+	modal.inner = document.createElement("div")
+	modal.inner.className = "modal-inner"
+	modal.appendChild(modal.inner)
 
-	const modal_close = document.createElement("span")
-	modal_close.className = "modal-close"
+	const modal_header = document.createElement("div")
+	modal_header.className = "modal-header"
+	modal.inner.appendChild(modal_header)
+	
+	const modal_close = document.createElement("button")
+	modal_close.className = "modal-close square"
 	modal_close.textContent = "×"
-	modal_close.onclick = e => {
+	modal_close.onclick = _ => {
 		root.removeChild(modal)
 	}
+	modal_header.appendChild(modal_close)
 
-	const modal_title = document.createElement("span")
-	modal_title.className = "modal-title"
-
-	modal.appendChild(modal_back)
-	modal_inner.appendChild(modal_close)
-	modal_inner.appendChild(modal_title)
-	modal.appendChild(modal_inner)
+	modal.label = document.createElement("span")
+	modal.label.className = "modal-title"
+	modal_header.appendChild(modal.label)
 
 	root.appendChild(modal)
+
+	modal.get_body = () => {
+		if (modal.body == "undefined" || modal.body == null) {
+			modal.body = document.createElement("div")
+			modal.body.className = "modal-content"
+			modal.inner.appendChild(modal.body)
+		}
+	
+		return modal.body
+	}
 
 	return modal
 }
 
-function modal_set_title(modal, title) {
-	modal.children[1].children[1].textContent = title
-}
-
-function modal_get_body(modal) {
-	if (modal.children[1].children[2] == "undefined" || modal.children[0].children[2] == null) {
-		const modal_content = document.createElement("div")
-		modal_content.className = "modal-content"
-		modal.children[1].appendChild(modal_content)
-	}
-
-	return modal.children[1].children[2]
-}
-
-export {create_modal, modal_set_title, modal_get_body}
+export {create_modal}

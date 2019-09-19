@@ -1,6 +1,6 @@
 import "phoenix_html"
 
-import {create_modal, modal_set_title, modal_get_body} from "./modals"
+import {create_modal} from "./modals"
 import {pad, enter} from "./extras"
 import {get_cookie, set_cookie} from "./cookies"
 
@@ -60,22 +60,23 @@ function init(socket, room) {
 
 function make_change_nickname() {
 	const modal = create_modal(chat_div)
-	modal_set_title(modal, "change your nickname")
+	modal.label.textContent = "change your nickname"
 
-	const modal_body = modal_get_body(modal)
+	const modal_body = modal.get_body()
 	modal_body.style.textAlign = "right"
 
 	const textfield = document.createElement("input")
 	modal_body.appendChild(textfield)
 
 	textfield.style.display = "block"
+	textfield.style.width = "100%"
 	textfield.value = get_cookie("nickname") || "anon"
 
 	const btn_set = document.createElement("button")
 	modal_body.appendChild(btn_set)
 
 	btn_set.textContent = "set"
-	btn_set.style.marginTop = "4px"
+	btn_set.style.marginTop = "0.5em"
 
 	btn_set.addEventListener("click", () => {
 		if (set_name(textfield.value.trim())) {

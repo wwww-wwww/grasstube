@@ -1,5 +1,3 @@
-import {modal_get_body} from "./modals"
-
 const emotes = {}
 let emotes_data = ""
 const hosted_videos = {}
@@ -7,7 +5,7 @@ const hosted_videos = {}
 function reload_emotes(room, modal, chatbox, refresh = true) {
 	if (modal == null || modal == undefined) return
 
-	const modal_body = modal_get_body(modal)
+	const modal_body = modal.get_body()
 	modal_body.style.textAlign = "center"
 	const sorted_keys = Object.keys(emotes).sort()
 	sorted_keys.forEach(emote => {
@@ -77,7 +75,7 @@ function reload_hosted_videos(modal, channel, url, download=true) {
 		return
 	}
 	
-	const modal_body = modal_get_body(modal)
+	const modal_body = modal.get_body()
 	while (modal_body.firstChild) modal_body.removeChild(modal_body.firstChild)
 	let color = "rgba(255, 255, 255, 0)"
 	
@@ -95,6 +93,7 @@ function reload_hosted_videos(modal, channel, url, download=true) {
 		const btn_add = document.createElement("button")
 		btn_add.textContent = "add"
 		btn_add.style.float = "right"
+		btn_add.style.height = "100%"
 
 		btn_add.addEventListener("click", () => {
 			channel.push("q_add", {
