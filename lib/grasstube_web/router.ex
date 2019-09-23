@@ -53,6 +53,7 @@ defmodule GrasstubeWeb.Router do
     scope "/" do
       pipe_through :logged_in
       post "/add_emote", UserController, :add_emote
+      post "/import_emotes", UserController, :import_emotes
       post "/delete_emote", UserController, :delete_emote
     end
   end
@@ -62,5 +63,6 @@ defmodule GrasstubeWeb.Router do
     post "/auth", UserController, :auth
     get "/list_rooms", PageController, :list_rooms
     get "/emotes/r/:room", PageController, :emotes
+    get "/emotes/u/:username", UserController, :emotes_json
   end
 end

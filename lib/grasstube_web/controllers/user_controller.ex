@@ -105,6 +105,23 @@ defmodule GrasstubeWeb.UserController do
     end
   end
 
+  def import_emotes(conn, %{"json" => json}) do
+    user = Guardian.Plug.current_resource(conn)
+    case Jason.decode(json) do
+      {:ok, emotes} ->
+        Enum.each(emotes, fn {emote, url} ->
+          new_emote = Ecto.build_assoc(user, :emotes, emote: emote |> String.downcase() |> String.trim(":"), url: url)
+          Repo.insert(new_emote)
+        end)
+        conn
+        |> redirect(to: "/user/#{user.username}")
+      {:error, _} ->
+        conn
+        |> put_flash("error", "bad json")
+        |> redirect(to: "/user/#{user.username}")
+    end
+  end
+
   def delete_emote(conn, %{"id" => emote_id}) do
     user = Guardian.Plug.current_resource(conn)
 
@@ -119,6 +136,17 @@ defmodule GrasstubeWeb.UserController do
         else
           redirect(conn, to: "/user/#{user.username}")
         end
+    end
+  end
+
+  def emotes_json(conn, %{"username" => username}) do
+    case Repo.get(Grasstube.User, username) do
+      nil ->
+        json(conn, %{success: false, message: "user not found"})
+      user ->
+        emotes = Repo.preload(user, :emotes).emotes
+        |> Enum.reduce(%{}, fn emote, acc -> Map.put(acc, emote.emote, emote.url) end)
+        json(conn, emotes)
     end
   end
 
