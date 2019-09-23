@@ -26,8 +26,11 @@ button, input, select, textarea {
 	background: none;
 	color: rgba(255, 255, 255, 0.7);
 	transition: color 0.05s, background-color 0.05s;
-	line-height: 2em;
 	vertical-align: middle;
+}
+
+textarea {
+	line-height: 2em;
 }
 
 button, select {
@@ -70,6 +73,7 @@ option {
 	font-size: 1em;
 	height: 1.5em;
 	width: 1.5em;
+	vertical-align: unset;
 }
 
 a {

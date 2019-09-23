@@ -11,10 +11,6 @@
 	color: rgb(150, 150, 150);
 }
 
-#btn_userlist_toggle {
-	margin: 1px 0 0 3px;
-}
-
 .message_timestamp {
 	font-size: 0.75em;
 	line-height: 14px;
@@ -42,20 +38,21 @@
 	position: absolute;
 	z-index: 1;
 	border: none;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 	background: none;
 	width: 100%;
 	vertical-align: middle;
-	line-height: 2em;
+	padding: 4px;
 	height: 2em;
 }
 
 .chat_main_area {
+	border-top: 1px solid rgba(255, 255, 255, 0.4);
 	position: absolute;
 	display: flex;
 	width: 100%;
 	height: 100%;
-	padding: 2em 0 2em 0;
+	margin: 2em 0;
+	padding-bottom: 4em;
 }
 
 #userlist {

@@ -225,17 +225,14 @@ html, body {
 
 .chat_header {
 	width: 100%;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-	vertical-align: middle;
 	font-size: 1em;
-	line-height: 2em;
+	padding: 4px;
 	height: 2em;
-	padding-left: 2px;
-	padding-right: 2px;
 	display: inline-block;
 }
 
 .chat_main_area {
+	border-top: 1px solid rgba(255, 255, 255, 0.4);
 	position: relative;
 	width: 100%;
 	height: calc(100% - 2em);
@@ -288,10 +285,6 @@ html, body {
 	width: 2em;
 	height: 2em;
 	padding: auto;
-}
-
-#btn_userlist_toggle {
-	margin-top: 1px;
 }
 
 .message_timestamp {
