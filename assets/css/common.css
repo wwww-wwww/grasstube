@@ -28,13 +28,16 @@ button, input, select {
 }
 
 button:focus, input:focus, select:focus {
-	/*outline: 1px solid rgba(255, 255, 255, 0.6);*/
 	box-shadow: 0 0 0 1pt rgba(255, 255, 255, 0.6);
 }
 
 button:hover {
 	background: rgba(255, 255, 255, 0.3);
 	cursor: pointer;
+}
+
+button:disabled {
+	cursor: default;
 }
 
 button:active {
@@ -67,6 +70,10 @@ a {
 	margin-bottom: 4px;
 }
 
+a:focus {
+	box-shadow: 0 0 0 1pt rgba(255, 255, 255, 0.6);
+}
+
 .modal {
 	display: flex;
 	justify-content: center;
@@ -85,13 +92,12 @@ a {
 
 .modal-header {
 	font-size: 1em;
-	height: 2em;
 }
 
 .modal-title {
-	display: inline-block;
-	padding: 0 8px;
+	margin: 0 0.5em;
 	line-height: 2em;
+	box-decoration-break: clone;
 }
 
 .modal-back {
@@ -125,7 +131,6 @@ a {
 	float: right;
 	text-align: center;
 	font-weight: bold;
-	line-height: 2em;
 	width: 2em;
 	height: 2em;
 	border: none;

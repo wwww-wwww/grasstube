@@ -29,7 +29,7 @@ modal.label.textContent = "this is for autoplay"
 init_video(socket, room, wplayer)
 
 init_playlist(socket, room)
-//init_polls(socket, room)
+init_polls(socket, room)
 
 init_settings()
 init_drag()

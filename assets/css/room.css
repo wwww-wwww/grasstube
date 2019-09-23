@@ -105,49 +105,64 @@ html, body {
 
 #polls_list {
 	width: 100%;
+	margin-top: 4px;
+	font-size: 0.8em;
 }
+
 .poll_item {
-	padding: 8px 0 0 6px;
+	margin-bottom: 1em;
 	max-width: 100%;
 	position: relative;
 }
+
 .poll_item-inner {
 	display: inline-block;
-	padding: 8px;
 	border: 1px solid rgba(255, 255, 255, 0.4);
-}
-.poll_choice {
-	margin-top: 2px;
-	display: block;
-	line-height: 21px;
-	height: 21px;
-	position: relative;
+	max-width: 100%;
 }
 
-.poll_item_title {
-	margin-right: 4px;
+.poll_item-header {
+	font-size: 1em;
+}
+
+.poll_item-body {
+	padding: 0.5em;
+	border-top: 1px solid rgba(255, 255, 255, 0.4);
+	width: 100%;
+}
+
+.poll_choice {
+	margin-bottom: 0.5em;
+	display: block;
+	line-height: 1.5em;
+}
+
+.poll_item-title {
+	margin: 0 0.5em;
+	font-size: 1em;
+	line-height: 2em;
+	box-decoration-break: clone;
+	word-wrap: break-word;
+}
+
+.poll_choice > span {
+	font-size: 1em;
+	line-height: 1.5em;
+	margin-left: 0.5em;
+	box-decoration-break: clone;
+	word-wrap: break-word;
 }
 
 .poll_choice > button {
-	width: 21px;
-	padding: 0;
-	margin-right: 2px;
+	float: left;
 }
 
-.poll-item-remove {
+.poll_item-delete {
 	float: right;
-	color: rgba(255, 255, 255, 0.7);
-	text-align: center;
+	width: 2em;
+	height: 2em;
 	font-weight: bold;
-	font-size: 19px;
-	line-height: 17px;
-}
-
-.poll-item-remove:hover,
-.poll-item-remove:focus {
-	color: white;
-	text-decoration: none;
-	cursor: pointer;
+	border: none;
 }
 
 .playlist_outer {
@@ -187,7 +202,7 @@ html, body {
 	padding: 4px 0 4px;
 }
 
-#playlist_controls, #btn_user_settings {
+#playlist_controls, #btn_user_settings, #btn_create_poll {
 	font-size: 0.8em;
 }
 

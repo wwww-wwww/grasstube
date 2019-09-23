@@ -4,6 +4,7 @@ import "phoenix_html"
 let channel = null
 let is_mod = false
 let myid = -1
+let username = ""
 
 function init(socket, room) {
 	console.log("polls: connecting to room " + room)
@@ -16,9 +17,23 @@ function init(socket, room) {
 		console.log("polls: failed to connect", resp)
 	})
 
+	channel.on("controls", data => {
+		console.log("polls: controls", data)
+		is_mod = true
+		btn_create_poll.classList.toggle("hidden", false)
+		for (const poll_id in polls) {
+			polls[poll_id].btn_delete.classList.toggle("hidden", false)
+		}
+	})
+
 	channel.on("id", data => {
 		console.log("polls: id", data)
 		myid = data.id
+	})
+
+	channel.on("username", data => {
+		console.log("polls: username", data)
+		username = data.username
 	})
 
 	channel.on("polls", on_get_polls)
@@ -37,29 +52,59 @@ function on_get_polls(data) {
 	for (const id in polls) {
 		const poll = polls[id]
 
-		poll.e = poll_item_template.cloneNode(true)
-		poll.e.id = ""
-		poll.e.children[0].children[1].textContent = poll.title
+		poll.e = document.createElement("div")
+		poll.e.className = "poll_item"
 
-		poll.e.children[0].children[0].classList.toggle("hidden", !is_mod)
+		const inner = document.createElement("div")
+		inner.className = "poll_item-inner"
+		poll.e.appendChild(inner)
+		
+		const header = document.createElement("div")
+		header.className = "poll_item-header"
+		inner.appendChild(header)
 
-		poll.e.children[0].children[0].addEventListener("click", () => {
+		poll.btn_delete = document.createElement("button")
+		poll.btn_delete.className = "square poll_item-delete"
+		poll.btn_delete.classList.toggle("hidden", !is_mod)
+		poll.btn_delete.textContent = "×"
+		header.appendChild(poll.btn_delete)
+
+		poll.btn_delete.addEventListener("click", () => {
 			channel.push("poll_remove", {id: id})
 		})
 		
+		const poll_title = document.createElement("span")
+		poll_title.className = "poll_item-title"
+		poll_title.textContent = poll.title
+		header.appendChild(poll_title)
+
+		const poll_body = document.createElement("div")
+		poll_body.className = "poll_item-body"
+		inner.appendChild(poll_body)
+
 		polls_list.insertBefore(poll.e, polls_list.firstChild)
 		
 		poll.choices.forEach(choice => {
-			const poll_choice = poll_item_choice_template.cloneNode(true)
-			poll_choice.id = ""
-			poll_choice.children[0].textContent = choice.users.length
-			poll_choice.children[0].disabled = choice.users.includes(myid)
-			poll_choice.children[1].textContent = choice.name
-			poll_choice.children[0].addEventListener("click", () => {
+			const poll_choice = document.createElement("div")
+			poll_choice.className = "poll_choice"
+
+			const poll_choose = document.createElement("button")
+			poll_choose.className = "square"
+			poll_choose.textContent = choice.users.length + choice.guests.length
+			poll_choose.disabled = choice.users.includes(username) || choice.guests.includes(myid)
+			poll_choose.addEventListener("click", () => {
 				channel.push("poll_vote", {id: id, choice: choice.name})
 			})
-			poll.e.children[0].children[2].appendChild(poll_choice)
+
+			poll_choice.appendChild(poll_choose)
+
+			const choice_name = document.createElement("span")
+			choice_name.textContent = choice.name
+			poll_choice.appendChild(choice_name)
+			poll_body.appendChild(poll_choice)
 		})
+
+		poll_body.lastChild.style.marginBottom = 0
 	}
 }
 
@@ -85,6 +130,8 @@ function create_choice(choices, choices_list) {
 
 	choice.del = document.createElement("button")
 	choice.del.textContent = "×"
+	choice.del.style.width = "2em"
+	choice.del.style.height = "2em"
 	choice.del.classList.add("square")
 
 	choice.del.addEventListener("click", () => {
