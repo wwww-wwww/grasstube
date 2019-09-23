@@ -14,7 +14,7 @@ defmodule GrasstubeWeb.ChatChannel do
         {:error, "no room"}
         
       channel ->
-        :ok = ChannelWatcher.monitor(:rooms, self(), {__MODULE__, :leave, [socket.id, socket.topic]})
+        :ok = ChannelWatcher.monitor(:rooms, self(), {__MODULE__, :leave, [socket, socket.topic]})
 
         new_user = if Guardian.Phoenix.Socket.authenticated?(socket) do
             user = Guardian.Phoenix.Socket.current_resource(socket)
@@ -53,17 +53,17 @@ defmodule GrasstubeWeb.ChatChannel do
     {:noreply, socket}
   end
   
-  def leave(user_id, topic) do
+  def leave(socket, topic) do
     "chat:" <> room_name = topic
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
-    case ChatAgent.get_user(chat, user_id) do
+    case ChatAgent.get_user(chat, socket.id) do
       :not_found ->
         nil
 
       _ ->
-        ChatAgent.remove_user(chat, user_id)
-        Logger.info(user_id <> " left")
+        ChatAgent.remove_user(chat, socket.id)
+        Logger.info(socket.id <> " left")
         Endpoint.broadcast(topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
     end
   end
