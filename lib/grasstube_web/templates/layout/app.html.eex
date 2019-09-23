@@ -16,6 +16,7 @@
 			}
 
 			header {
+				font-family: 'Google Sans', sans-serif;
 				width: 100%;
 				border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 				height: 2em;
