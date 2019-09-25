@@ -35,9 +35,12 @@ function create_modal(root) {
 
 	modal.get_body = () => {
 		if (modal.body == "undefined" || modal.body == null) {
+			const body_outer = document.createElement("div")
+			body_outer.style.overflow = "auto"
+			modal.inner.appendChild(body_outer)
 			modal.body = document.createElement("div")
 			modal.body.className = "modal-content"
-			modal.inner.appendChild(modal.body)
+			body_outer.appendChild(modal.body)
 		}
 	
 		return modal.body

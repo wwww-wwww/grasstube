@@ -120,18 +120,17 @@ function create_choice(choices, choices_list) {
 	const choice = {}
 
 	choice.e = document.createElement("div")
-	choice.e.style.marginTop = "4px"
+	choice.e.style.marginTop = "0.5em"
 	choice.e.style.display = "block"
 
 	choice.name = document.createElement("input")
 	choice.name.placeholder = "name of choice"
-	choice.name.style.marginRight = "4px"
+	choice.name.style.marginRight = "0.5em"
 	choice.e.appendChild(choice.name)
 
 	choice.del = document.createElement("button")
 	choice.del.textContent = "×"
-	choice.del.style.width = "2em"
-	choice.del.style.height = "2em"
+	choice.del.style.verticalAlign = "middle"
 	choice.del.classList.add("square")
 
 	choice.del.addEventListener("click", () => {
@@ -160,7 +159,7 @@ function create_poll_modal() {
 	modal_body.appendChild(poll_title)
 
 	const choices_list = document.createElement("div")
-	choices_list.style.marginTop = "4px"
+	choices_list.style.marginTop = "0.5em"
 	modal_body.appendChild(choices_list)
 	
 	const choices = []
@@ -168,8 +167,8 @@ function create_poll_modal() {
 
 	const poll_add_choice = document.createElement("button")
 	poll_add_choice.textContent = "add another choice"
-	poll_add_choice.style.marginTop = "4px"
-	poll_add_choice.style.marginRight = "4px"
+	poll_add_choice.style.marginTop = "0.5em"
+	poll_add_choice.style.marginRight = "0.5em"
 
 	poll_add_choice.addEventListener("click", () => {
 		create_choice(choices, choices_list).name.focus()
@@ -180,7 +179,7 @@ function create_poll_modal() {
 	const poll_create = document.createElement("button")
 	poll_create.textContent = "create"
 	poll_create.style.float = "right"
-	poll_create.style.marginTop = "4px"
+	poll_create.style.marginTop = "0.5em"
 
 	poll_create.addEventListener("click", () => {
 		const final_title = poll_title.value.trim()

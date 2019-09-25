@@ -57,10 +57,6 @@ html, body {
 	font-weight: 500;
 }
 
-#bottom {
-	margin-top: 4px;
-}
-
 #bottom:after {
 	content: "";
 	display: table;
@@ -105,12 +101,11 @@ html, body {
 
 #polls_list {
 	width: 100%;
-	margin-top: 4px;
-	font-size: 0.8em;
+	margin-top: 0.5em;
 }
 
 .poll_item {
-	margin-bottom: 1em;
+	margin-bottom: 0.5em;
 	max-width: 100%;
 	position: relative;
 }
@@ -166,15 +161,14 @@ html, body {
 }
 
 .playlist_outer {
+	margin-top: 0.5em;
 	display: inline-block;
-	margin-top: 4px;
 	border: 1px solid rgba(255, 255, 255, 0.3);
-	font-size: 13px;
 }
 
 .playlist_header {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-	padding: 4px;
+	padding: 0.5em 0.5em;
 	text-align: left;
 }
 
@@ -183,27 +177,28 @@ html, body {
 }
 
 .playlist_item {
-	padding: 0 4px 0 4px;
+	padding: 0 0.5em;
 }
 
 .playlist_item_duration {
-	margin-left: 8px;
+	margin-left: 0.5em;
 }
 
 .playlist_set {
-	margin-left: 4px;
+	margin-left: 0.5em;
 }
 
 .playlist_remove {
-	margin-right: 4px;
+	margin-right: 0.5em;
 }
 
 #playlist_container {
-	padding: 4px 0 4px;
+	padding: 0.5em 0;
 }
 
-#playlist_controls, #btn_user_settings, #btn_create_poll {
+#bottom {
 	font-size: 0.8em;
+	margin-top: 0.5em;
 }
 
 .isactive, .isactive > a {
@@ -223,68 +218,73 @@ html, body {
 	color: rgb(150, 150, 150);
 }
 
+#chat_div {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
 .chat_header {
-	width: 100%;
 	font-size: 1em;
 	padding: 4px;
 	height: 2em;
-	display: inline-block;
 }
 
 .chat_main_area {
-	border-top: 1px solid rgba(255, 255, 255, 0.4);
 	position: relative;
-	width: 100%;
-	height: calc(100% - 2em);
+	border-top: 1px solid rgba(255, 255, 255, 0.4);
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
 }
 
 #userlist {
 	position: absolute;
 	background: rgba(0, 0, 0, 0.6);	
-	padding: 4px;
-	width: 120px;
+	padding: 0.5em;
+	width: 8em;
 	left: 0;
 	top: 0;
 	overflow-y: auto;
+	word-wrap: break-word;
 	text-align: left;
 	height: unset;
-	max-height: 150px;
+	max-height: 10em;
 	border-right: 1px solid rgba(255, 255, 255, 0.4);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-#messages {
-	width: 100%;
-	height: calc(100% - 2em);
+#messages_outer {
+	flex: 1;
 	overflow-y: auto;
-	padding: 4px;
+}
+
+#messages {
+	padding: 0.5em;
 	word-wrap: break-word;
 	color: rgba(255, 255, 255, 0.7);
-	background: black;
+	background: none;
 }
 
 #input_area {
 	border: none;
 	background: none;
-	width: 100%;
-	vertical-align: middle;
 	font-size: 1em;
 	line-height: 2em;
 	height: 2em;
+	display: flex;
 }
 
 #chat_input {
-	width: calc(100% - 2em);
+	flex: 1;
 	font-size: 1em;
-	float: left;
 	height: 2em;
 }
 
 #btn_show_emotes {
-	float: right;
 	width: 2em;
 	height: 2em;
-	padding: auto;
 }
 
 .message_timestamp {
@@ -292,12 +292,16 @@ html, body {
 	line-height: 14px;
 }
 
-.message_content img {
-	max-height: 100px;
+.message_content > img {
+	max-height: 6em;
 }
 
 .message_user {
 	font-weight: 500;
+}
+
+hr {
+	margin-bottom: 0.5em;
 }
 
 #userlist.hidden, #seekbar.hidden {

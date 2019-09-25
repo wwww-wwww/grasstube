@@ -6,22 +6,22 @@
 
 	.inner {
 		display: inline-block;
-		font-size: 1.5em;
+		font-size: 1.25em;
 	}
 
 	.form {
 		display: block;
 		text-align: center;
-		margin-top: 12px;
 	}
 
 	.form > div > input {
 		display: block;
-		margin: 12px;
-		padding: 0 12px;
-		font-size: 0.8em;
-		height: 2em;
-		border-radius: 100px;
+		margin: 0.5em 0;
+		padding: 0.25em 0.75em;
+		font-size: 1em;
+		width: 12em;
+		max-width: 100%;
+		border-radius: 1em;
 	}
 
 	.form > div {
@@ -29,17 +29,16 @@
 	}
 	
 	.form > div > button {
-		padding: 0 12px;
+		padding: 0.25em 0.75em;
 		font-size: 1em;
-		height: 1.5em;
-		border-radius: 100px;
+		border-radius: 1em;
 		cursor: pointer;
 	}
 
 	.sign_in {
 		display: block;
-		margin-top: 20px;
-		font-size: 0.8em;
+		margin-top: 0.5em;
+		font-size: 0.75em;
 	}
 </style>
 

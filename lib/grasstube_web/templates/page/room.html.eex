@@ -7,7 +7,7 @@
 		<div id="maincontent">
 			<div id="dragbar_h" style="opacity: 0"></div>
 			<div id="container_chat">
-				<div id="chat_div" style="position: relative; width: 100%; height: 100%;">
+				<div id="chat_div">
 					<div class="chat_header">
 						<button id="btn_userlist_toggle" class="square">👨‍👦</button>
 						<button id="btn_chat_settings" class="square">⚙</button>
@@ -15,7 +15,9 @@
 					</div>
 
 					<div class="chat_main_area">
-						<div id="messages"></div>
+						<div id="messages_outer">
+							<div id="messages"></div>
+						</div>
 						<div id="input_area">
 							<input id="chat_input" type="text"/>
 							<button id="btn_show_emotes" class="square">🙂</button>
@@ -31,6 +33,9 @@
 		<div id="bottom">
 			<div class="col">
 				<button id="btn_user_settings">settings</button>
+				<%= link("chat only", to: Routes.page_path(@conn, :chat, @room), class: "button") %>
+				
+				<%= link("video only", to: Routes.page_path(@conn, :video, @room), class: "button") %>
 				<button id="btn_create_poll" class="hidden">create poll</button>
 				<div id="polls_list"></div>
 			</div>

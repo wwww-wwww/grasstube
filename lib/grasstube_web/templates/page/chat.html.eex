@@ -6,14 +6,18 @@
 		<span id="user_count">disconnected</span>
 	</div>
 	<div class="chat_main_area">
-		<div id="userlist"></div>
-		<div class="chat_right">
-			<div id="messages"></div>
+		<div class="top">
+			<div id="userlist"></div>
+			<div id="messages_outer">
+				<div id="messages"></div>
+			</div>
 		</div>
-	</div>
-	<div id="input_area">
-		<input id="chat_input" type="text"/>
-		<button id="btn_show_emotes" class="square">🙂</button>
+		<div class="bottom">
+			<div id="input_area">
+				<input id="chat_input" type="text"/>
+				<button id="btn_show_emotes" class="square">🙂</button>
+			</div>
+		</div>
 	</div>
 </div>
 

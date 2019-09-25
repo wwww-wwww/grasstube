@@ -12,23 +12,26 @@
 		<% end %>
 		<style>
 			body {
-				font-size: 1.5em;
+				font-size: 1.25em;
+				display: flex;
+				flex-direction: column;
+				height: 100%;
 			}
 
 			header {
 				font-family: 'Google Sans', sans-serif;
-				width: 100%;
 				border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 				height: 2em;
 				z-index: 99;
+				transition: 0.1s opacity;
 			}
 			header > section > nav > span > a {
 				margin: 4px;
 				line-height: 2em;
 			}
 			main {
-				width: 100%;
-				height: calc(100% - 2em);
+				flex: 1;
+				min-height: 0;
 				overflow: auto;
 			}
 			.alerts {
@@ -36,7 +39,7 @@
 				width: 100%;
 			}
 			.alert {
-				font-size: 1.5em;
+				font-size: 1.25em;
 			}
 
 			.alert-danger {

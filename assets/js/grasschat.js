@@ -126,7 +126,8 @@ function on_chat(data) {
 	}
 
 	if (data.name != last_chat_user) {
-		msg.style.marginTop = "4px"
+		if (last_chat_user.length != 0)
+			msg.style.marginTop = "0.5em"
 		
 		if (data.sender != "sys") {
 			const d = new Date()
@@ -141,9 +142,8 @@ function on_chat(data) {
 			msg.appendChild(username)
 			msg.appendChild(separator)
 		}
-	last_chat_user = data.name
+		last_chat_user = data.name
 	}
-
 
 	const message_content = document.createElement("span")
 	message_content.className = "message_content"
@@ -156,7 +156,7 @@ function on_chat(data) {
 	message_content.innerHTML = data.content
 
 	messages.appendChild(msg)
-	messages.scrollTop = messages.scrollHeight
+	messages_outer.scrollTop = messages_outer.scrollHeight
 }
 
 function on_history(data) {
@@ -170,7 +170,8 @@ function on_history(data) {
 		username.className = "message_user"
 
 		if (last_chat_user != message.name) {
-			msg.style.marginTop = "4px"
+			if (last_chat_user.length != 0)
+				msg.style.marginTop = "0.5em"
 			
 			username.textContent = message.name
 
@@ -191,7 +192,7 @@ function on_history(data) {
 		message_content.innerHTML = message.msg
 
 		messages.appendChild(msg)
-		messages.scrollTop = messages.scrollHeight
+		messages_outer.scrollTop = messages_outer.scrollHeight
 
 	})
 

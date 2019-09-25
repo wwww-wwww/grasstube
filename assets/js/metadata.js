@@ -76,6 +76,7 @@ function reload_hosted_videos(modal, channel, url, download=true) {
 	}
 	
 	const modal_body = modal.get_body()
+	
 	while (modal_body.firstChild) modal_body.removeChild(modal_body.firstChild)
 	let color = "rgba(255, 255, 255, 0)"
 	
@@ -87,13 +88,14 @@ function reload_hosted_videos(modal, channel, url, download=true) {
 
 		const title = document.createElement("span")
 		title.textContent = v.title
-		title.style.marginRight = "4px"
+		title.style.marginRight = "0.5em"
 		item.appendChild(title)
 
 		const btn_add = document.createElement("button")
 		btn_add.textContent = "add"
 		btn_add.style.float = "right"
-		btn_add.style.height = "100%"
+		btn_add.style.lineHeight = "1em"
+		btn_add.style.padding = "0em 0.5em"
 
 		btn_add.addEventListener("click", () => {
 			channel.push("q_add", {
