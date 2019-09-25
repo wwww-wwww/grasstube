@@ -271,15 +271,13 @@ html, body {
 	border: none;
 	background: none;
 	font-size: 1em;
-	line-height: 2em;
-	height: 2em;
 	display: flex;
 }
 
 #chat_input {
 	flex: 1;
 	font-size: 1em;
-	height: 2em;
+	min-width: 0;
 }
 
 #btn_show_emotes {
