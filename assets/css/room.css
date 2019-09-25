@@ -160,8 +160,11 @@ html, body {
 	border: none;
 }
 
+#playlist_controls {
+	margin-bottom: 0.5em;
+}
+
 .playlist_outer {
-	margin-top: 0.5em;
 	display: inline-block;
 	border: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -180,11 +183,7 @@ html, body {
 	padding: 0 0.5em;
 }
 
-.playlist_item_duration {
-	margin-left: 0.5em;
-}
-
-.playlist_set {
+.playlist_item_duration, .playlist_set {
 	margin-left: 0.5em;
 }
 
