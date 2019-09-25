@@ -29,7 +29,18 @@ function init(socket, room) {
 		users = []
 		while (userlist.firstChild) userlist.removeChild(userlist.firstChild)
 
-		data.list.forEach(user => {
+		for (const user of data.list) {
+			if (user.username.length > 0) {
+				let users_contains = false
+				for (const u2 of users) {
+					if (u2.username == user.username) {
+						users_contains = true
+						break
+					}
+				}
+				if (users_contains) continue
+			}
+
 			users.push(user)
 			const e = document.createElement("div")
 			e.className = "user"
@@ -42,8 +53,8 @@ function init(socket, room) {
 
 			e.appendChild(user_name)
 			userlist.appendChild(e)
-		})
-		user_count.textContent = data.list.length + (data.list.length > 1 ? " users connected" : " user connected")
+		}
+		user_count.textContent = users.length + (users.length > 1 ? " users connected" : " user connected")
 	})
 
 	channel.on("chat", on_chat)
@@ -88,8 +99,8 @@ function make_change_nickname() {
 	})
 	
 	textfield.addEventListener("keyup", event => {
-		event.preventDefault();
-		if (event.keyCode !== 13) return;
+		event.preventDefault()
+		if (event.keyCode !== 13) return
 		if (set_name(textfield.value.trim())) {
 			chat_div.removeChild(modal)
 		} else {
