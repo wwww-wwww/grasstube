@@ -120,27 +120,6 @@ function init(socket, room) {
 	})
 }
 
-function add_ss(e) {
-	if (ss.length <= 1 &&
-		(e.selectedIndex - 1) < ss.length) return
-
-	const vid = ss[e.target.selectedIndex - 1]
-	add_url.value = vid["url"]
-	add_sub.value = vid["sub"]
-	e.target.selectedIndex = 0
-}
-
-/*
-function toggle_playing() {
-	channel.push("toggle_playing")
-}
-
-function set_seek() {
-	if (get_clappr_instance() != null)
-		channel.push("seek", {t: (seekbar.value / 1000) * get_clappr_instance().getDuration() })
-}
-*/
-
 function queue_add() {
 	channel.push("q_add", {
 		url: add_url.value,
@@ -155,7 +134,7 @@ function queue_set(e) {
 	for (let i = 0; i < playlist.length; i++) {
 		if (playlist[i].q_set == e.target) {
 			channel.push("q_set", {id: playlist[i].id})
-			break;
+			break
 		}
 	}
 }
@@ -164,15 +143,9 @@ function queue_remove(e) {
 	for (let i = 0; i < playlist.length; i++) {
 		if (playlist[i].q_del == e.target) {
 			channel.push("q_del", {id: playlist[i].id})
-			break;
+			break
 		}
 	}
 }
-
-/*
-function queue_next() {
-	channel.push("q_next")
-}
-*/
 
 export default init

@@ -3,9 +3,9 @@ import {Socket} from "phoenix"
 function getMeta(metaName) {
 	const metas = [...document.getElementsByTagName('meta')]
   
-	for (const i in metas) {
-		if (metas[i].getAttribute("name") == metaName) {
-			return metas[i].getAttribute("content")
+	for (const meta of metas) {
+		if (meta.getAttribute("name") == metaName) {
+			return meta.getAttribute("content")
 		}
 	}
   

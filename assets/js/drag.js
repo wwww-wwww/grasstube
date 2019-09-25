@@ -16,11 +16,11 @@ function init() {
 	change_layout()
 
 	window.addEventListener("resize", e => {
-		const scrollbar = container2.offsetWidth - container2.clientWidth;
-		container2.style.paddingRight = scrollbar + "px";
-		container2.style.width = "calc(100% + " + scrollbar + "px)";
-		maincontent.style.width = "calc(100% + " + scrollbar + "px)";
-		bottom.style.width = "calc(100% + " + scrollbar + "px)";
+		const scrollbar = container2.offsetWidth - container2.clientWidth
+		container2.style.paddingRight = scrollbar + "px"
+		container2.style.width = "calc(100% + " + scrollbar + "px)"
+		maincontent.style.width = "calc(100% + " + scrollbar + "px)"
+		bottom.style.width = "calc(100% + " + scrollbar + "px)"
 
 		if (maincontent.style.flexDirection == "row-reverse")
 			dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().left + 1}px, 0)`
@@ -36,14 +36,14 @@ function init() {
 		e.preventDefault()
 		dragging_h = true
 		document.addEventListener("mousemove", drag_h)
-		dragbar_h.style.opacity = 1;
+		dragbar_h.style.opacity = 1
 	})
 
 	dragbar_v.addEventListener("mousedown", e => {
 		e.preventDefault()
 		dragging_v = true
 		document.addEventListener("mousemove", drag_v)
-		dragbar_v.style.opacity = 1;
+		dragbar_v.style.opacity = 1
 	})
 
 	document.addEventListener("mouseup", e => {
@@ -63,8 +63,8 @@ function init() {
 		
 		dragging_h = false
 		dragging_v = false
-		dragbar_h.style.opacity = 0;
-		dragbar_v.style.opacity = 0;
+		dragbar_h.style.opacity = 0
+		dragbar_v.style.opacity = 0
 
 		window.dispatchEvent(new Event("resize"))
 	})

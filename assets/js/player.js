@@ -8,7 +8,7 @@ function init(socket, room, player) {
 	.then(data => {
 		data.resources.forEach(font => {
 			fonts.push(`https://res.cloudinary.com/okea/raw/upload/v${font.version}/${font.public_id}`)
-		});
+		})
 		console.log("fonts: fetched")
 		player.set_fonts(fonts)
 	})

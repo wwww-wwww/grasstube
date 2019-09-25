@@ -5,7 +5,7 @@ function get_cookies() {
 	} catch(e) {
 		console.log(e)
 	}
-	const ca = decoded.split(";");
+	const ca = decoded.split(";")
 	for (const i in ca) {
 		const cookie = ca[i].trim()
 		if (cookie.indexOf("data=") == 0)

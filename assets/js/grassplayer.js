@@ -266,8 +266,8 @@ class GrassPlayer {
 			if (this.settings.default_quality in videos) {
 				this.video.src = videos[this.settings.default_quality]
 			} else {
-				for (const video in videos) {
-					this.video.src = videos[video]
+				for (const video of videos) {
+					this.video.src = video
 					break
 				}
 			}

@@ -5,8 +5,8 @@ function pad(n, width, z) {
 }
 
 function enter(event, cb) {
-	event.preventDefault();
-	if (event.keyCode !== 13) return;
+	event.preventDefault()
+	if (event.keyCode !== 13) return
 	cb()
 }
 

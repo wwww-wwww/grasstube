@@ -35,7 +35,7 @@ function reload_emotes(room, modal, chatbox, refresh = true) {
 					for (const emote in emotes) delete emotes[emote]
 					data.emotes.forEach(emote => {
 						emotes[emote["emote"]] = emote["url"]
-					});
+					})
 					reload_emotes(room, modal, chatbox, false)
 				}
 				emotes_data = new_data
@@ -47,7 +47,7 @@ function reload_emotes(room, modal, chatbox, refresh = true) {
 		})
 		.catch(err => {
 			console.log("emotes: error fetching", err)
-		});
+		})
 	}
 }
 
@@ -65,12 +65,12 @@ function reload_hosted_videos(modal, channel, url, download=true) {
 				hosted_videos[url] = xhr.response
 				reload_hosted_videos(modal, channel, url, false)
 			}
-			console.log("videos: fetched");
+			console.log("videos: fetched")
 		}
 
 		xhr.onerror = function() {
-			console.log("videos: error fetching");
-		};
+			console.log("videos: error fetching")
+		}
 		xhr.send()
 		return
 	}

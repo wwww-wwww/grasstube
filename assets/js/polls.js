@@ -49,8 +49,8 @@ function on_get_polls(data) {
 
 	for (const poll in data) polls[poll] = data[poll]
 
-	for (const id in polls) {
-		const poll = polls[id]
+	for (const poll_id in polls) {
+		const poll = polls[poll_id]
 
 		poll.e = document.createElement("div")
 		poll.e.className = "poll_item"
