@@ -25,6 +25,8 @@ defmodule GrasstubeWeb.ChatChannel do
           
         ChatAgent.add_user(channel, new_user)
 
+        GrasstubeWeb.RoomsLive.update()
+
         send(self(), {:after_join, nil})
         {:ok, socket}
     end
@@ -65,6 +67,7 @@ defmodule GrasstubeWeb.ChatChannel do
         ChatAgent.remove_user(chat, socket.id)
         Logger.info(socket.id <> " left")
         Endpoint.broadcast(topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
+        GrasstubeWeb.RoomsLive.update()
     end
   end
 

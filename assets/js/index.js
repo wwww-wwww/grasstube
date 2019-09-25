@@ -1,6 +1,7 @@
 import css from "../css/index.css"
 
-import LiveSocket from "phoenix_live_view"
+import {Socket} from "phoenix"
+import {LiveSocket} from "phoenix_live_view"
 
-const liveSocket = new LiveSocket("/live")
+const liveSocket = new LiveSocket("/live", Socket)
 liveSocket.connect()
