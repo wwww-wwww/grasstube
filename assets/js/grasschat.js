@@ -9,8 +9,25 @@ let channel = null
 let users = []
 let last_chat_user = ""
 
+let freezeframe_loaded = false
+const gifs = []
+
 function init(socket, room) {
 	
+	console.log("freezeframe: fetching")
+
+	const freezeframe_script = document.createElement("script")
+	freezeframe_script.src = "https://unpkg.com/freezeframe/dist/freezeframe.min.js"
+	freezeframe_script.addEventListener("load", () => {
+		console.log("freezeframe: loaded")
+		freezeframe_loaded = true
+
+		for (const e of document.getElementsByClassName("message_content"))
+			freeze_gifs(e)
+	})
+
+	document.head.appendChild(freezeframe_script)
+
 	console.log("chat: connecting to room " + room)
 	channel = socket.channel("chat:" + room, {})
 	channel.join()
@@ -67,6 +84,16 @@ function init(socket, room) {
 	})
 
 	btn_chat_settings.addEventListener("click", make_change_nickname)
+
+	window.addEventListener("focus", () => {
+		for (const gif of gifs)
+			gif.start()
+	})
+
+	window.addEventListener("blur", () => {
+		for (const gif of gifs)
+			gif.stop()
+	})
 }
 
 function make_change_nickname() {
@@ -167,6 +194,9 @@ function on_chat(data) {
 	message_content.innerHTML = data.content
 
 	messages.appendChild(msg)
+
+	freeze_gifs(message_content)
+
 	messages_outer.scrollTop = messages_outer.scrollHeight
 }
 
@@ -203,6 +233,9 @@ function on_history(data) {
 		message_content.innerHTML = message.msg
 
 		messages.appendChild(msg)
+
+		freeze_gifs(message_content)
+
 		messages_outer.scrollTop = messages_outer.scrollHeight
 
 	})
@@ -221,6 +254,49 @@ function set_name(name) {
 	} else {
 		return false
 	}
+}
+
+function freeze_gifs(message) {
+	if (!freezeframe_loaded) return
+	const message_gif = new Freezeframe(message, {
+		trigger: false,
+		responsive: false
+	})
+	
+	const observer = new MutationObserver(() => {
+		message_gif.start()
+		observer.disconnect()
+	})
+
+	Object.defineProperty(message_gif.items, "push", {
+		enumerable: false,
+		configurable: false,
+		writable: false,
+		value: function () {
+			for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {          
+				this[n] = arguments[i]
+
+				const observer = new MutationObserver(() => {
+					if (document.hasFocus())
+						message_gif.start()
+					observer.disconnect()
+					messages_outer.scrollTop = messages_outer.scrollHeight
+				})
+
+				observer.observe(arguments[i].$container, {
+					attributes: true, 
+					attributeFilter: ['class'],
+					childList: false, 
+					characterData: false
+				})
+			}
+			
+			if (!(message_gif in gifs))
+				gifs.push(message_gif)
+			
+			return n
+		}
+	})
 }
 
 export default init

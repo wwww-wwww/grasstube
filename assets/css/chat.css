@@ -85,6 +85,7 @@
 }
 
 #chat_input {
+	z-index: 1;
 	flex: 1;
 	font-size: 1em;
 	min-width: 0;

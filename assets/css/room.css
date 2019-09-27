@@ -245,6 +245,7 @@ html, body {
 	width: 8em;
 	left: 0;
 	top: 0;
+	z-index: 1;
 	overflow-y: auto;
 	word-wrap: break-word;
 	text-align: left;
@@ -274,6 +275,7 @@ html, body {
 }
 
 #chat_input {
+	z-index: 1;
 	flex: 1;
 	font-size: 1em;
 	min-width: 0;

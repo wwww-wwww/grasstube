@@ -16,8 +16,8 @@ import {create_modal} from "./modals"
 
 const room = document.getElementById("room").dataset.room
 
-console.log("init")
-console.log("room", room)
+console.log("room: init")
+console.log("room:", room)
 
 const player = document.getElementById("player")
 const wplayer = new GrassPlayer(player)
