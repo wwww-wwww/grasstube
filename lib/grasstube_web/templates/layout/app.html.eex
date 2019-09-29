@@ -10,50 +10,6 @@
 		<%= if Guardian.Plug.current_token(@conn) do %>
 			<meta name="guardian_token" content="<%= Guardian.Plug.current_token(@conn) %>">
 		<% end %>
-		<style>
-			body {
-				font-size: 1.25em;
-				display: flex;
-				flex-direction: column;
-				height: 100%;
-			}
-
-			header {
-				font-family: 'Google Sans', sans-serif;
-				border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-				height: 2em;
-				z-index: 99;
-				transition: 0.1s opacity;
-			}
-			header > section > nav > span > a {
-				margin: 4px;
-				line-height: 2em;
-			}
-			main {
-				flex: 1;
-				min-height: 0;
-				overflow: auto;
-			}
-			.alerts {
-				text-align: center;
-				width: 100%;
-			}
-			.alert {
-				font-size: 1.25em;
-			}
-
-			.alert-danger {
-
-			}
-			
-			@media (min-width: 768px) {
-
-				body {
-					font-size: 1em;
-				}
-				
-			}
-		</style>
 	</head>
 	<body id="body">
 		<header>
@@ -67,10 +23,6 @@
 			</section>
 		</header>
 		<main role="main">
-			<div class="alerts">
-				<p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
-				<p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
-			</div>
 			<%= render @view_module, @view_template, assigns %>
 		</main>
 	</body>

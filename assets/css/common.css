@@ -18,6 +18,39 @@ html, body {
 	overflow: hidden;
 }
 
+body {
+	font-size: 1.25em;
+	display: flex;
+	flex-direction: column;
+}
+
+header {
+	font-family: 'Google Sans', sans-serif;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+	height: 2em;
+	z-index: 99;
+	transition: 0.1s opacity;
+}
+
+header > section > nav > span > a {
+	margin: 4px;
+	line-height: 2em;
+}
+
+main {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+}
+
+@media (min-width: 768px) {
+
+	body {
+		font-size: 1em;
+	}
+	
+}
+
 button, input, select, textarea, .button {
 	text-decoration: none;
 	font-size: 1em;

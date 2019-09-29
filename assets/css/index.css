@@ -1,0 +1,26 @@
+.outer {
+    padding: auto;
+    text-align: center;
+    font-family: 'Google Sans', sans-serif;
+    font-size: 1.25em;
+}
+
+.room {
+    margin-bottom: 0.5em;
+}
+
+.btn_room {
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    padding: 0.25em 0.75em;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 1em;
+    width: 12em;
+    max-width: 100%;
+    font-size: 1em;
+}
+
+.btn_room > div > span {
+    font-size: 0.9em;
+}

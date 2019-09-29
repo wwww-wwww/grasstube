@@ -1,26 +1,8 @@
-<style>
-	.btn_room {
-		text-decoration: none;
-		display: block;
-		text-align: left;
-		padding: 0.25em 0.75em;
-		border: 1px solid rgba(255, 255, 255, 0.4);
-		border-radius: 1em;
-		width: 12em;
-		max-width: 100%;
-		font-size: 1em;
-	}
-
-	.btn_room > div > span {
-		font-family: 'Google Sans', sans-serif;
-	}
-</style>
-
-<div style="padding: auto; text-align: center; font-size: 1.25em;">
-	<div style="margin: 0.5em 0; font-family: 'Varela Round', sans-serif;">Rooms:</div>
+<div class="outer">
+	<div style="margin: 0.5em 0">Rooms:</div>
 		<%= for {room_name, num_users} <- @rooms do %>
-		<div style="margin-bottom: 8px;">
-			<div class="room" style="display: inline-block">
+		<div class="room">
+			<div style="display: inline-block">
 				<a class="btn_room" href="/r/<%= room_name %>">
 					<div>
 						<span><%= room_name %></span><span style="float: right;"><%= num_users %> 🙍</span>

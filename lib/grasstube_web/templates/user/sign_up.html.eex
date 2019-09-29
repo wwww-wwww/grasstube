@@ -1,58 +1,17 @@
-<style>
-	.outer {
-		margin: auto;
-		text-align: center;
-	}
-
-	.inner {
-		display: inline-block;
-		font-size: 1.25em;
-	}
-
-	.form {
-		display: block;
-		text-align: center;
-	}
-
-	.form > div > input {
-		display: block;
-		margin: 0.5em 0;
-		padding: 0.25em 0.75em;
-		font-size: 1em;
-		width: 12em;
-		max-width: 100%;
-		border-radius: 1em;
-	}
-
-	.form > div {
-		display: inline-block;
-	}
-	
-	.form > div > button {
-		padding: 0.25em 0.75em;
-		font-size: 1em;
-		border-radius: 1em;
-		cursor: pointer;
-	}
-
-	.sign_in {
-		display: block;
-		margin-top: 0.5em;
-		font-size: 0.75em;
-	}
-</style>
-
 <div class="outer">
 	<div class="inner">
-		<%= form_for @changeset, Routes.user_path(@conn, :sign_up), [class: "form"], fn f -> %>
+		<%= form_for(@conn, Routes.user_path(@conn, :sign_up), [class: "form"], fn f -> %>
 			<div>
+				<div class="alerts">
+					<p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+					<p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+				</div>
 				<%= text_input(f, :username, placeholder: "username") %>
 				<%= text_input(f, :password, placeholder: "password", type: "password") %>
-				<%= submit "sign up" %>
+				<%= submit "sign in" %>
 			</div>
-		<% end %>
-
-		<span class="sign_in">already have an account? sign in <%= link("here", to: "/sign_in") %></span>
+			<span class="sign_in">already have an account?<br>sign in <%= link("here", to: "/sign_in") %></span>
+		<% end) %>
 	</div>
 </div>
 
