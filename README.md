@@ -19,6 +19,6 @@ iex -S mix phx.server
 - [x] custom player
   - [ ] google drive support
 - [x] authentication
-  - [ ] user created rooms
+  - [x] user created rooms
     - [ ] editing rooms
   - [x] user provided list of emotes
