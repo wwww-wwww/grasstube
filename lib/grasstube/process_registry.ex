@@ -3,8 +3,8 @@ defmodule Grasstube.ProcessRegistry do
     Registry.start_link(keys: :unique, name: __MODULE__)
   end
 
-  def via_tuple(key) do
-    {:via, Registry, {__MODULE__, key}}
+  def via_tuple(key, admin \\ nil) do
+    {:via, Registry, {__MODULE__, key, admin}}
   end
 
   def child_spec(_) do
@@ -23,6 +23,10 @@ defmodule Grasstube.ProcessRegistry do
         :not_found
     end
   end
+  
+  def rooms_of(user) do
+	Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", user}, [], [:"$1"]}])
+  end
 
   def list_rooms() do
     Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", :"$3"}, [], [:"$1"]}])
@@ -30,5 +34,9 @@ defmodule Grasstube.ProcessRegistry do
 
   def create_room(room_name, admin) do
     DynamicSupervisor.start_child(Grasstube.DynamicSupervisor, {Grasstube.RoomSupervisor, room_name: room_name, admin: admin})
+  end
+  
+  def close_room(room_name) do
+	DynamicSupervisor.stop(lookup(room_name, :supervisor))
   end
 end

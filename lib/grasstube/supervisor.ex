@@ -20,11 +20,12 @@ defmodule Grasstube.Supervisor do
 end
 
 defmodule Grasstube.RoomSupervisor do
-  use Supervisor
+  use Supervisor, restart: :transient
   
   def start_link(opts) do
     room_name = opts |> Keyword.get(:room_name)
-    Supervisor.start_link(__MODULE__, opts, name: via_tuple(room_name))
+    admin = opts |> Keyword.get(:admin)
+    Supervisor.start_link(__MODULE__, opts, name: via_tuple(room_name, admin))
   end
 
   def init(opts) do
@@ -41,8 +42,8 @@ defmodule Grasstube.RoomSupervisor do
     Supervisor.init(children, strategy: :one_for_one)
   end
   
-  def via_tuple(room_name) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :supervisor})
+  def via_tuple(room_name, admin) do
+    Grasstube.ProcessRegistry.via_tuple({room_name, :supervisor}, admin)
   end
 end
 
