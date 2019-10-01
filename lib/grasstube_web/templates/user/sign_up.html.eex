@@ -1,6 +1,6 @@
 <div class="outer">
 	<div class="inner">
-		<%= form_for(@conn, Routes.user_path(@conn, :sign_up), [class: "form"], fn f -> %>
+		<%= form_for(@changeset, Routes.user_path(@conn, :sign_up), [class: "form"], fn f -> %>
 			<div>
 				<div class="alerts">
 					<p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
@@ -8,9 +8,9 @@
 				</div>
 				<%= text_input(f, :username, placeholder: "username") %>
 				<%= text_input(f, :password, placeholder: "password", type: "password") %>
-				<%= submit "sign in" %>
+				<%= submit "sign up" %>
 			</div>
-			<span class="sign_in">already have an account?<br>sign in <%= link("here", to: "/sign_in") %></span>
+			<span class="sign_in">already have an account?<br>sign in <%= link("here", to: Routes.user_path(@conn, :sign_in)) %></span>
 		<% end) %>
 	</div>
 </div>
