@@ -37,6 +37,7 @@ defmodule Grasstube.ProcessRegistry do
   end
   
   def close_room(room_name) do
-	  DynamicSupervisor.stop(lookup(room_name, :supervisor))
+    DynamicSupervisor.stop(lookup(room_name, :supervisor))
+    GrasstubeWeb.RoomsLive.update()
   end
 end

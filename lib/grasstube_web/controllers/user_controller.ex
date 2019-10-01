@@ -165,6 +165,7 @@ defmodule GrasstubeWeb.UserController do
     else
       case Grasstube.ProcessRegistry.create_room(room_name, user.username) do
         {:ok, _} ->
+          GrasstubeWeb.RoomsLive.update()
           redirect(conn, to: Routes.page_path(conn, :room, room_name))
         {:error, {reason, _}} ->
           case reason do
