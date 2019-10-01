@@ -4,7 +4,7 @@
 		<meta charset="utf-8"/>
 		<meta name="theme-color" content="#000000"/>
 		<link rel="icon" type="image/x-icon" href="/favicon.ico"/>
-		<title>grasstube 2.5</title>
+		<title>grasstube 2.6</title>
 		<link rel="stylesheet" type="text/css" href="/css/common.css">
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 		<%= if Guardian.Plug.current_token(@conn) do %>
@@ -15,7 +15,7 @@
 		<header>
 			<section>
 				<nav role="navigation">
-					<span style="float: left"><%= link("grasstube", to: "/") %></span>
+					<span style="float: left"><%= link("grasstube", to: Routes.page_path(@conn, :index)) %></span>
 					<span style="float: right">
 						<%= get_user_links(@conn) %>
 					</span>

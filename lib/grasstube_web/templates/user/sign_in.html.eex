@@ -10,7 +10,7 @@
 				<%= text_input(f, :password, placeholder: "password", type: "password") %>
 				<%= submit "sign in" %>
 			</div>
-			<span class="sign_up">don't have an account?<br>sign up <%= link("here", to: "/sign_up") %></span>
+			<span class="sign_up">don't have an account?<br>sign up <%= link("here", to: Routes.user_path(@conn, :sign_up)) %></span>
 		<% end) %>
 	</div>
 </div>
