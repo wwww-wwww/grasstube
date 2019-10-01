@@ -31,7 +31,7 @@ defmodule GrasstubeWeb.Router do
   scope "/", GrasstubeWeb do
     pipe_through [:browser, :auth]
     
-    live "/", RoomsLive
+    get "/", PageController, :index
     
     get "/r/:room/chat", PageController, :chat
     get "/r/:room/video", PageController, :video
@@ -55,6 +55,8 @@ defmodule GrasstubeWeb.Router do
       post "/add_emote", UserController, :add_emote
       post "/import_emotes", UserController, :import_emotes
       post "/delete_emote", UserController, :delete_emote
+      get "/create_room", UserController, :create_room_page
+      post "/create_room", UserController, :create_room
     end
   end
 

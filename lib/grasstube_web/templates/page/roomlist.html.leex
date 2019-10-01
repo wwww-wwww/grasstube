@@ -1,16 +1,19 @@
 <div class="outer">
 	<div style="margin: 0.5em 0">Rooms:</div>
 		<%= for {room_name, num_users} <- @rooms do %>
-		<div class="room">
-			<div style="display: inline-block">
-				<a class="btn_room" href="/r/<%= room_name %>">
-					<div>
-						<span><%= room_name %></span><span style="float: right;"><%= num_users %> 🙍</span>
-					</div>
-				</a>
+			<div class="room">
+				<div style="display: inline-block">
+					<a class="btn_room" href="<%= Routes.page_path(@socket, :room, room_name) %>">
+						<div>
+							<span><%= room_name %></span><span style="float: right;"><%= num_users %> 🙍</span>
+						</div>
+					</a>
+				</div>
 			</div>
-		</div>
-	<% end %>
+		<% end %>
+		
+		<%= if @can_make_room do link("create a room", to: Routes.user_path(@socket, :create_room_page), style: "font-size: 0.8em") end %>
+	</div>
 </div>
 
 <link rel="stylesheet" type="text/css" href="/css/index.css">

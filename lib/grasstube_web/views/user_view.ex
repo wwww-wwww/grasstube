@@ -11,4 +11,8 @@ defmodule GrasstubeWeb.UserView do
     |> Enum.sort_by(fn e -> e.emote end)
   end
 
+  def get_rooms(conn) do
+    user = Guardian.Plug.current_resource(conn)
+    Grasstube.ProcessRegistry.rooms_of(user.username)
+  end
 end

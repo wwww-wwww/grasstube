@@ -12,9 +12,40 @@
 	}
 </style>
 
+<% current_user = Guardian.Plug.current_resource(@conn) != nil and Guardian.Plug.current_resource(@conn).username == @username %>
+
+<%= if current_user do %>
+	<% rooms = get_rooms(@conn) %>
+	<%= if length(rooms) > 0 do %>
+
+		<div class="heading">
+			you have
+			<%= if length(rooms) > 1 do %>
+				rooms
+			<%= else %>
+				a room
+			<% end%>
+			at:
+		</div>
+
+		<%= for room_name <- rooms do %>
+			<div>
+				<%= link(room_name, to: Routes.page_path(@conn, :room, room_name)) %>
+			</div>
+		<% end %>
+	<% else %>
+		<div>
+			create a room <%= link("here", to: Routes.user_path(@conn, :create_room_page)) %>
+		</div>
+	<% end %>
+
+	<br>
+<% end %>
+
 <%= @username %>'s emotes: 
+
 <%= link("export", to: Routes.user_path(@conn, :emotes_json, @username)) %>
-<%= if Guardian.Plug.current_resource(@conn) != nil and Guardian.Plug.current_resource(@conn).username == @username do %>
+<%= if current_user do %>
 	<%= form_for(@conn, Routes.user_path(@conn, :add_emote), [class: "form"], fn f -> %>
 		<div>
 			<%= text_input(f, :emote, placeholder: "emote") %>
@@ -33,7 +64,7 @@
 <%= for %{id: id, emote: emote, url: url} <- get_emotes(@username) do %>
 	<div>
 		<%= img_tag(url, alt: emote, title: emote, class: "emote") %> <span>:<%= emote %>:</span>
-			<%= if Guardian.Plug.current_resource(@conn) != nil and Guardian.Plug.current_resource(@conn).username == @username do %>
+			<%= if current_user do %>
 			<%= form_for(@conn, Routes.user_path(@conn, :delete_emote), [class: "form_delete_emote"], fn _ -> %>
 				<div style="display: inline;">
 					<input name="id" type="hidden" value="<%= id %>">

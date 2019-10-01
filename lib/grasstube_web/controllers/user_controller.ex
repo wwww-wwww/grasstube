@@ -15,21 +15,25 @@ defmodule GrasstubeWeb.UserController do
     render(conn, "sign_in.html")
   end
 
+  def create_room_page(conn, _params) do
+    render(conn, "create_room.html")
+  end
+
   def sign_in(conn, %{"username" => username, "password" => password}) do
     case Repo.get_by(User, username: username |> to_string()) do
       nil ->
         conn
         |> put_flash(:error, "Incorrect username or password")
-        |> redirect(to: "/sign_in")
+        |> redirect(to: Routes.user_path(conn, :sign_in))
       user ->
         if Bcrypt.verify_pass(password |> to_string(), user.password) do
           conn
           |> Guardian.Plug.sign_in(user)
-          |> redirect(to: "/")
+          |> redirect(to: Routes.page_path(conn, :index))
         else
           conn
           |> put_flash(:error, "Incorrect username or password")
-          |> redirect(to: "/sign_in")
+          |> redirect(to: Routes.user_path(conn, :sign_in))
         end
     end
   end
@@ -60,7 +64,7 @@ defmodule GrasstubeWeb.UserController do
   def sign_out(conn, _params) do
     conn
     |> Guardian.Plug.sign_out()
-    |> redirect(to: "/")
+    |> redirect(to: Routes.page_path(conn, :index))
   end
 
   def sign_up(conn, %{"user" => user}) do
@@ -70,7 +74,7 @@ defmodule GrasstubeWeb.UserController do
       {:ok, user} ->
         conn
         |> Guardian.Plug.sign_in(user)
-        |> redirect(to: "/")
+        |> redirect(to: Routes.page_path(conn, :index))
       {:error, changeset} ->
         errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
           Enum.reduce(opts, msg, fn {key, value}, acc ->
@@ -79,7 +83,7 @@ defmodule GrasstubeWeb.UserController do
         end) |> Enum.map(fn {k, v} -> "#{k} #{v}" end)
         conn
         |> put_flash(:error, errors |> Enum.at(0))
-        |> redirect(to: "/sign_up")
+        |> redirect(to: Routes.user_path(conn, :sign_up))
     end
   end
 
@@ -98,10 +102,10 @@ defmodule GrasstubeWeb.UserController do
     new_emote = Ecto.build_assoc(user, :emotes, emote: emote |> String.downcase() |> String.trim(":"), url: url)
     case Repo.insert(new_emote) do
       {:ok, _} ->
-        redirect(conn, to: "/user/#{user.username}")
+        redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
       {:error, _} ->
         conn
-        |> redirect(to: "/user/#{user.username}")
+        |> redirect(to: Routes.user_path(conn, :show_user, user.username))
     end
   end
 
@@ -114,11 +118,11 @@ defmodule GrasstubeWeb.UserController do
           Repo.insert(new_emote)
         end)
         conn
-        |> redirect(to: "/user/#{user.username}")
+        |> redirect(to: Routes.user_path(conn, :show_user, user.username))
       {:error, _} ->
         conn
         |> put_flash("error", "bad json")
-        |> redirect(to: "/user/#{user.username}")
+        |> redirect(to: Routes.user_path(conn, :show_user, user.username))
     end
   end
 
@@ -126,15 +130,15 @@ defmodule GrasstubeWeb.UserController do
     user = Guardian.Plug.current_resource(conn)
 
     case Repo.get(Emote, emote_id) do
-      nil -> redirect(conn, to: "/user/#{user.username}")
+      nil -> redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
       emote ->
         if emote.user_username == user.username do
           case Repo.delete(emote) do
-            {:ok, _} -> redirect(conn, to: "/user/#{user.username}")
-            {:error, _} -> redirect(conn, to: "/user/#{user.username}")
+            {:ok, _} -> redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
+            {:error, _} -> redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
           end
         else
-          redirect(conn, to: "/user/#{user.username}")
+          redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
         end
     end
   end
@@ -150,4 +154,30 @@ defmodule GrasstubeWeb.UserController do
     end
   end
 
+  def create_room(conn, %{"room_name" => room_name}) do
+    user = Guardian.Plug.current_resource(conn)
+    rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
+
+    if length(rooms) > 0 do
+      conn
+      |> put_flash("error", "you already have a room!")
+      |> redirect(to: Routes.user_path(conn, :create_room_page))
+    else
+      case Grasstube.ProcessRegistry.create_room(room_name, user.username) do
+        {:ok, _} ->
+          redirect(conn, to: Routes.page_path(conn, :room, room_name))
+        {:error, {reason, _}} ->
+          case reason do
+            :already_started ->
+              conn
+              |> put_flash("error", "room already exists with this name")
+              |> redirect(to: Routes.user_path(conn, :create_room_page))
+            _ ->
+              conn
+              |> put_flash("error", "error creating room")
+              |> redirect(to: Routes.user_path(conn, :create_room_page))
+          end
+      end
+    end
+  end
 end

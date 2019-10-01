@@ -1,6 +1,12 @@
 defmodule GrasstubeWeb.PageController do
   use GrasstubeWeb, :controller
 
+  alias Grasstube.Guardian
+
+  def index(conn, assigns) do
+    live_render(conn, GrasstubeWeb.RoomsLive, session: %{can_make_room: can_make_room?(conn)})
+  end
+
   def chat(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
@@ -49,5 +55,15 @@ defmodule GrasstubeWeb.PageController do
       end
     end)
     )
+  end
+
+  def can_make_room?(conn) do
+    if Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil do
+      user = Guardian.Plug.current_resource(conn)
+      rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
+      length(rooms) == 0
+    else
+      false
+    end
   end
 end
