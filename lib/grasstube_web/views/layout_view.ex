@@ -7,7 +7,7 @@ defmodule GrasstubeWeb.LayoutView do
     if Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil do
       user = Guardian.Plug.current_resource(conn)
       [
-        link(user.username, to: Routes.user_path(conn, :show_user, user.username)),
+        link(user.name, to: Routes.user_path(conn, :show_user, user.username)),
         link("sign out", to: Routes.user_path(conn, :sign_out))
       ]
     else

@@ -5,6 +5,7 @@ defmodule Grasstube.User do
   @primary_key false
   schema "users" do
     field :username, :string, size: 24, primary_key: true
+    field :name, :string, size: 24
     field :nickname, :string, size: 24
     field :password, :string
 
@@ -34,7 +35,10 @@ defmodule Grasstube.User do
   defp copy_username(changeset) do
     case changeset do
       %Ecto.Changeset{valid?: true, changes: %{username: username}} ->
-        put_change(changeset, :nickname, username)
+        changeset
+        |> put_change(:nickname, username)
+        |> put_change(:name, username)
+        |> put_change(:username, username |> String.downcase())
       _ ->
         changeset
     end

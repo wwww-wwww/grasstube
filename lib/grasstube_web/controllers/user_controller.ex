@@ -20,7 +20,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def sign_in(conn, %{"username" => username, "password" => password}) do
-    case Repo.get_by(User, username: username |> to_string()) do
+    case Repo.get_by(User, username: username |> to_string() |> String.downcase()) do
       nil ->
         conn
         |> put_flash(:error, "Incorrect username or password")
@@ -39,7 +39,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def auth(conn, %{"username" => username, "password" => password}) do
-    case Repo.get_by(User, username: username |> to_string()) do
+    case Repo.get_by(User, username: username |> to_string() |> String.downcase()) do
       nil ->
         conn
         |> put_status(200)
@@ -88,8 +88,9 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def show_user(conn, %{"username" => username}) do
-    if Repo.get(Grasstube.User, username) != nil do
-        render(conn, "profile.html", username: username)
+    user = Repo.get(Grasstube.User, username |> to_string() |> String.downcase())
+    if user != nil do
+        render(conn, "profile.html", name: user.name, username: user.username)
     else
       conn
       |> put_flash(:info, "user does not exist")
@@ -99,7 +100,7 @@ defmodule GrasstubeWeb.UserController do
 
   def add_emote(conn, %{"emote" => emote, "url" => url}) do
     user = Guardian.Plug.current_resource(conn)
-    new_emote = Ecto.build_assoc(user, :emotes, emote: emote |> String.downcase() |> String.trim(":"), url: url)
+    new_emote = Ecto.build_assoc(user, :emotes, emote: emote |> to_string() |> String.downcase() |> String.trim(":"), url: url)
     case Repo.insert(new_emote) do
       {:ok, _} ->
         redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
@@ -144,7 +145,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def emotes_json(conn, %{"username" => username}) do
-    case Repo.get(Grasstube.User, username) do
+    case Repo.get(Grasstube.User, username |> to_string() |> String.downcase()) do
       nil ->
         json(conn, %{success: false, message: "user not found"})
       user ->
@@ -179,6 +180,20 @@ defmodule GrasstubeWeb.UserController do
               |> redirect(to: Routes.user_path(conn, :create_room_page))
           end
       end
+    end
+  end
+
+  def close_room(conn, %{"room_name" => room_name}) do
+    user = Guardian.Plug.current_resource(conn)
+    rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
+    room_id = room_name |> to_string() |> String.downcase()
+    if room_id in rooms do
+      Grasstube.ProcessRegistry.close_room(room_id)
+      redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
+    else
+      conn
+      |> put_flash("error", "you can't close this room")
+      |> redirect(to: Routes.user_path(conn, :show_user, user.username))
     end
   end
 end

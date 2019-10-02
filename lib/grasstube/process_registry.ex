@@ -3,8 +3,8 @@ defmodule Grasstube.ProcessRegistry do
     Registry.start_link(keys: :unique, name: __MODULE__)
   end
 
-  def via_tuple(key, admin \\ nil) do
-    {:via, Registry, {__MODULE__, key, admin}}
+  def via_tuple({room_name, key}, admin \\ nil) do
+    {:via, Registry, {__MODULE__, {room_name |> String.downcase(), key}, {room_name, admin}}}
   end
 
   def child_spec(_) do
@@ -16,7 +16,7 @@ defmodule Grasstube.ProcessRegistry do
   end
 
   def lookup(room_name, channel) do
-    case Registry.lookup(__MODULE__, {room_name, channel}) do
+    case Registry.lookup(__MODULE__, {room_name |> String.downcase(), channel}) do
       [{pid, _}] ->
         pid
       _ ->
@@ -25,11 +25,11 @@ defmodule Grasstube.ProcessRegistry do
   end
   
   def rooms_of(user) do
-    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", user}, [], [:"$1"]}])
+    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", user}}, [], [:"$1"]}])
   end
 
   def list_rooms() do
-    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", :"$3"}, [], [:"$1"]}])
+    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", :"$4"}}, [], [:"$3"]}])
   end
 
   def create_room(room_name, admin) do
