@@ -70,7 +70,7 @@ function on_get_polls(data) {
         header.appendChild(poll.btn_delete)
 
         poll.btn_delete.addEventListener("click", () => {
-            channel.push("poll_remove", {id: id})
+            channel.push("poll_remove", {id: poll_id})
         })
         
         const poll_title = document.createElement("span")
@@ -93,7 +93,7 @@ function on_get_polls(data) {
             poll_choose.textContent = choice.users.length + choice.guests.length
             poll_choose.disabled = choice.users.includes(username) || choice.guests.includes(myid)
             poll_choose.addEventListener("click", () => {
-                channel.push("poll_vote", {id: id, choice: choice.name})
+                channel.push("poll_vote", {id: poll_id, choice: choice.name})
             })
 
             poll_choice.appendChild(poll_choose)
