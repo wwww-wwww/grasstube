@@ -24,6 +24,10 @@ defmodule GrasstubeWeb.PlaylistAgent do
     Grasstube.ProcessRegistry.via_tuple({room_name, :playlist})
   end
 
+  def get_room_name(pid) do
+    Agent.get(pid, fn val -> val.room_name end)
+  end
+
   def get_video(pid, id) do
     Agent.get(pid, fn val -> 
       case val.videos[id] do
@@ -35,6 +39,14 @@ defmodule GrasstubeWeb.PlaylistAgent do
 
   def get_queue(pid) do
     Agent.get(pid, fn val -> val.queue end)
+  end
+
+  def set_queue(pid, queue) do
+    Agent.update(pid, fn val ->
+      %{val | queue: queue}
+    end)
+
+    Endpoint.broadcast("playlist:" <> get_room_name(pid), "playlist", %{ playlist: get_playlist(pid) })
   end
 
   def get_playlist(pid) do
@@ -77,12 +89,10 @@ defmodule GrasstubeWeb.PlaylistAgent do
       %{val | queue: new_queue, videos: new_videos}
     end)
 
-    room_name = Agent.get(pid, fn val -> val.room_name end)
+    room_name = get_room_name(pid)
+
     video = Grasstube.ProcessRegistry.lookup(room_name, :video)
-
     current = VideoAgent.get_current_video(video)
-
-    room_name = Agent.get(pid, fn val -> val.room_name end)
 
     if current != :nothing and current.id == id do
       VideoAgent.set_current_video(video, :nothing)
@@ -185,15 +195,14 @@ defmodule GrasstubeWeb.PlaylistAgent do
             end
         end
 
-        room_name = Agent.get(pid, fn val -> val.room_name end)
-        Endpoint.broadcast("playlist:" <> room_name, "playlist", %{ playlist: get_playlist(pid) })
+        Endpoint.broadcast("playlist:" <> get_room_name(pid), "playlist", %{ playlist: get_playlist(pid) })
     end
   end
 
   def next_video(pid) do
     queue = get_queue(pid)
 
-    room_name = Agent.get(pid, fn val -> val.room_name end)
+    room_name = get_room_name(pid)
 
     video = Grasstube.ProcessRegistry.lookup(room_name, :video)
     

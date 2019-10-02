@@ -83,11 +83,23 @@ defmodule GrasstubeWeb.PlaylistChannel do
     if Guardian.Phoenix.Socket.authenticated?(socket) do
       user = Guardian.Phoenix.Socket.current_resource(socket)
       if ChatAgent.room_mod?(room_name, user) do
-        playlist = Grasstube.ProcessRegistry.lookup(room_name, :playlist)
-        PlaylistAgent.remove_queue(playlist, id)
+        Grasstube.ProcessRegistry.lookup(room_name, :playlist)
+        |> PlaylistAgent.remove_queue(id)
       end
     end
 
+    {:noreply, socket}
+  end
+
+  def handle_in("q_order", %{"order" => order}, socket) do
+    "playlist:" <> room_name = socket.topic
+    if Guardian.Phoenix.Socket.authenticated?(socket) do
+      user = Guardian.Phoenix.Socket.current_resource(socket)
+      if ChatAgent.room_mod?(room_name, user) do
+        Grasstube.ProcessRegistry.lookup(room_name, :playlist)
+        |> PlaylistAgent.set_queue(order)
+      end
+    end
     {:noreply, socket}
   end
 
@@ -98,14 +110,15 @@ defmodule GrasstubeWeb.PlaylistChannel do
       user = Guardian.Phoenix.Socket.current_resource(socket)
       if ChatAgent.room_mod?(room_name, user) do
         playlist = Grasstube.ProcessRegistry.lookup(room_name, :playlist)
-        video = Grasstube.ProcessRegistry.lookup(room_name, :video)
 
         case PlaylistAgent.get_video(playlist, id) do
           :not_found ->
             nil
 
           vid ->
-            VideoAgent.set_current_video(video, vid)
+            Grasstube.ProcessRegistry.lookup(room_name, :video)
+            |> VideoAgent.set_current_video(vid)
+            
             Endpoint.broadcast("playlist:" <> room_name, "current", %{id: vid.id})
 
             Endpoint.broadcast("video:" <> room_name, "setvid", %{

@@ -171,7 +171,7 @@ html, body {
 
 .playlist_header {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-	padding: 0.5em 0.5em;
+	padding: 0.5em;
 	text-align: left;
 }
 
@@ -189,6 +189,19 @@ html, body {
 
 .playlist_remove {
 	margin-right: 0.5em;
+}
+
+.playlist_dragging {
+	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.playlist_drag, .playlist_drag:hover, .playlist_drag:active, .playlist_drag:focus {
+	cursor: grab;
+	background: none;
+	border: none;
+	box-shadow: none;
+	margin-left: 0.5em;
+	color: rgba(255, 255, 255, 0.7);
 }
 
 #playlist_container {

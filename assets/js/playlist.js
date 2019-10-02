@@ -60,15 +60,23 @@ function init(socket, room) {
 				vid.q_del.className = "playlist_remove square"
 				vid.q_del.textContent = "×"
 
+				vid.q_move = document.createElement("button")
+				vid.q_move.className = "playlist_drag"
+				vid.q_move.textContent = "☰"
+
+				vid.q_move.addEventListener("mousedown", queue_start_drag)
+
 				vid.q_set.addEventListener("click", queue_set)
 				vid.q_del.addEventListener("click", queue_remove)
 		
 				vid.q_del.classList.toggle("hidden", !has_controls)
 				vid.q_set.classList.toggle("hidden", !has_controls)
+				vid.q_move.classList.toggle("hidden", !has_controls)
 
 				e.prepend(vid.q_del)
 				e.append(vid.duration_e)
 				e.append(vid.q_set)
+				e.append(vid.q_move)
 		
 				e.classList.toggle("isactive", vid.id == current_video)
 
@@ -77,7 +85,6 @@ function init(socket, room) {
 				playlist.push(vid)
 			}
 			playlist_header_time.textContent = seconds_to_hms(time)
-			
 		}
 	})
 
@@ -99,6 +106,7 @@ function init(socket, room) {
 		playlist.forEach(vid => {
 			vid.q_set.classList.toggle("hidden", false)
 			vid.q_del.classList.toggle("hidden", false)
+			vid.q_move.classList.toggle("hidden", false)
 		})
 	})
 	
@@ -146,6 +154,72 @@ function queue_remove(e) {
 			break
 		}
 	}
+}
+
+function queue_start_drag(e) {
+	for (let i = 0; i < playlist.length; i++) {
+		if (playlist[i].q_move == e.target) {
+			playlist[i].dragging = true
+			playlist[i].e.classList.toggle("playlist_dragging", true)
+			document.addEventListener("mouseup", queue_stop_drag)
+			document.addEventListener("mousemove", queue_drag)
+			break
+		}
+	}
+}
+
+function queue_drag(e) {
+	for (let i = 0; i < playlist.length; i++) {
+		if (playlist[i].dragging) {
+			const playlist_item = playlist[i]
+			playlist_item.e.style.transform = "none"
+			let rect = playlist_item.e.getBoundingClientRect()
+			let mouse_y = Math.min(Math.max(e.clientY, playlist[0].e.getBoundingClientRect().y), playlist[playlist.length - 1].e.getBoundingClientRect().bottom)
+			let y = rect.y
+			let off = mouse_y - y - rect.height / 2
+
+			for (let j = i - 1; j <= i + 1; j++) { // only 1 before and after
+				if (j < 0 || j == i || j >= playlist.length) continue
+				const playlist_item2 = playlist[j]
+				if ((j < i && mouse_y <= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)) || 
+					(j > i && mouse_y >= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)))
+				{
+					playlist.splice(i, 1)
+					playlist.splice(j, 0, playlist_item)
+
+					if (j < i) {
+						playlist_item.e.parentNode.insertBefore(playlist_item.e, playlist_item2.e)
+					} else {
+						playlist_item.e.parentNode.insertBefore(playlist_item2.e, playlist_item.e)
+					}
+
+					rect = playlist_item.e.getBoundingClientRect()
+					y = rect.y
+					off = mouse_y - y - rect.height / 2
+					break
+				}
+			}
+			playlist_item.e.style.transform = `translate(0, ${off}px)`
+			break
+		}
+	}
+}
+
+function queue_stop_drag(_) {
+	for (let i = 0; i < playlist.length; i++) {
+		playlist[i].e.style.transform = "none"
+		if (playlist[i].dragging) {
+			playlist[i].dragging = false
+			playlist[i].e.classList.toggle("playlist_dragging", false)
+			const new_order = []
+			playlist.forEach(playlist_item => {
+				new_order.push(playlist_item.id)
+			})
+			channel.push("q_order", {order: new_order})
+		}
+	}
+	document.removeEventListener("mouseup", queue_stop_drag)
+	document.removeEventListener("mousemove", queue_drag)
 }
 
 export default init
