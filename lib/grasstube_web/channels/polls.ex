@@ -2,11 +2,11 @@ defmodule GrasstubeWeb.PollsChannel do
   use Phoenix.Channel
   require Logger
 
-	alias GrasstubeWeb.Endpoint
-	alias GrasstubeWeb.PollsAgent
-	alias GrasstubeWeb.ChatAgent
+  alias GrasstubeWeb.Endpoint
+  alias GrasstubeWeb.PollsAgent
+  alias GrasstubeWeb.ChatAgent
 
-	def join("polls:" <> room_name, _message, socket) do
+  def join("polls:" <> room_name, _message, socket) do
     case Grasstube.ProcessRegistry.lookup(room_name, :polls) do
       :not_found ->
         {:error, "no room"}
@@ -37,8 +37,8 @@ defmodule GrasstubeWeb.PollsChannel do
 
     polls = Grasstube.ProcessRegistry.lookup(room_name, :polls)
 
-		push(socket, "polls", PollsAgent.get_polls(polls))
-		{:noreply, socket}
+    push(socket, "polls", PollsAgent.get_polls(polls))
+    {:noreply, socket}
   end
   
   def handle_info({ref, _}, socket) do
@@ -56,7 +56,7 @@ defmodule GrasstubeWeb.PollsChannel do
     end
   end
 
-	def handle_in("poll_add", %{"title" => title, "choices" => choices}, socket) do
+  def handle_in("poll_add", %{"title" => title, "choices" => choices}, socket) do
     "polls:" <> room_name = socket.topic
     
     if Guardian.Phoenix.Socket.authenticated?(socket) do
@@ -66,11 +66,11 @@ defmodule GrasstubeWeb.PollsChannel do
         PollsAgent.add_poll(polls, title, choices)
         Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
       end
-		end
-		{:noreply, socket}
-	end
+    end
+    {:noreply, socket}
+  end
 
-	def handle_in("poll_remove", %{"id" => poll_id}, socket) do
+  def handle_in("poll_remove", %{"id" => poll_id}, socket) do
     "polls:" <> room_name = socket.topic
 
     if Guardian.Phoenix.Socket.authenticated?(socket) do
@@ -80,11 +80,11 @@ defmodule GrasstubeWeb.PollsChannel do
         PollsAgent.remove_poll(polls, poll_id)
         Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
       end
-		end
-		{:noreply, socket}
-	end
+    end
+    {:noreply, socket}
+  end
 
-	def handle_in("poll_vote", %{"id" => poll_id, "choice" => choice}, socket) do
+  def handle_in("poll_vote", %{"id" => poll_id, "choice" => choice}, socket) do
     "polls:" <> room_name = socket.topic
     polls = Grasstube.ProcessRegistry.lookup(room_name, :polls)
 
@@ -94,7 +94,7 @@ defmodule GrasstubeWeb.PollsChannel do
     else
       PollsAgent.set_vote(polls, poll_id, socket.id, true, choice)
     end
-		Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
-		{:noreply, socket}
-	end
+    Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
+    {:noreply, socket}
+  end
 end

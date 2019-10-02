@@ -1,109 +1,109 @@
 .user_name {
-	color: rgb(200, 200, 200);
+    color: rgb(200, 200, 200);
 }
 
 .mod {
-	text-decoration: underline;
-	text-decoration-color: rgb(150, 150, 150);
+    text-decoration: underline;
+    text-decoration-color: rgb(150, 150, 150);
 }
 
 .guest {
-	color: rgb(150, 150, 150);
+    color: rgb(150, 150, 150);
 }
 
 .message_timestamp {
-	font-size: 0.75em;
-	line-height: 14px;
+    font-size: 0.75em;
+    line-height: 14px;
 }
 
 .message_content > img {
-	max-height: 6em;
+    max-height: 6em;
 }
 
 .message_user {
-	font-weight: 500;
+    font-weight: 500;
 }
 
 #userlist.hidden, #seekbar.hidden {
-	display: none;
+    display: none;
 }
 
 #chat_div {
-	display: flex;
-	flex-direction: column;
-	align-items: stretch;
-	height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    height: 100%;
 }
 
 #header {
-	border: none;
-	background: none;
-	width: 100%;
-	vertical-align: middle;
-	padding: 4px;
-	height: 2em;
+    border: none;
+    background: none;
+    width: 100%;
+    vertical-align: middle;
+    padding: 4px;
+    height: 2em;
 }
 
 .chat_main_area {
-	display: flex;
-	flex-direction: column;
-	border-top: 1px solid rgba(255, 255, 255, 0.4);
-	flex: 1;
-	min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+    flex: 1;
+    min-height: 0;
 }
 
 .top {
-	display: flex;
-	min-height: 0;
-	flex: 1;
+    display: flex;
+    min-height: 0;
+    flex: 1;
 }
 
 #userlist {
-	background: none;
-	padding: 0.5em;
-	overflow-y: auto;
-	border-right: 1px solid rgba(255, 255, 255, 0.4);
-	word-wrap: break-word;
-	max-width: 8em;
+    background: none;
+    padding: 0.5em;
+    overflow-y: auto;
+    border-right: 1px solid rgba(255, 255, 255, 0.4);
+    word-wrap: break-word;
+    max-width: 8em;
 }
 
 #messages_outer {
-	flex: 1;
-	overflow-y: auto;
+    flex: 1;
+    overflow-y: auto;
 }
 
 #messages {
-	padding: 0.5em;
-	word-wrap: break-word;
-	color: rgba(255, 255, 255, 0.7);
-	background: none;	
+    padding: 0.5em;
+    word-wrap: break-word;
+    color: rgba(255, 255, 255, 0.7);
+    background: none;
 }
 
 #input_area {
-	font-size: 1.25em;
-	display: flex;
+    font-size: 1.25em;
+    display: flex;
 }
 
 #chat_input {
-	z-index: 1;
-	flex: 1;
-	font-size: 1em;
-	min-width: 0;
+    z-index: 1;
+    flex: 1;
+    font-size: 1em;
+    min-width: 0;
 }
 
 @media (min-width: 768px) {
 
-	#input_area {
-		font-size: 1em;
-	}
-	
+    #input_area {
+        font-size: 1em;
+    }
+    
 }
 
 #btn_show_emotes {
-	width: 2em;
-	height: 2em;
+    width: 2em;
+    height: 2em;
 }
 
 hr {
-	margin-bottom: 0.5em;
+    margin-bottom: 0.5em;
 }

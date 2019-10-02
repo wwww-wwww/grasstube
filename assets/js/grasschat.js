@@ -13,290 +13,290 @@ let freezeframe_loaded = false
 const gifs = []
 
 function init(socket, room) {
-	
-	console.log("freezeframe: fetching")
+    
+    console.log("freezeframe: fetching")
 
-	const freezeframe_script = document.createElement("script")
-	freezeframe_script.src = "https://unpkg.com/freezeframe/dist/freezeframe.min.js"
-	freezeframe_script.addEventListener("load", () => {
-		console.log("freezeframe: loaded")
-		freezeframe_loaded = true
+    const freezeframe_script = document.createElement("script")
+    freezeframe_script.src = "https://unpkg.com/freezeframe/dist/freezeframe.min.js"
+    freezeframe_script.addEventListener("load", () => {
+        console.log("freezeframe: loaded")
+        freezeframe_loaded = true
 
-		for (const e of document.getElementsByClassName("message_content"))
-			freeze_gifs(e)
-	})
+        for (const e of document.getElementsByClassName("message_content"))
+            freeze_gifs(e)
+    })
 
-	document.head.appendChild(freezeframe_script)
+    document.head.appendChild(freezeframe_script)
 
-	console.log("chat: connecting to room " + room)
-	channel = socket.channel("chat:" + room, {})
-	channel.join()
-	.receive("ok", resp => {
-		const nickname = get_cookie("nickname")
-		if (nickname || false) set_name(nickname)
-		console.log("chat: connected", resp) 
-	})
-	.receive("error", resp => {
-		console.log("chat: failed to connect", resp)
-	})
+    console.log("chat: connecting to room " + room)
+    channel = socket.channel("chat:" + room, {})
+    channel.join()
+    .receive("ok", resp => {
+        const nickname = get_cookie("nickname")
+        if (nickname || false) set_name(nickname)
+        console.log("chat: connected", resp) 
+    })
+    .receive("error", resp => {
+        console.log("chat: failed to connect", resp)
+    })
 
-	channel.on("userlist", data => {
-		console.log("chat: userlist", data)
+    channel.on("userlist", data => {
+        console.log("chat: userlist", data)
 
-		users = []
-		while (userlist.firstChild) userlist.removeChild(userlist.firstChild)
+        users = []
+        while (userlist.firstChild) userlist.removeChild(userlist.firstChild)
 
-		for (const user of data.list) {
-			if (user.username.length > 0) {
-				let users_contains = false
-				for (const u2 of users) {
-					if (u2.username == user.username) {
-						users_contains = true
-						break
-					}
-				}
-				if (users_contains) continue
-			}
+        for (const user of data.list) {
+            if (user.username.length > 0) {
+                let users_contains = false
+                for (const u2 of users) {
+                    if (u2.username == user.username) {
+                        users_contains = true
+                        break
+                    }
+                }
+                if (users_contains) continue
+            }
 
-			users.push(user)
-			const e = document.createElement("div")
-			e.className = "user"
+            users.push(user)
+            const e = document.createElement("div")
+            e.className = "user"
 
-			const user_name = document.createElement("span")
-			user_name.className = "user_name"
-			user_name.textContent = user.nickname
-			user_name.classList.toggle("mod", user.mod)
-			user_name.classList.toggle("guest", user.username.length == 0)
+            const user_name = document.createElement("span")
+            user_name.className = "user_name"
+            user_name.textContent = user.nickname
+            user_name.classList.toggle("mod", user.mod)
+            user_name.classList.toggle("guest", user.username.length == 0)
 
-			e.appendChild(user_name)
-			userlist.appendChild(e)
-		}
-		user_count.textContent = users.length + (users.length > 1 ? " users connected" : " user connected")
-	})
+            e.appendChild(user_name)
+            userlist.appendChild(e)
+        }
+        user_count.textContent = users.length + (users.length > 1 ? " users connected" : " user connected")
+    })
 
-	channel.on("chat", on_chat)
+    channel.on("chat", on_chat)
 
-	channel.on("history", on_history)
+    channel.on("history", on_history)
 
-	chat_input.addEventListener("keyup", event => { enter(event, () => { chat_send_msg() }) })
-	btn_userlist_toggle.addEventListener("click", e => {
-		userlist.classList.toggle("hidden")
-	})
+    chat_input.addEventListener("keyup", event => { enter(event, () => { chat_send_msg() }) })
+    btn_userlist_toggle.addEventListener("click", e => {
+        userlist.classList.toggle("hidden")
+    })
 
-	btn_chat_settings.addEventListener("click", make_change_nickname)
+    btn_chat_settings.addEventListener("click", make_change_nickname)
 
-	window.addEventListener("focus", () => {
-		for (const gif of gifs)
-			gif.start()
-	})
+    window.addEventListener("focus", () => {
+        for (const gif of gifs)
+            gif.start()
+    })
 
-	window.addEventListener("blur", () => {
-		for (const gif of gifs)
-			gif.stop()
-	})
+    window.addEventListener("blur", () => {
+        for (const gif of gifs)
+            gif.stop()
+    })
 }
 
 function make_change_nickname() {
-	const modal = create_modal(chat_div)
-	modal.label.textContent = "change your nickname"
+    const modal = create_modal(chat_div)
+    modal.label.textContent = "change your nickname"
 
-	const modal_body = modal.get_body()
-	modal_body.style.textAlign = "right"
+    const modal_body = modal.get_body()
+    modal_body.style.textAlign = "right"
 
-	const textfield = document.createElement("input")
-	modal_body.appendChild(textfield)
+    const textfield = document.createElement("input")
+    modal_body.appendChild(textfield)
 
-	textfield.style.display = "block"
-	textfield.style.width = "100%"
-	textfield.value = get_cookie("nickname") || "anon"
+    textfield.style.display = "block"
+    textfield.style.width = "100%"
+    textfield.value = get_cookie("nickname") || "anon"
 
-	const btn_set = document.createElement("button")
-	modal_body.appendChild(btn_set)
+    const btn_set = document.createElement("button")
+    modal_body.appendChild(btn_set)
 
-	btn_set.textContent = "set"
-	btn_set.style.marginTop = "0.5em"
+    btn_set.textContent = "set"
+    btn_set.style.marginTop = "0.5em"
 
-	btn_set.addEventListener("click", () => {
-		if (set_name(textfield.value.trim())) {
-			chat_div.removeChild(modal)
-		} else {
-			textfield.focus()
-			textfield.select()
-		}
-	})
-	
-	textfield.addEventListener("keyup", event => {
-		event.preventDefault()
-		if (event.keyCode !== 13) return
-		if (set_name(textfield.value.trim())) {
-			chat_div.removeChild(modal)
-		} else {
-			textfield.select()
-		}
-	})
+    btn_set.addEventListener("click", () => {
+        if (set_name(textfield.value.trim())) {
+            chat_div.removeChild(modal)
+        } else {
+            textfield.focus()
+            textfield.select()
+        }
+    })
+    
+    textfield.addEventListener("keyup", event => {
+        event.preventDefault()
+        if (event.keyCode !== 13) return
+        if (set_name(textfield.value.trim())) {
+            chat_div.removeChild(modal)
+        } else {
+            textfield.select()
+        }
+    })
 
-	textfield.focus()
-	textfield.select()
+    textfield.focus()
+    textfield.select()
 }
 
 function chat_send_msg() {
-	let text = chat_input.value.trim()
-	chat_input.value = ""
+    let text = chat_input.value.trim()
+    chat_input.value = ""
 
-	if (text.length <= 0) return
+    if (text.length <= 0) return
 
-	channel.push("chat", {msg: text})
+    channel.push("chat", {msg: text})
 }
 
 function on_chat(data) {
-	console.log("chat: chat", data)
-	const msg = document.createElement("div")
-	const username = document.createElement("span")
-	const separator = document.createElement("span")
-	separator.textContent = ": "
-	username.className = "message_user"
-	username.textContent = data.name
+    console.log("chat: chat", data)
+    const msg = document.createElement("div")
+    const username = document.createElement("span")
+    const separator = document.createElement("span")
+    separator.textContent = ": "
+    username.className = "message_user"
+    username.textContent = data.name
 
-	if (data.sender == "sys") {
-		msg.style.fontStyle = "italic"
-		msg.appendChild(username)
-		msg.appendChild(separator)
-	}
+    if (data.sender == "sys") {
+        msg.style.fontStyle = "italic"
+        msg.appendChild(username)
+        msg.appendChild(separator)
+    }
 
-	if (data.name != last_chat_user) {
-		if (last_chat_user.length != 0)
-			msg.style.marginTop = "0.5em"
-		
-		if (data.sender != "sys") {
-			const d = new Date()
-			const timestamp = document.createElement("span")
-			timestamp.className = "message_timestamp"
-			timestamp.textContent = "["
-				+ pad(d.getHours(), 2) + ":"
-				+ pad(d.getMinutes(), 2) + ":"
-				+ pad(d.getSeconds(), 2) + "] "
+    if (data.name != last_chat_user) {
+        if (last_chat_user.length != 0)
+            msg.style.marginTop = "0.5em"
+        
+        if (data.sender != "sys") {
+            const d = new Date()
+            const timestamp = document.createElement("span")
+            timestamp.className = "message_timestamp"
+            timestamp.textContent = "["
+                + pad(d.getHours(), 2) + ":"
+                + pad(d.getMinutes(), 2) + ":"
+                + pad(d.getSeconds(), 2) + "] "
 
-			msg.appendChild(timestamp)
-			msg.appendChild(username)
-			msg.appendChild(separator)
-		}
-		last_chat_user = data.name
-	}
+            msg.appendChild(timestamp)
+            msg.appendChild(username)
+            msg.appendChild(separator)
+        }
+        last_chat_user = data.name
+    }
 
-	const message_content = document.createElement("span")
-	message_content.className = "message_content"
-	msg.appendChild(message_content)
-	
-	if (data.content.indexOf("&gt;") == 0) {
-		message_content.style.color = "#789922"
-	}
+    const message_content = document.createElement("span")
+    message_content.className = "message_content"
+    msg.appendChild(message_content)
+    
+    if (data.content.indexOf("&gt;") == 0) {
+        message_content.style.color = "#789922"
+    }
 
-	message_content.innerHTML = data.content
+    message_content.innerHTML = data.content
 
-	messages.appendChild(msg)
+    messages.appendChild(msg)
 
-	freeze_gifs(message_content)
+    freeze_gifs(message_content)
 
-	messages_outer.scrollTop = messages_outer.scrollHeight
+    messages_outer.scrollTop = messages_outer.scrollHeight
 }
 
 function on_history(data) {
-	console.log("chat: history", data)
-	
-	data.list.reverse().forEach(message => {
-		const msg = document.createElement("div")
-		const username = document.createElement("span")
-		const separator = document.createElement("span")
-		separator.textContent = ": "
-		username.className = "message_user"
+    console.log("chat: history", data)
+    
+    data.list.reverse().forEach(message => {
+        const msg = document.createElement("div")
+        const username = document.createElement("span")
+        const separator = document.createElement("span")
+        separator.textContent = ": "
+        username.className = "message_user"
 
-		if (last_chat_user != message.name) {
-			if (last_chat_user.length != 0)
-				msg.style.marginTop = "0.5em"
-			
-			username.textContent = message.name
+        if (last_chat_user != message.name) {
+            if (last_chat_user.length != 0)
+                msg.style.marginTop = "0.5em"
+            
+            username.textContent = message.name
 
-			msg.appendChild(username)
-			msg.appendChild(separator)
-		}
+            msg.appendChild(username)
+            msg.appendChild(separator)
+        }
 
-		last_chat_user = message.name
+        last_chat_user = message.name
 
-		const message_content = document.createElement("span")
-		message_content.className = "message_content"
-		msg.appendChild(message_content)
-		
-		if (message.msg.indexOf("&gt;") == 0) {
-			message_content.style.color = "#789922"
-		}
+        const message_content = document.createElement("span")
+        message_content.className = "message_content"
+        msg.appendChild(message_content)
+        
+        if (message.msg.indexOf("&gt;") == 0) {
+            message_content.style.color = "#789922"
+        }
 
-		message_content.innerHTML = message.msg
+        message_content.innerHTML = message.msg
 
-		messages.appendChild(msg)
+        messages.appendChild(msg)
 
-		freeze_gifs(message_content)
+        freeze_gifs(message_content)
 
-		messages_outer.scrollTop = messages_outer.scrollHeight
+        messages_outer.scrollTop = messages_outer.scrollHeight
 
-	})
+    })
 
-	messages.appendChild(document.createElement("hr"))
+    messages.appendChild(document.createElement("hr"))
 }
 
 function set_name(name) {
-	if (name.length > 0) {
-		if (name != "anon") {
-			set_cookie("nickname", name)
-		}
-		
-		channel.push("setname", {name: name})
-		return true
-	} else {
-		return false
-	}
+    if (name.length > 0) {
+        if (name != "anon") {
+            set_cookie("nickname", name)
+        }
+        
+        channel.push("setname", {name: name})
+        return true
+    } else {
+        return false
+    }
 }
 
 function freeze_gifs(message) {
-	if (!freezeframe_loaded) return
-	const message_gif = new Freezeframe(message, {
-		trigger: false,
-		responsive: false
-	})
-	
-	const observer = new MutationObserver(() => {
-		message_gif.start()
-		observer.disconnect()
-	})
+    if (!freezeframe_loaded) return
+    const message_gif = new Freezeframe(message, {
+        trigger: false,
+        responsive: false
+    })
+    
+    const observer = new MutationObserver(() => {
+        message_gif.start()
+        observer.disconnect()
+    })
 
-	Object.defineProperty(message_gif.items, "push", {
-		enumerable: false,
-		configurable: false,
-		writable: false,
-		value: function () {
-			for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {          
-				this[n] = arguments[i]
+    Object.defineProperty(message_gif.items, "push", {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function () {
+            for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {          
+                this[n] = arguments[i]
 
-				const observer = new MutationObserver(() => {
-					if (document.hasFocus())
-						message_gif.start()
-					observer.disconnect()
-					messages_outer.scrollTop = messages_outer.scrollHeight
-				})
+                const observer = new MutationObserver(() => {
+                    if (document.hasFocus())
+                        message_gif.start()
+                    observer.disconnect()
+                    messages_outer.scrollTop = messages_outer.scrollHeight
+                })
 
-				observer.observe(arguments[i].$container, {
-					attributes: true, 
-					attributeFilter: ['class'],
-					childList: false, 
-					characterData: false
-				})
-			}
-			
-			if (!(message_gif in gifs))
-				gifs.push(message_gif)
-			
-			return n
-		}
-	})
+                observer.observe(arguments[i].$container, {
+                    attributes: true, 
+                    attributeFilter: ['class'],
+                    childList: false, 
+                    characterData: false
+                })
+            }
+            
+            if (!(message_gif in gifs))
+                gifs.push(message_gif)
+            
+            return n
+        }
+    })
 }
 
 export default init

@@ -11,7 +11,7 @@ const room = document.getElementById("room").dataset.room
 init_chat(socket, room)
 
 btn_show_emotes.addEventListener("click", () => {
-	const modal = create_modal()
-	modal.label.textContent = "emotes"
-	reload_emotes(room, modal, chat_input)
+    const modal = create_modal()
+    modal.label.textContent = "emotes"
+    reload_emotes(room, modal, chat_input)
 })

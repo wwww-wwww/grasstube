@@ -182,7 +182,7 @@ defmodule GrasstubeWeb.VideoScheduler do
       
               Endpoint.broadcast("chat:" <> state.room_name, "chat", %{
                 sender: "sys",
-				name: "System",
+                name: "System",
                 content: "playing next video in #{@time_to_next + @time_to_start} seconds"
               })
               %{state | set_task: Process.send_after(scheduler, {:delayed_set, playlist}, 5000), sync_task: :nothing}

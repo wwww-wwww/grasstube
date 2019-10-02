@@ -1,332 +1,332 @@
 html, body {
-	width: 100%;
-	height: 100%;
-	margin: 0;
-	background: black;
-	color: rgba(255, 255, 255, 0.7);
-	overflow: hidden;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: black;
+    color: rgba(255, 255, 255, 0.7);
+    overflow: hidden;
 }
 
 #container1 {
-	height: 100%;
-	width: 100%;
-	overflow: hidden;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
 }
 
 #container2 {
-	position: relative;
-	height: 100%;
-	overflow-y: scroll;
+    position: relative;
+    height: 100%;
+    overflow-y: scroll;
 }
 
 #maincontent {
-	position: relative;
-	display: flex;
-	justify-content: space-between;
-	flex-direction: row;
-	height: 80%;
-	width: 100%;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    height: 80%;
+    width: 100%;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 #container_video {
-	height: 100%;
-	width: 100%;
-	position: relative;
-	overflow-x: hidden;
+    height: 100%;
+    width: 100%;
+    position: relative;
+    overflow-x: hidden;
 }
 
 #container_chat {
-	height: 100%;
-	width: 300px;
-	flex-shrink: 0;
-	position:relative;
-	border-left: 1px solid rgba(255, 255, 255, 0.3);
-	border-right: 1px solid rgba(255, 255, 255, 0.3);
+    height: 100%;
+    width: 300px;
+    flex-shrink: 0;
+    position:relative;
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    border-right: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .template {
-	display: none;
+    display: none;
 }
 
 .message_content img {
-	max-height: 100px;
+    max-height: 100px;
 }
 
 .message_user {
-	font-weight: 500;
+    font-weight: 500;
 }
 
 #bottom:after {
-	content: "";
-	display: table;
-	clear: both;
+    content: "";
+    display: table;
+    clear: both;
 }
 
 .col {
-	float: left;
-	width: 50%;
+    float: left;
+    width: 50%;
 }
 
 #dragbar_h {
-	background-color: rgba(255, 255, 255, 0.2);
-	height: 100%;
-	position: absolute;
-	width: 3px;
-	cursor: col-resize;
-	z-index: 2;
+    background-color: rgba(255, 255, 255, 0.2);
+    height: 100%;
+    position: absolute;
+    width: 3px;
+    cursor: col-resize;
+    z-index: 2;
 }
 
 #dragbar_v {
-	background-color: rgba(255, 255, 255, 0.2);
-	height: 3px;
-	width: 100%;
-	cursor: row-resize;
-	position: absolute;
-	z-index: 2;
+    background-color: rgba(255, 255, 255, 0.2);
+    height: 3px;
+    width: 100%;
+    cursor: row-resize;
+    position: absolute;
+    z-index: 2;
 }
 
 #dragbar_userlist {
-	background-color: rgba(255, 255, 255, 0.2);
-	width: 100%;
-	float: top;
-	height: 3px;
-	cursor: row-resize;
+    background-color: rgba(255, 255, 255, 0.2);
+    width: 100%;
+    float: top;
+    height: 3px;
+    cursor: row-resize;
 }
 
 #user_settings {
-	display: inline-block;
-	transition: opacity 0.1s;
+    display: inline-block;
+    transition: opacity 0.1s;
 }
 
 #polls_list {
-	width: 100%;
-	margin-top: 0.5em;
+    width: 100%;
+    margin-top: 0.5em;
 }
 
 .poll_item {
-	margin-bottom: 0.5em;
-	max-width: 100%;
-	position: relative;
+    margin-bottom: 0.5em;
+    max-width: 100%;
+    position: relative;
 }
 
 .poll_item-inner {
-	display: inline-block;
-	border: 1px solid rgba(255, 255, 255, 0.4);
-	max-width: 100%;
+    display: inline-block;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    max-width: 100%;
 }
 
 .poll_item-header {
-	font-size: 1em;
+    font-size: 1em;
 }
 
 .poll_item-body {
-	padding: 0.5em;
-	border-top: 1px solid rgba(255, 255, 255, 0.4);
-	width: 100%;
+    padding: 0.5em;
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+    width: 100%;
 }
 
 .poll_choice {
-	margin-bottom: 0.5em;
-	display: block;
-	line-height: 1.5em;
+    margin-bottom: 0.5em;
+    display: block;
+    line-height: 1.5em;
 }
 
 .poll_item-title {
-	margin: 0 0.5em;
-	font-size: 1em;
-	line-height: 2em;
-	box-decoration-break: clone;
-	word-wrap: break-word;
+    margin: 0 0.5em;
+    font-size: 1em;
+    line-height: 2em;
+    box-decoration-break: clone;
+    word-wrap: break-word;
 }
 
 .poll_choice > span {
-	font-size: 1em;
-	line-height: 1.5em;
-	margin-left: 0.5em;
-	box-decoration-break: clone;
-	word-wrap: break-word;
+    font-size: 1em;
+    line-height: 1.5em;
+    margin-left: 0.5em;
+    box-decoration-break: clone;
+    word-wrap: break-word;
 }
 
 .poll_choice > button {
-	float: left;
+    float: left;
 }
 
 .poll_item-delete {
-	float: right;
-	width: 2em;
-	height: 2em;
-	font-weight: bold;
-	border: none;
+    float: right;
+    width: 2em;
+    height: 2em;
+    font-weight: bold;
+    border: none;
 }
 
 #playlist_controls {
-	margin-bottom: 0.5em;
+    margin-bottom: 0.5em;
 }
 
 .playlist_outer {
-	display: inline-block;
-	border: 1px solid rgba(255, 255, 255, 0.3);
+    display: inline-block;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .playlist_header {
-	border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-	padding: 0.5em;
-	text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5em;
+    text-align: left;
 }
 
 #playlist_header_time {
-	float: right;
+    float: right;
 }
 
 .playlist_item {
-	padding: 0 0.5em;
+    padding: 0 0.5em;
 }
 
 .playlist_item_duration, .playlist_set {
-	margin-left: 0.5em;
+    margin-left: 0.5em;
 }
 
 .playlist_remove {
-	margin-right: 0.5em;
+    margin-right: 0.5em;
 }
 
 .playlist_dragging {
-	box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.6);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .playlist_drag, .playlist_drag:hover, .playlist_drag:active, .playlist_drag:focus {
-	cursor: grab;
-	background: none;
-	border: none;
-	box-shadow: none;
-	margin-left: 0.5em;
-	color: rgba(255, 255, 255, 0.7);
+    cursor: grab;
+    background: none;
+    border: none;
+    box-shadow: none;
+    margin-left: 0.5em;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 #playlist_container {
-	padding: 0.5em 0;
+    padding: 0.5em 0;
 }
 
 #bottom {
-	font-size: 0.8em;
-	margin-top: 0.5em;
+    font-size: 0.8em;
+    margin-top: 0.5em;
 }
 
 .isactive, .isactive > a {
-	background-color: rgb(60, 60, 60);
-	color: rgb(220, 220, 220);
+    background-color: rgb(60, 60, 60);
+    color: rgb(220, 220, 220);
 }
 .user_name {
-	color: rgb(200, 200, 200);
+    color: rgb(200, 200, 200);
 }
 
 .mod {
-	text-decoration: underline;
-	text-decoration-color: rgb(150, 150, 150);
+    text-decoration: underline;
+    text-decoration-color: rgb(150, 150, 150);
 }
 
 .guest {
-	color: rgb(150, 150, 150);
+    color: rgb(150, 150, 150);
 }
 
 #chat_div {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .chat_header {
-	font-size: 1em;
-	padding: 4px;
-	height: 2em;
+    font-size: 1em;
+    padding: 4px;
+    height: 2em;
 }
 
 .chat_main_area {
-	position: relative;
-	border-top: 1px solid rgba(255, 255, 255, 0.4);
-	display: flex;
-	flex-direction: column;
-	flex: 1;
-	min-height: 0;
+    position: relative;
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 #userlist {
-	position: absolute;
-	background: rgba(0, 0, 0, 0.6);	
-	padding: 0.5em;
-	width: 8em;
-	left: 0;
-	top: 0;
-	z-index: 1;
-	overflow-y: auto;
-	word-wrap: break-word;
-	text-align: left;
-	height: unset;
-	max-height: 10em;
-	border-right: 1px solid rgba(255, 255, 255, 0.4);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    position: absolute;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 0.5em;
+    width: 8em;
+    left: 0;
+    top: 0;
+    z-index: 1;
+    overflow-y: auto;
+    word-wrap: break-word;
+    text-align: left;
+    height: unset;
+    max-height: 10em;
+    border-right: 1px solid rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 #messages_outer {
-	flex: 1;
-	overflow-y: auto;
+    flex: 1;
+    overflow-y: auto;
 }
 
 #messages {
-	padding: 0.5em;
-	word-wrap: break-word;
-	color: rgba(255, 255, 255, 0.7);
-	background: none;
+    padding: 0.5em;
+    word-wrap: break-word;
+    color: rgba(255, 255, 255, 0.7);
+    background: none;
 }
 
 #input_area {
-	border: none;
-	background: none;
-	font-size: 1em;
-	display: flex;
+    border: none;
+    background: none;
+    font-size: 1em;
+    display: flex;
 }
 
 #chat_input {
-	z-index: 1;
-	flex: 1;
-	font-size: 1em;
-	min-width: 0;
+    z-index: 1;
+    flex: 1;
+    font-size: 1em;
+    min-width: 0;
 }
 
 #btn_show_emotes {
-	width: 2em;
-	height: 2em;
+    width: 2em;
+    height: 2em;
 }
 
 .message_timestamp {
-	font-size: 10px;
-	line-height: 14px;
+    font-size: 10px;
+    line-height: 14px;
 }
 
 .message_content > img {
-	max-height: 6em;
+    max-height: 6em;
 }
 
 .message_user {
-	font-weight: 500;
+    font-weight: 500;
 }
 
 hr {
-	margin-bottom: 0.5em;
+    margin-bottom: 0.5em;
 }
 
 #userlist.hidden, #seekbar.hidden {
-	display: none;
+    display: none;
 }
 
 #player {
-	width: 100%;
-	height: 100%;
+    width: 100%;
+    height: 100%;
 }
 
 .hidden {
-	display: none;
+    display: none;
 }
 
 @import url("video.css");

@@ -25,7 +25,7 @@ defmodule Grasstube.ProcessRegistry do
   end
   
   def rooms_of(user) do
-	  Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", user}, [], [:"$1"]}])
+    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", user}, [], [:"$1"]}])
   end
 
   def list_rooms() do
