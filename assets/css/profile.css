@@ -1,0 +1,17 @@
+.form_delete_emote {
+    display: inline;
+}
+.emote {
+    width: 2em;
+    vertical-align: middle;
+    transition: width 0.2s;
+}
+.emote:hover {
+    width: 100px;
+}
+
+.form_delete_room {
+    display: inline-block;
+    margin-left: 0.5em;
+    font-size: 0.8em;
+}

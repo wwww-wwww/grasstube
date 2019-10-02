@@ -1,17 +1,3 @@
-<style>
-	.form_delete_emote {
-		display: inline;
-	}
-	.emote {
-		width: 2em;
-		vertical-align: middle;
-		transition: width 0.2s;
-	}
-	.emote:hover {
-		width: 100px;
-	}
-</style>
-
 <% current_user = Guardian.Plug.current_resource(@conn) != nil and Guardian.Plug.current_resource(@conn).username == @username %>
 
 <%= if current_user do %>
@@ -31,6 +17,10 @@
 		<%= for room_name <- rooms do %>
 			<div>
 				<%= link(room_name, to: Routes.page_path(@conn, :room, room_name)) %>
+				<%= form_for(@conn, Routes.user_path(@conn, :close_room), [class: "form_delete_room"], fn f -> %>
+					<%= hidden_input(f, :room_name, value: room_name) %>
+					<%= submit "close room" %>
+				<% end) %>
 			</div>
 		<% end %>
 	<% else %>
@@ -42,7 +32,7 @@
 	<br>
 <% end %>
 
-<%= @username %>'s emotes: 
+<%= @name %>'s emotes: 
 
 <%= link("export", to: Routes.user_path(@conn, :emotes_json, @username)) %>
 <%= if current_user do %>

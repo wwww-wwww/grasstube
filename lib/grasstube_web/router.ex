@@ -57,6 +57,7 @@ defmodule GrasstubeWeb.Router do
       post "/delete_emote", UserController, :delete_emote
       get "/create_room", UserController, :create_room_page
       post "/create_room", UserController, :create_room
+      post "/close_room", UserController, :close_room
     end
   end
 
