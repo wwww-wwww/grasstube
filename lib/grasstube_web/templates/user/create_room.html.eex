@@ -5,7 +5,7 @@
         you already have
         <%= if length(rooms) > 0 do %>
             rooms
-        <%= else %>
+        <% else %>
             a room
         <% end%>
         at:

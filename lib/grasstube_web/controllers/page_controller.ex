@@ -3,7 +3,7 @@ defmodule GrasstubeWeb.PageController do
 
   alias Grasstube.Guardian
 
-  def index(conn, assigns) do
+  def index(conn, _) do
     live_render(conn, GrasstubeWeb.RoomsLive, session: %{can_make_room: can_make_room?(conn)})
   end
 

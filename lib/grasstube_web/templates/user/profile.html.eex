@@ -8,7 +8,7 @@
 			you have
 			<%= if length(rooms) > 1 do %>
 				rooms
-			<%= else %>
+			<% else %>
 				a room
 			<% end%>
 			at:
