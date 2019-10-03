@@ -329,4 +329,22 @@ hr {
     display: none;
 }
 
+.ff-container.ff-loading-icon:before {
+    background: none;
+}
+
+.ff-container.ff-inactive .ff-image {
+    opacity: 1;
+    transition: none;
+}
+
+.ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
+    opacity: 0;
+}
+
+.freeze > div > .message_content > .ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
 @import url("video.css");

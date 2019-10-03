@@ -83,17 +83,58 @@ function init(socket, room) {
         userlist.classList.toggle("hidden")
     })
 
-    btn_chat_settings.addEventListener("click", make_change_nickname)
+    btn_chat_settings.addEventListener("click", make_settings)
 
     window.addEventListener("focus", () => {
-        for (const gif of gifs)
-            gif.start()
+        messages.classList.toggle("freeze", false)
     })
 
     window.addEventListener("blur", () => {
-        for (const gif of gifs)
-            gif.stop()
+        if ((get_cookie("freezeframe") || 0))
+            messages.classList.toggle("freeze", true)
     })
+
+    messages.classList.toggle("freeze", !document.hasFocus() && (get_cookie("freezeframe") || 0))
+}
+
+function make_settings() {
+    const modal = create_modal(chat_div)
+    modal.label.textContent = "chat settings"
+    const modal_body = modal.get_body()
+    
+    let row = document.createElement("div")
+    row.style.display = "block"
+    row.style.marginBottom = "0.5em"
+    modal_body.appendChild(row)
+
+    let lbl = document.createElement("span")
+    lbl.textContent = "freeze gifs:"
+    lbl.style.marginRight = "0.5em"
+    row.appendChild(lbl)
+
+    const toggle_freezeframe = document.createElement("button")
+    toggle_freezeframe.textContent = (get_cookie("freezeframe") || 0) ? "on" : "off"
+    row.appendChild(toggle_freezeframe)
+
+    toggle_freezeframe.addEventListener("click", () => {
+        const freezeframe = (get_cookie("freezeframe") || 0)
+        set_cookie("freezeframe", !freezeframe)
+        toggle_freezeframe.textContent = !freezeframe ? "on" : "off"
+    })
+
+    row = document.createElement("div")
+    row.style.display = "block"
+    modal_body.appendChild(row)
+
+    lbl = document.createElement("span")
+    lbl.textContent = "nickname:"
+    lbl.style.marginRight = "0.5em"
+    row.appendChild(lbl)
+
+    const change_nickname = document.createElement("button")
+    change_nickname.textContent = "change"
+    row.appendChild(change_nickname)
+    change_nickname.addEventListener("click", make_change_nickname)
 }
 
 function make_change_nickname() {
@@ -277,8 +318,6 @@ function freeze_gifs(message) {
                 this[n] = arguments[i]
 
                 const observer = new MutationObserver(() => {
-                    if (document.hasFocus())
-                        message_gif.start()
                     observer.disconnect()
                     messages_outer.scrollTop = messages_outer.scrollHeight
                 })
