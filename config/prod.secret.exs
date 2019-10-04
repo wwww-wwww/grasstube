@@ -5,4 +5,6 @@ config :grasstube, GrasstubeWeb.Endpoint,
 
 config :grasstube, Grasstube.Guardian,
   issuer: "Grasstube",
-  secret_key: ""
+  secret_key: "",
+  ttl: { 30, :days }
+  

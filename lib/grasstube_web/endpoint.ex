@@ -44,7 +44,8 @@ defmodule GrasstubeWeb.Endpoint do
   plug(Plug.Session,
     store: :cookie,
     key: "_grasstube_key",
-    signing_salt: "gvBU6+ko"
+    signing_salt: "gvBU6+ko",
+    max_age: 604800
   )
 
   plug(GrasstubeWeb.Router)
