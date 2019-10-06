@@ -24,8 +24,17 @@ const wplayer = new GrassPlayer(player)
 
 init_chat(socket, room)
 
-const modal = create_modal(player)
-modal.label.textContent = "this is for autoplay"
+const test_autoplay = document.createElement("video").play()
+if (test_autoplay != undefined) {
+    test_autoplay.catch(_ => {
+        const modal = create_modal(player)
+        modal.label.textContent = "this is for autoplay"
+    })
+} else {
+    const modal = create_modal(player)
+    modal.label.textContent = "this is for autoplay"
+}
+
 init_video(socket, room, wplayer)
 
 init_playlist(socket, room)
