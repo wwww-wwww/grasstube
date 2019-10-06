@@ -1,0 +1,46 @@
+<div style="display: none" id="room" data-room="<%= @room %>"></div>
+
+<div id="container1">
+	<div id="container2">
+		<div id="dragbar_v" style="opacity: 0"></div>
+		<div id="maincontent">
+			<div id="container_chat">
+                <div id="chat_div">
+                    <div id="header">
+                        <button id="btn_userlist_toggle" class="square">👨‍👦</button>
+                        <button id="btn_chat_settings" class="square">⚙</button>
+                        <span id="user_count">disconnected</span>
+                    </div>
+                    <div class="chat_main_area">
+                        <div class="top">
+                            <div id="userlist"></div>
+                            <div id="messages_outer">
+                                <div id="messages"></div>
+                            </div>
+                        </div>
+                        <div class="bottom">
+                            <div id="input_area">
+                                <input id="chat_input" type="text"/>
+                                <button id="btn_show_emotes" class="square">🙂</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+			</div>
+		</div>
+		<div id="bottom">
+			<div class="col">
+				<button id="btn_user_settings">settings</button>
+				<%= link("full room", to: Routes.page_path(@conn, :room, @room), class: "button") %>
+				<button id="btn_create_poll" class="hidden">create poll</button>
+				<div id="polls_list"></div>
+			</div>
+			<div class="col" style="text-align: right">
+				<%= render @view_module, "playlist.html", assigns %>
+			</div>
+		</div>
+	</div>
+</div>
+
+<link rel="stylesheet" type="text/css" href="/css/no_video.css">
+<script src="/js/no_video.js"></script>

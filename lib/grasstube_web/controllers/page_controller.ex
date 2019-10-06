@@ -16,6 +16,15 @@ defmodule GrasstubeWeb.PageController do
     end
   end
 
+  def no_video(conn, %{"room" => room}) do
+    case Grasstube.ProcessRegistry.lookup(room, :video) do
+      :not_found ->
+        text(conn, "room not found")
+      _ ->
+        render(conn, "no_video.html", room: room)
+    end
+  end
+
   def video(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :video) do
       :not_found ->

@@ -36,6 +36,8 @@
 				<%= link("chat only", to: Routes.page_path(@conn, :chat, @room), class: "button") %>
 				
 				<%= link("video only", to: Routes.page_path(@conn, :video, @room), class: "button") %>
+				
+				<%= link("no video", to: Routes.page_path(@conn, :no_video, @room), class: "button") %>
 				<button id="btn_create_poll" class="hidden">create poll</button>
 				<div id="polls_list"></div>
 			</div>

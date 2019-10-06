@@ -14,23 +14,7 @@ function init() {
     if (drag_width) container_chat.style.width = Math.round(drag_width * window.innerWidth) + "px"
 
     change_layout()
-
-    window.addEventListener("resize", e => {
-        const scrollbar = container2.offsetWidth - container2.clientWidth
-        container2.style.paddingRight = scrollbar + "px"
-        container2.style.width = "calc(100% + " + scrollbar + "px)"
-        maincontent.style.width = "calc(100% + " + scrollbar + "px)"
-        bottom.style.width = "calc(100% + " + scrollbar + "px)"
-
-        if (maincontent.style.flexDirection == "row-reverse")
-            dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().left + 1}px, 0)`
-        else
-            dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().right - 2}px, 0)`
-            
-        dragbar_v.style.transform = `translate(0, ${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px)`
-    })
-    
-    window.dispatchEvent(new Event("resize"))
+    hide_scrollbar()
 
     dragbar_h.addEventListener("mousedown", e => {
         e.preventDefault()
@@ -70,6 +54,26 @@ function init() {
     })
 }
 
+function hide_scrollbar() {
+    window.addEventListener("resize", e => {
+        const scrollbar = container2.offsetWidth - container2.clientWidth
+        container2.style.paddingRight = scrollbar + "px"
+        container2.style.width = "calc(100% + " + scrollbar + "px)"
+        maincontent.style.width = "calc(100% + " + scrollbar + "px)"
+        bottom.style.width = "calc(100% + " + scrollbar + "px)"
+
+        if (document.getElementById("dragbar_h") == null) return
+
+        if (maincontent.style.flexDirection == "row-reverse")
+            dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().left + 1}px, 0)`
+        else
+            dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().right - 2}px, 0)`
+            
+        dragbar_v.style.transform = `translate(0, ${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px)`
+    })
+    window.dispatchEvent(new Event("resize"))
+}
+
 function change_layout() {
     const layout = get_cookie("view_layout")
     if (layout == 0) {
@@ -98,4 +102,4 @@ function drag_v(e) {
 }
 
 export default init
-export {change_layout}
+export {change_layout, hide_scrollbar}
