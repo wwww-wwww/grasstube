@@ -322,11 +322,13 @@ hr {
 
 .ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
     opacity: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .freeze > div > .message_content > .ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
     opacity: 1;
     transition: opacity 0.3s;
+    width: 100%;
+    height: 100%;
 }
-
-@import url("video.css");
