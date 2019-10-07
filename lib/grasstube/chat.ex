@@ -143,7 +143,7 @@ defmodule GrasstubeWeb.ChatAgent do
 
   defp command(channel, socket, "emotelists") do
     Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System",
-      content: "emotelists: " <> (get_emotelists(channel) |> Enum.reduce(fn(x, acc) -> acc <> ", " <> x end))})
+      content: "emotelists: " <> (get_emotelists(channel) |> Enum.join(", "))})
   end
 
   defp command(channel, socket, "ops") do
@@ -151,7 +151,7 @@ defmodule GrasstubeWeb.ChatAgent do
       user = Guardian.Phoenix.Socket.current_resource(socket)
       if mod?(channel, user) do
         Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System",
-          content: "ops: " <> ((get_mods(channel) ++ [get_admin(channel)]) |> Enum.reduce(fn(x, acc) -> acc <> ", " <> x end))})
+          content: "ops: " <> ((get_mods(channel) ++ [get_admin(channel)]) |> Enum.join(", "))})
       else
         Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "you can't do this!"})
       end
