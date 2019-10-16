@@ -260,33 +260,42 @@ class GrassPlayer {
         this.playing_message.textContent = ""
         this.btn_play.disabled = false
 
-        if (type == "yt") {
-            this.set_youtube(videos)
-        } else {
-            if (this.settings.default_quality in videos) {
-                this.video.src = videos[this.settings.default_quality]
-            } else {
-                for (const video of videos) {
-                    this.video.src = video
-                    break
+        switch (type) {
+            case "yt":
+                this.set_youtube(videos)
+                break
+            case "gdrive":
+                this.set_gdrive(videos, subs)
+                break
+            default:
+                if (this.settings.default_quality in videos) {
+                    this.video.src = videos[this.settings.default_quality]
+                } else {
+                    for (const video in videos) {
+                        this.video.src = videos[video]
+                        break
+                    }
                 }
-            }
-            if (Object.keys(videos).length > 1) {
-                this.select_quality.classList.toggle("hidden", false)
-                for (const video in videos) {
-                    const opt = document.createElement("option")
-                    opt.textContent = video
-                    this.select_quality.appendChild(opt)
+                if (Object.keys(videos).length > 1) {
+                    this.select_quality.classList.toggle("hidden", false)
+                    for (const video in videos) {
+                        const opt = document.createElement("option")
+                        opt.textContent = video
+                        this.select_quality.appendChild(opt)
+                        if (video == this.settings.default_quality) {
+                            this.select_quality.value = video
+                        }
+                    }
                 }
-            }
-            if (this.btn_cc.checked) {
-                this.octopusInstance = new SubtitlesOctopus({
-                    video: this.video,
-                    subUrl: subs,
-                    fonts: this.fonts,
-                    workerUrl: '/includes/subtitles-octopus-worker.js'
-                })
-            }
+                if (this.btn_cc.checked) {
+                    this.octopusInstance = new SubtitlesOctopus({
+                        video: this.video,
+                        subUrl: subs,
+                        fonts: this.fonts,
+                        workerUrl: '/includes/subtitles-octopus-worker.js'
+                    })
+                }
+                break
         }
     }
 
@@ -368,6 +377,49 @@ class GrassPlayer {
         })
     }
     
+    set_gdrive(video_id, subs) {
+        const url = "https://docs.google.com/get_video_info?" +
+            `docid=${video_id}&sle=true&hl=en`
+        
+        httpRequest({
+            method: 'GET',
+            url: url,
+            onload: resp => {
+                resp = resp.responseText
+                const data = {}
+                resp.split('&').forEach(kv => {
+                    const pair = kv.split('=')
+                    data[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1])
+                })
+
+                if (data.status === 'fail') {
+                    console.log("Google Drive request failed: " +
+                        unescape(data.reason).replace(/\+/g, ""))
+                }
+
+                if (!data.fmt_stream_map) {
+                    alert(
+                        "Google has removed the video streams associated" +
+                        " with this item.  It can no longer be played."
+                    )
+                }
+
+                data.links = {}
+                data.fmt_stream_map.split(',').forEach(function (item) {
+                    const pair = item.split('|')
+                    data.links[pair[0]] = pair[1]
+                })
+
+                const videos = {}
+                for (const q in data.links) {
+                    if (q in ITAG_QMAP) 
+                        videos[ITAG_QMAP[q]] = data.links[q]
+                }
+                this.set_video("default", videos, subs)
+            }
+        })
+    }
+
     update_youtube_time() {
         if (this.current_video.yt) {
             const current = this.current_video.yt.getCurrentTime()
@@ -517,6 +569,17 @@ function seekbar_mouse_move(e, player) {
     const t = Math.min(Math.max(((e.clientX - player.seekbar.getBoundingClientRect().left) / (player.seekbar.getBoundingClientRect().width)), 0), 1)
     seek_local(player, t)
     return t * player.duration()
+}
+
+function httpRequest(opts) {
+    document.xmlHttpRequest(opts)
+}
+
+const ITAG_QMAP = {
+    37: "1080",
+    22: "720",
+    59: "480",
+    18: "360"
 }
 
 export default GrassPlayer

@@ -1,5 +1,3 @@
-import {get_cookie} from "./cookies"
-
 const fonts = []
 
 function init(socket, room, player) {
@@ -75,57 +73,5 @@ function connect(socket, room, player) {
         player.toggle_controls(true)
     })
 }
-
-function httpRequest(opts) {
-    document.xmlHttpRequest(opts)
-}
-/*
-            const url = "https://docs.google.com/get_video_info?"
-                + "docid=" + file_video
-                + "&sle=true"
-                + "&hl=en"
-
-            httpRequest({
-                method: 'GET',
-                url: url,
-                onload: resp => {
-                    resp = resp.responseText
-                    const data = {};
-
-                    resp.split('&').forEach(kv => {
-                        const pair = kv.split('=')
-                        data[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1])
-                    })
-
-                    if (data.status === 'fail') {
-                        console.log("Google Drive request failed: " +
-                            unescape(data.reason).replace(/\+/g, ""))
-                    }
-
-                    if (!data.fmt_stream_map) {
-                        alert(
-                            "Google has removed the video streams associated" +
-                            " with this item.  It can no longer be played."
-                        )
-                    }
-
-                    data.links = {}
-                    data.fmt_stream_map.split(',').forEach(function (item) {
-                        const pair = item.split('|')
-                        data.links[pair[0]] = pair[1]
-                    })
-
-                    const gdrive_link = (get_cookie().lq || false) ? 
-                        (data.links[37] ||
-                        data.links[22] || 
-                        data.links[59] ||
-                        data.links[18]) :
-                        (data.links[18] ||
-                        data.links[59] || 
-                        data.links[22] ||
-                        data.links[37])
-                        
-
-}*/
 
 export default init
