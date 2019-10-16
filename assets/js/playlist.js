@@ -65,6 +65,7 @@ function init(socket, room) {
                 vid.q_move.textContent = "☰"
 
                 vid.q_move.addEventListener("mousedown", queue_start_drag)
+                vid.q_move.addEventListener("touchstart", queue_start_drag)
 
                 vid.q_set.addEventListener("click", queue_set)
                 vid.q_del.addEventListener("click", queue_remove)
@@ -158,11 +159,13 @@ function queue_remove(e) {
 
 function queue_start_drag(e) {
     for (let i = 0; i < playlist.length; i++) {
-        if (playlist[i].q_move == e.target) {
+        if (playlist[i].q_move == (e.touches ? e.touches[0].target : e.target)) {
             playlist[i].dragging = true
             playlist[i].e.classList.toggle("playlist_dragging", true)
             document.addEventListener("mouseup", queue_stop_drag)
             document.addEventListener("mousemove", queue_drag)
+            document.addEventListener("touchend", queue_stop_drag)
+            document.addEventListener("touchmove", queue_drag)
             break
         }
     }
@@ -174,7 +177,8 @@ function queue_drag(e) {
             const playlist_item = playlist[i]
             playlist_item.e.style.transform = "none"
             let rect = playlist_item.e.getBoundingClientRect()
-            let mouse_y = Math.min(Math.max(e.clientY, playlist[0].e.getBoundingClientRect().y), playlist[playlist.length - 1].e.getBoundingClientRect().bottom)
+            let mouse_y = Math.min(Math.max(e.touches ? e.touches[0].clientY : e.clientY,
+                playlist[0].e.getBoundingClientRect().y), playlist[playlist.length - 1].e.getBoundingClientRect().bottom)
             let y = rect.y
             let off = mouse_y - y - rect.height / 2
 
@@ -220,6 +224,8 @@ function queue_stop_drag(_) {
     }
     document.removeEventListener("mouseup", queue_stop_drag)
     document.removeEventListener("mousemove", queue_drag)
+    document.removeEventListener("touchend", queue_stop_drag)
+    document.removeEventListener("touchmove", queue_drag)
 }
 
 export default init

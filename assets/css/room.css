@@ -195,6 +195,10 @@ html, body {
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.6);
 }
 
+.playlist_drag {
+    touch-action: none;
+}
+
 .playlist_drag, .playlist_drag:hover, .playlist_drag:active, .playlist_drag:focus {
     cursor: grab;
     background: none;
