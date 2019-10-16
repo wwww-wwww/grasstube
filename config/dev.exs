@@ -12,8 +12,13 @@ config :grasstube, Grasstube.Guardian,
   issuer: "Grasstube",
   secret_key: ""
 
+config :grasstube,
+  youtube_api_keys: [
+  ]
+
 config :grasstube, GrasstubeWeb.Endpoint,
   http: [port: 17001],
+  url: [host: "o2.okea.moe"],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,

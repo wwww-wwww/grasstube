@@ -1,4 +1,4 @@
-function create_modal(root) {
+function create_modal(root, show=true) {
     root = root || body
 
     const modal = document.createElement("div")
@@ -31,7 +31,11 @@ function create_modal(root) {
     modal.label.className = "modal-title"
     modal_header.appendChild(modal.label)
 
-    root.appendChild(modal)
+    modal.show = () => {
+        root.appendChild(modal)
+    }
+
+    if (show) modal.show()
 
     modal.get_body = () => {
         if (modal.body == "undefined" || modal.body == null) {

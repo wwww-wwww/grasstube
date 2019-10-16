@@ -7,4 +7,7 @@ config :grasstube, Grasstube.Guardian,
   issuer: "Grasstube",
   secret_key: "",
   ttl: { 30, :days }
-  
+
+config :grasstube,
+  youtube_api_keys: [
+  ]

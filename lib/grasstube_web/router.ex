@@ -68,5 +68,6 @@ defmodule GrasstubeWeb.Router do
     get "/list_rooms", PageController, :list_rooms
     get "/emotes/r/:room", PageController, :emotes
     get "/emotes/u/:username", UserController, :emotes_json
+    get "/yt_search", YTController, :yt_search
   end
 end

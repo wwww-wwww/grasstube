@@ -5,6 +5,7 @@
 		<button id="playlist_add">add</button>
 		<button id="btn_show_ss">ss</button>
 		<button id="btn_show_hosted_videos">video</button>
+		<button id="btn_show_yt">yt</button>
 	</div>
 
 	<div class="playlist_outer">

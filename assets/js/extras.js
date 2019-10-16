@@ -20,4 +20,14 @@ function seconds_to_hms(seconds, hide_hours = false) {
     return `${pad(hours, 2)}:${pad(minutes, 2)}:${pad(seconds, 2)}`
 }
 
-export {pad, enter, seconds_to_hms}
+// https://stackoverflow.com/a/16149053
+function unescape_html(unsafe) {
+    return unsafe
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, "\"")
+        .replace(/&#0{0,1}39;/g, "'")
+}
+
+export {pad, enter, seconds_to_hms, unescape_html}

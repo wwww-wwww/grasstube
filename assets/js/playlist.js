@@ -1,7 +1,7 @@
 import "phoenix_html"
 import {create_modal} from "./modals"
 import {reload_hosted_videos} from "./metadata"
-import {seconds_to_hms, enter} from "./extras"
+import {seconds_to_hms, enter, unescape_html} from "./extras"
 
 let channel = null
 const playlist = []
@@ -127,6 +127,15 @@ function init(socket, room) {
         modal.label.textContent = "ss"
         reload_hosted_videos(modal, channel, "https://okea.moe/ss/list.json")
     })
+
+    const yt_modal = create_yt_modal()
+
+    btn_show_yt.addEventListener("click", () => {
+        yt_modal.show()
+        yt_modal.search_input.focus()
+        yt_modal.search_input.select()
+    })
+
 }
 
 function queue_add() {
@@ -226,6 +235,128 @@ function queue_stop_drag(_) {
     document.removeEventListener("mousemove", queue_drag)
     document.removeEventListener("touchend", queue_stop_drag)
     document.removeEventListener("touchmove", queue_drag)
+}
+
+function create_yt_modal() {
+    const modal = create_modal(null, false)
+    modal.label.textContent = "yt"
+
+    const modal_body = modal.get_body()
+    modal_body.style.display = "flex"
+    modal_body.style.flexDirection = "column"
+    modal_body.style.height = "100%"
+
+    modal.search_input = document.createElement("input")
+    modal.search_input.style.display = "block"
+    modal.search_input.style.marginBottom = "0.5em"
+    modal.search_input.style.flex = "0"
+    modal_body.appendChild(modal.search_input)
+
+    let row = document.createElement("div")
+    row.style.display = "block"
+    row.style.flex = "1"
+    row.style.minHeight = "0"
+    row.style.overflow = "auto"
+    row.style.borderBottom = "1px solid rgba(255, 255, 255, 0.6)"
+    row.style.borderTop = "1px solid rgba(255, 255, 255, 0.6)"
+    modal_body.appendChild(row)
+
+    const videos_list = document.createElement("div")
+    row.appendChild(videos_list)
+
+    row = document.createElement("div")
+    row.style.display = "block"
+    row.style.flex = "0"
+    modal_body.appendChild(row)
+
+    let search_text = modal.search_input.value.trim()
+
+    let search_timer = null
+
+    modal.search_input.addEventListener("keyup", () => {
+        const new_text = modal.search_input.value.trim()
+
+        if (search_timer != null) clearTimeout(search_timer)
+
+        search_timer = setTimeout(() => {
+            if (search_text == new_text) return
+            
+            search_text = new_text
+            
+            fetch(`/api/yt_search?query=${encodeURIComponent(search_text)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    while (videos_list.firstChild) videos_list.removeChild(videos_list.firstChild)
+
+                    for (const video of data.items) {
+                        const video_id = unescape_html(video.id)
+                        const video_url = `https://youtube.com/watch?v=${video_id}`
+    
+                        const video_e = document.createElement("div")
+                        video_e.style.display = "flex"
+                        video_e.style.borderBottom = "1px solid rgba(255, 255, 255, 0.4)"
+                        
+                        const video_e_thumbnail = document.createElement("img")
+                        video_e_thumbnail.style.height = "6em"
+                        video_e_thumbnail.style.verticalAlign = "top"
+                        video_e_thumbnail.src = `https://img.youtube.com/vi/${video_id}/mqdefault.jpg`
+                        video_e.appendChild(video_e_thumbnail)
+    
+                        let column = document.createElement("div")
+                        column.style.padding = "0.5em"
+                        column.style.flex = "1"
+                        column.style.minWidth = "0"
+                        video_e.appendChild(column)
+    
+                        let row = document.createElement("div")
+                        column.appendChild(row)
+    
+                        const video_e_title = document.createElement("a")
+                        video_e_title.textContent = unescape_html(video.title)
+                        video_e_title.style.fontWeight = "500"
+                        video_e_title.href = video_url
+                        row.appendChild(video_e_title)
+                        
+                        row = document.createElement("div")
+                        column.appendChild(row)
+    
+                        const video_e_author = document.createElement("a")
+                        video_e_author.textContent = unescape_html(video.channel_title)
+                        video_e_author.style.fontSize = "0.9em"
+                        video_e_author.href = `https://youtube.com/channel/${video.channel_id}`
+                        row.appendChild(video_e_author)
+    
+                        row = document.createElement("div")
+                        column.appendChild(row)
+                        
+                        const video_add = document.createElement("button")
+                        video_add.textContent = "add"
+                        video_add.style.flex = "0"
+                        video_e.appendChild(video_add)
+    
+                        video_add.addEventListener("click", () => {
+                            channel.push("q_add", {
+                                url: video_url,
+                                sub: ""
+                            })
+                        })
+    
+                        videos_list.appendChild(video_e)
+                    }
+    
+                    if (videos_list.lastChild) videos_list.lastChild.style.borderBottom = ""
+                }
+
+                search_timer = null
+            })
+            .catch(err => {
+                console.log("yt_search: error fetching", err)
+            })
+        }, 500)
+    })
+
+    return modal
 }
 
 export default init

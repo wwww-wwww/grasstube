@@ -9,6 +9,7 @@ defmodule Grasstube.Supervisor do
     children = [
       {Task.Supervisor, name: Tasks},
       GrasstubeWeb.Counter,
+      Grasstube.YTCounter,
       Grasstube.ProcessRegistry,
       {DynamicSupervisor, name: Grasstube.DynamicSupervisor, strategy: :one_for_one},
       Grasstube.DefaultRooms,
