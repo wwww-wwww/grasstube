@@ -161,7 +161,6 @@ a:focus {
 
 .modal-content {
     padding: 0.5em;
-    border-top: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .modal-close {

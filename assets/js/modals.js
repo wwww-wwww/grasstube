@@ -41,6 +41,8 @@ function create_modal(root, show=true) {
         if (modal.body == "undefined" || modal.body == null) {
             const body_outer = document.createElement("div")
             body_outer.style.overflow = "auto"
+            body_outer.style.display = "flex"
+            body_outer.style.borderTop = "1px solid rgba(255, 255, 255, 0.4)"
             modal.inner.appendChild(body_outer)
             modal.body = document.createElement("div")
             modal.body.className = "modal-content"

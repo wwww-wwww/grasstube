@@ -212,6 +212,22 @@ html, body {
     padding: 0.5em 0;
 }
 
+.yt-video { 
+    font-size: 0.75em;
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.yt-video > div > div > a {
+    text-decoration: none;
+}
+
+@media (min-width: 768px) {
+    .yt-video { 
+        font-size: 1em;
+    }
+}
+
 #bottom {
     font-size: 0.8em;
     margin-top: 0.5em;

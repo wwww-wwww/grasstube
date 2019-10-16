@@ -244,7 +244,6 @@ function create_yt_modal() {
     const modal_body = modal.get_body()
     modal_body.style.display = "flex"
     modal_body.style.flexDirection = "column"
-    modal_body.style.height = "100%"
 
     modal.search_input = document.createElement("input")
     modal.search_input.style.display = "block"
@@ -294,16 +293,19 @@ function create_yt_modal() {
                         const video_url = `https://youtube.com/watch?v=${video_id}`
     
                         const video_e = document.createElement("div")
-                        video_e.style.display = "flex"
-                        video_e.style.borderBottom = "1px solid rgba(255, 255, 255, 0.4)"
+                        video_e.className = "yt-video"
                         
+                        let column = document.createElement("div")
+                        column.style.display = "flex"
+                        column.style.alignItems = "center"
+                        video_e.appendChild(column)
+
                         const video_e_thumbnail = document.createElement("img")
                         video_e_thumbnail.style.height = "6em"
-                        video_e_thumbnail.style.verticalAlign = "top"
                         video_e_thumbnail.src = `https://img.youtube.com/vi/${video_id}/mqdefault.jpg`
-                        video_e.appendChild(video_e_thumbnail)
+                        column.appendChild(video_e_thumbnail)
     
-                        let column = document.createElement("div")
+                        column = document.createElement("div")
                         column.style.padding = "0.5em"
                         column.style.flex = "1"
                         column.style.minWidth = "0"
@@ -314,7 +316,7 @@ function create_yt_modal() {
     
                         const video_e_title = document.createElement("a")
                         video_e_title.textContent = unescape_html(video.title)
-                        video_e_title.style.fontWeight = "500"
+                        video_e_title.style.color = "rgba(255, 255, 255, 0.9)"
                         video_e_title.href = video_url
                         row.appendChild(video_e_title)
                         
@@ -345,7 +347,7 @@ function create_yt_modal() {
                         videos_list.appendChild(video_e)
                     }
     
-                    if (videos_list.lastChild) videos_list.lastChild.style.borderBottom = ""
+                    if (videos_list.lastChild) videos_list.lastChild.style.borderBottom = "none"
                 }
 
                 search_timer = null
