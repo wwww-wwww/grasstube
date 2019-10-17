@@ -318,44 +318,48 @@ function set_name(name) {
 }
 
 function freeze_gifs(message) {
-    if (!freezeframe_loaded) return
-    const message_gif = new Freezeframe(message, {
-        trigger: false,
-        responsive: false
-    })
-    
-    const observer = new MutationObserver(() => {
-        message_gif.start()
-        observer.disconnect()
-    })
+    for (const e of message.children) {
+        if (e.tagName != "IMG") continue
 
-    Object.defineProperty(message_gif.items, "push", {
-        enumerable: false,
-        configurable: false,
-        writable: false,
-        value: function () {
-            for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {          
-                this[n] = arguments[i]
+        if (!freezeframe_loaded) return
+        const message_gif = new Freezeframe(e, {
+            trigger: false,
+            responsive: false
+        })
+        
+        const observer = new MutationObserver(() => {
+            message_gif.start()
+            observer.disconnect()
+        })
 
-                const observer = new MutationObserver(() => {
-                    observer.disconnect()
-                    messages_outer.scrollTop = messages_outer.scrollHeight
-                })
+        Object.defineProperty(message_gif.items, "push", {
+            enumerable: false,
+            configurable: false,
+            writable: false,
+            value: function () {
+                for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {          
+                    this[n] = arguments[i]
 
-                observer.observe(arguments[i].$container, {
-                    attributes: true, 
-                    attributeFilter: ['class'],
-                    childList: false, 
-                    characterData: false
-                })
+                    const observer = new MutationObserver(() => {
+                        observer.disconnect()
+                        messages_outer.scrollTop = messages_outer.scrollHeight
+                    })
+
+                    observer.observe(arguments[i].$container, {
+                        attributes: true, 
+                        attributeFilter: ['class'],
+                        childList: false, 
+                        characterData: false
+                    })
+                }
+                
+                if (!(message_gif in gifs))
+                    gifs.push(message_gif)
+                
+                return n
             }
-            
-            if (!(message_gif in gifs))
-                gifs.push(message_gif)
-            
-            return n
-        }
-    })
+        })
+    }
 }
 
 export default init
