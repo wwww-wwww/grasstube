@@ -1,10 +1,11 @@
 defmodule GrasstubeWeb.ChatChannel do
-  use Phoenix.Channel
+  use GrasstubeWeb, :channel
+
   require Logger
 
-  alias GrasstubeWeb.Endpoint
+  alias Grasstube.Presence
+
   alias GrasstubeWeb.ChatAgent
-  alias GrasstubeWeb.User
 
   @max_name_length 24
   
@@ -13,20 +14,7 @@ defmodule GrasstubeWeb.ChatChannel do
       :not_found ->
         {:error, "no room"}
         
-      channel ->
-        :ok = ChannelWatcher.monitor(:rooms, self(), {__MODULE__, :leave, [socket, socket.topic]})
-
-        new_user = if Guardian.Phoenix.Socket.authenticated?(socket) do
-            user = Guardian.Phoenix.Socket.current_resource(socket)
-            %User{id: socket.id, socket: socket, username: user.username, nickname: user.nickname}
-          else
-            %User{id: socket.id, socket: socket, nickname: "anon#{socket.id}"}
-          end
-          
-        ChatAgent.add_user(channel, new_user)
-
-        GrasstubeWeb.RoomsLive.update()
-
+      _ ->
         send(self(), {:after_join, nil})
         {:ok, socket}
     end
@@ -36,7 +24,17 @@ defmodule GrasstubeWeb.ChatChannel do
     "chat:" <> room_name = socket.topic
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
-    Endpoint.broadcast(socket.topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
+    meta = if Guardian.Phoenix.Socket.authenticated?(socket), do: %{}, else: %{nickname: "anon#{socket.id}"}
+
+    presence = Presence.list(socket)
+
+    {:ok, _} = Presence.track(socket, socket.assigns.user_id, meta)
+    
+    push(socket, "presence_state", Presence.list(socket))
+
+    if not Map.has_key?(presence, socket.assigns.user_id) do
+      GrasstubeWeb.RoomsLive.update()
+    end
 
     history = ChatAgent.get_history(chat)
     if length(history) > 0 do
@@ -45,29 +43,12 @@ defmodule GrasstubeWeb.ChatChannel do
 
     {:noreply, socket}
   end
-
-  def handle_info({ref, _}, socket) do
-    Process.demonitor(ref, [:flush])
-    {:noreply, socket}
-  end
-
-  def handle_info({:DOWN, _, :process, _pid, _reason}, socket) do
-    {:noreply, socket}
-  end
   
-  def leave(socket, topic) do
-    "chat:" <> room_name = topic
-    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
-
-    case ChatAgent.get_user(chat, socket.id) do
-      :not_found ->
-        nil
-
-      _ ->
-        ChatAgent.remove_user(chat, socket.id)
-        Logger.info(socket.id <> " left")
-        Endpoint.broadcast(topic, "userlist", %{list: ChatAgent.get_userlist(chat)})
-        GrasstubeWeb.RoomsLive.update()
+  def terminate(_, socket) do
+    Presence.untrack(socket, socket.assigns.user_id)
+    presence = Presence.list(socket)
+    if not Map.has_key?(presence, socket.assigns.user_id) do
+      GrasstubeWeb.RoomsLive.update()
     end
   end
 
@@ -90,10 +71,8 @@ defmodule GrasstubeWeb.ChatChannel do
   end
 
   def handle_in("setname", %{"name" => name}, socket) do
-    "chat:" <> room_name = socket.topic
-    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
     if String.length(name) > 0 and String.length(name) <= @max_name_length do
-      newname =
+      new_nickname =
         cond do
           String.downcase(name) == "anon" ->
             "anon#{socket.id}"
@@ -108,7 +87,8 @@ defmodule GrasstubeWeb.ChatChannel do
 
         # TODO: check for reserved names
 
-      ChatAgent.set_name(chat, socket, newname)
+      ChatAgent.set_name(socket, new_nickname)
+      Presence.update(socket, socket.assigns.user_id, %{nickname: new_nickname})
     else
       push(socket, "chat", %{
         id: "sys",

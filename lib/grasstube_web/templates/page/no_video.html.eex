@@ -1,5 +1,3 @@
-<div style="display: none" id="room" data-room="<%= @room %>"></div>
-
 <div id="container1">
 	<div id="container2">
 		<div id="dragbar_v" style="opacity: 0"></div>

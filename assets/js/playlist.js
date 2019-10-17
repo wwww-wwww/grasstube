@@ -7,10 +7,10 @@ let channel = null
 const playlist = []
 let has_controls = false
 
-function init(socket, room) {
+function init(socket) {
 
-    console.log("playlist: connecting to room " + room)
-    channel = socket.channel("playlist:" + room, {})
+    console.log("playlist: connecting to room " + socket.room)
+    channel = socket.channel("playlist:" + socket.room, {})
     channel.join()
     .receive("ok", resp => {
         console.log("playlist: connected", resp) 

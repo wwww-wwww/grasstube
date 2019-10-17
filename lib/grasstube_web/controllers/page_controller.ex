@@ -56,12 +56,7 @@ defmodule GrasstubeWeb.PageController do
   def list_rooms(conn, _) do
     room_names = Grasstube.ProcessRegistry.list_rooms()
     json(conn, room_names |> Enum.reduce(%{}, fn name, acc ->
-      case Grasstube.ProcessRegistry.lookup(name, :chat) do
-        :not_found ->
-          acc
-        chat ->
-          Map.put(acc, name, GrasstubeWeb.ChatAgent.get_users(chat) |> length)
-      end
+      Map.put(acc, name, Grasstube.Presence.list("chat:#{name}") |> Enum.count())
     end)
     )
   end

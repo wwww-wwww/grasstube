@@ -30,4 +30,16 @@ function unescape_html(unsafe) {
         .replace(/&#0{0,1}39;/g, "'")
 }
 
-export {pad, enter, seconds_to_hms, unescape_html}
+function get_meta(meta_name) {
+    const metas = [...document.getElementsByTagName('meta')]
+  
+    for (const meta of metas) {
+        if (meta.getAttribute("name") == meta_name) {
+            return meta.getAttribute("content")
+        }
+    }
+
+    return ""
+}
+
+export {pad, enter, seconds_to_hms, unescape_html, get_meta}

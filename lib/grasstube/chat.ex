@@ -1,12 +1,7 @@
-defmodule GrasstubeWeb.User do
-  defstruct id: 0, socket: nil, username: "", nickname: ""
-end
-
 defmodule GrasstubeWeb.ChatAgent do
   use Agent
 
   alias GrasstubeWeb.Endpoint
-  alias GrasstubeWeb.User
   
   alias Grasstube.Repo
 
@@ -17,7 +12,6 @@ defmodule GrasstubeWeb.ChatAgent do
 
   defstruct admin: "",
             mods: [],
-            users: [],   
             history: [],
             room_name: "",
             emotelists: []
@@ -45,10 +39,14 @@ defmodule GrasstubeWeb.ChatAgent do
       
       new_msg = do_emote(channel, AutoLinker.link(escaped))
 
-      add_to_history(channel, socket.id, new_msg)
-      sender = get_user(channel, socket.id)
+      sender = Grasstube.Presence.get_by_key(socket, socket.assigns.user_id)
       
-      Endpoint.broadcast(socket.topic, "chat", %{sender: sender.username, name: sender.nickname, content: new_msg})
+      id = if sender.member, do: sender.username, else: sender.id
+      nickname = if sender.member, do: sender.nickname, else: Enum.at(sender.metas, 0).nickname
+
+      add_to_history(channel, nickname, new_msg)
+      
+      Endpoint.broadcast(socket.topic, "chat", %{sender: id, name: nickname, content: new_msg})
     end
 
     {:noreply}
@@ -177,10 +175,9 @@ defmodule GrasstubeWeb.ChatAgent do
     end
   end
 
-  def add_to_history(pid, id, msg) do
+  def add_to_history(pid, nickname, msg) do
     Agent.update(pid, fn val ->
-      user = val.users |> Enum.find(:not_found, fn user -> user.id == id end)
-      new_history = [%{name: user.nickname, msg: msg}] ++ val.history
+      new_history = [%{name: nickname, msg: msg}] ++ val.history
 
       if length(new_history) > @max_history_size do
         %{val | history: new_history |> Enum.reverse() |> tl() |> Enum.reverse()}
@@ -192,10 +189,6 @@ defmodule GrasstubeWeb.ChatAgent do
 
   def get_history(pid) do
     Agent.get(pid, fn val -> val.history end)
-  end
-
-  def get_users(pid) do
-    Agent.get(pid, fn val -> val.users end)
   end
 
   def get_admin(pid) do
@@ -244,66 +237,13 @@ defmodule GrasstubeWeb.ChatAgent do
     mod?(chat, user)
   end
 
-  def get_user(pid, id) do
-    get_users(pid) |> Enum.find(:not_found, fn user -> user.id == id end)
-  end
-
-  def add_user(pid, user) do
-    Agent.update(pid, fn val -> %{val | users: val.users ++ [user]} end)
-  end
-
-  def remove_user(pid, id) do
-    Agent.update(pid, fn val ->
-      case val.users |> Enum.find(:not_found, fn user -> user.id == id end) do
-        :not_found -> val
-        user = %User{} -> %{val | users: List.delete(val.users, user)}
-      end
-    end)
-  end
-
-  def get_userlist(pid) do
-    get_users(pid)
-    |> Enum.map(fn user ->
-      %{
-        username: user.username,
-        nickname: user.nickname,
-        mod: mod?(pid, user)
-      }
-    end)
-  end
-
-  def update_name(pid, socket, name) do
-    Agent.update(pid, fn val ->
-      new_users =
-        Enum.map(val.users, fn user ->
-          cond do
-            user.id == socket.id ->
-              %User{user | nickname: name}
-
-            true ->
-              user
-          end
-        end)
-
-      %{val | users: new_users}
-    end)
-  end
-
-  def set_name(pid, socket, name) do
+  def set_name(socket, name) do
     if Guardian.Phoenix.Socket.authenticated?(socket) do
-      user = Guardian.Phoenix.Socket.current_resource(socket)
-      changeset = Repo.get(Grasstube.User, user.username)
+      changeset = Repo.get(Grasstube.User, socket.assigns.user_id)
         |> Ecto.Changeset.change(nickname: name)
-      case Repo.update(changeset) do
-        {:ok, _} ->
-          update_name(pid, socket, name)
-          Endpoint.broadcast(socket.topic, "userlist", %{list: get_userlist(pid)})
-        {:error, changeset} ->
-          IO.inspect(changeset)
-      end
+      Repo.update(changeset)
     else
-      update_name(pid, socket, name)
-      Endpoint.broadcast(socket.topic, "userlist", %{list: get_userlist(pid)})
+      {:ok}
     end
   end
 

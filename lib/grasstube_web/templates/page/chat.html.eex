@@ -1,4 +1,3 @@
-<div style="display: none" id="room" data-room="<%= @room %>"></div>
 <div id="chat_div">
 	<div id="header">
 		<button id="btn_userlist_toggle" class="square">👨‍👦</button>

@@ -11,15 +11,13 @@ import init_settings from "./settings"
 import {reload_emotes} from "./metadata"
 import {create_modal} from "./modals"
 
-const room = document.getElementById("room").dataset.room
-
 console.log("room: init")
-console.log("room:", room)
+console.log("room:", socket.room)
 
-init_chat(socket, room)
+init_chat(socket)
 
-init_playlist(socket, room)
-init_polls(socket, room)
+init_playlist(socket)
+init_polls(socket)
 
 init_settings()
 hide_scrollbar()
@@ -27,5 +25,5 @@ hide_scrollbar()
 btn_show_emotes.addEventListener("click", () => {
     const modal = create_modal()
     modal.label.textContent = "emotes"
-    reload_emotes(room, modal, chat_input)
+    reload_emotes(socket.room, modal, chat_input)
 })

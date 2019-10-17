@@ -1,24 +1,22 @@
 import {Socket} from "phoenix"
+import {get_meta} from "./extras"
 
-function getMeta(metaName) {
-    const metas = [...document.getElementsByTagName('meta')]
-  
-    for (const meta of metas) {
-        if (meta.getAttribute("name") == metaName) {
-            return meta.getAttribute("content")
-        }
-    }
-  
-    return ""
-}
-
-const token = getMeta("guardian_token")
+const token = get_meta("guardian_token")
 
 const params = {}
 if (token.length > 0) {
     params["params"] = {token: token}
 }
+
 const socket = new Socket("/tube", params)
+socket.room = get_meta("room")
+
+socket.onOpen(() => document.title = socket.room)
+
+socket.onError(() => document.title = "disconnected")
+
+socket.onClose(() => document.title = "disconnected")
+
 socket.connect()
 
 export default socket

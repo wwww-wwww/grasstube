@@ -10,12 +10,7 @@ defmodule GrasstubeWeb.RoomsLive do
   def get_rooms() do
     room_names = Grasstube.ProcessRegistry.list_rooms()
     room_names |> Enum.reduce([], fn name, acc ->
-      case Grasstube.ProcessRegistry.lookup(name, :chat) do
-        :not_found ->
-          acc
-        chat ->
-          [{name, GrasstubeWeb.ChatAgent.get_users(chat) |> length} | acc]
-      end
+      [{name, Grasstube.Presence.list("chat:#{name}") |> Enum.count()} | acc]
     end) |> Enum.sort_by(&{-elem(&1, 1), elem(&1, 0)})
   end
   

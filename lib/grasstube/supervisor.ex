@@ -11,9 +11,9 @@ defmodule Grasstube.Supervisor do
       GrasstubeWeb.Counter,
       Grasstube.YTCounter,
       Grasstube.ProcessRegistry,
+      Grasstube.Presence,
       {DynamicSupervisor, name: Grasstube.DynamicSupervisor, strategy: :one_for_one},
-      Grasstube.DefaultRooms,
-      worker(ChannelWatcher, [:rooms])
+      Grasstube.DefaultRooms
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -76,74 +76,32 @@ defmodule GrasstubeWeb.UserSocket do
   def connect(%{"token" => token}, socket, _) do
     case Guardian.Phoenix.Socket.authenticate(socket, Grasstube.Guardian, token) do
       {:ok, authed_socket} ->
-        {:ok, authed_socket}
+        socket_id = new_id()
+        {:ok,
+          authed_socket
+          |> assign(:socket_id, socket_id)
+          |> assign(:user_id, Guardian.Phoenix.Socket.current_resource(authed_socket).username)
+        }
       _ -> :error
     end
   end
 
-  def connect(_params, socket, _) do
-    {:ok, socket}
+  def connect(_, socket, _) do
+    socket_id = new_id()
+    {:ok,
+      socket
+      |> assign(:socket_id, socket_id)
+      |> assign(:user_id, "$" <> socket_id)
+    }
   end
 
-  def id(_socket) do
+  def id(socket) do
+    socket.assigns.socket_id
+  end
+
+  def new_id() do
     ret = GrasstubeWeb.Counter.value()
     GrasstubeWeb.Counter.increment()
     Integer.to_string(ret)
-  end
-end
-
-defmodule ChannelWatcher do
-  use GenServer
-
-  def monitor(server_name, pid, mfa) do
-    GenServer.call(server_name, {:monitor, pid, mfa})
-  end
-
-  def demonitor(server_name, pid) do
-    GenServer.call(server_name, {:demonitor, pid})
-  end
-
-  def start_link(name) do
-    GenServer.start_link(__MODULE__, [], name: name)
-  end
-
-  def init(_) do
-    Process.flag(:trap_exit, true)
-    {:ok, %{channels: Map.new()}}
-  end
-
-  def handle_call({:monitor, pid, mfa}, _from, state) do
-    Process.link(pid)
-    {:reply, :ok, put_channel(state, pid, mfa)}
-  end
-
-  def handle_call({:demonitor, pid}, _from, state) do
-    case Map.fetch(state.channels, pid) do
-      :error ->
-        {:reply, :ok, state}
-
-      {:ok, _mfa} ->
-        Process.unlink(pid)
-        {:reply, :ok, drop_channel(state, pid)}
-    end
-  end
-
-  def handle_info({:EXIT, pid, _reason}, state) do
-    case Map.fetch(state.channels, pid) do
-      :error ->
-        {:noreply, state}
-
-      {:ok, {mod, func, args}} ->
-        Task.start_link(fn -> apply(mod, func, args) end)
-        {:noreply, drop_channel(state, pid)}
-    end
-  end
-
-  defp drop_channel(state, pid) do
-    %{state | channels: Map.delete(state.channels, pid)}
-  end
-
-  defp put_channel(state, pid, mfa) do
-    %{state | channels: Map.put(state.channels, pid, mfa)}
   end
 end

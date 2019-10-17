@@ -6,9 +6,9 @@ let is_mod = false
 let myid = -1
 let username = ""
 
-function init(socket, room) {
-    console.log("polls: connecting to room " + room)
-    channel = socket.channel("polls:" + room, {})
+function init(socket) {
+    console.log("polls: connecting to room " + socket.room)
+    channel = socket.channel("polls:" + socket.room, {})
     channel.join()
     .receive("ok", resp => {
         console.log("polls: connected", resp) 

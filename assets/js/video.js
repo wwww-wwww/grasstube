@@ -5,7 +5,6 @@ import socket from "./socket"
 
 import init_video from "./player"
 
-const room = document.getElementById("room").dataset.room
 const player = document.getElementById("player")
 
 const wplayer = new GrassPlayer(player)
@@ -21,4 +20,4 @@ if (test_autoplay != undefined) {
     modal.label.textContent = "this is for autoplay"
 }
 
-init_video(socket, room, wplayer)
+init_video(socket, wplayer)

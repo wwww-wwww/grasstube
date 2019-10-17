@@ -1,5 +1,4 @@
 <script src="/includes/subtitles-octopus.js"></script>
-<div style="display: none" id="room" data-room="<%= @room %>"></div>
 
 <div id="container1">
 	<div id="container2">

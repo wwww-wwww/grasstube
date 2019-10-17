@@ -7,9 +7,13 @@
 		<title>grasstube 2.7</title>
 		<link rel="stylesheet" type="text/css" href="/css/common.css">
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+		<meta name="user_token" content="<%= assigns[:user_token] %>">
 		<%= if Guardian.Plug.current_token(@conn) do %>
 			<meta name="guardian_token" content="<%= Guardian.Plug.current_token(@conn) %>">
 		<% end %>
+		<%= if assigns[:room] do %>
+			<meta name="room" content="<%= @room %>">
+		<% end%>
 	</head>
 	<body id="body">
 		<header>

@@ -1,5 +1,7 @@
 import "phoenix_html"
 
+import {Presence} from "phoenix"
+
 import {create_modal} from "./modals"
 import {pad, enter} from "./extras"
 import {get_cookie, set_cookie} from "./cookies"
@@ -12,8 +14,7 @@ let last_chat_user = ""
 let freezeframe_loaded = false
 const gifs = []
 
-function init(socket, room) {
-    
+function init(socket) {
     console.log("freezeframe: fetching")
 
     const freezeframe_script = document.createElement("script")
@@ -28,53 +29,36 @@ function init(socket, room) {
 
     document.head.appendChild(freezeframe_script)
 
-    console.log("chat: connecting to room " + room)
-    channel = socket.channel("chat:" + room, {})
+    console.log("chat: connecting to room " + socket.room)
+    channel = socket.channel("chat:" + socket.room, {})
+
+    let presence = new Presence(channel)
+
+    presence.onSync(() => repaint_userlist(presence))
+    /*
+    presence.onJoin((_id, current, _pres) => {
+        if(!current){
+            repaint_userlist(presence)
+        }
+    })
+
+    presence.onLeave((_id, current, _pres) => {
+        if(current.metas.length === 0){
+            repaint_userlist(presence)
+        }
+    })*/
+
     channel.join()
     .receive("ok", resp => {
         const nickname = get_cookie("nickname")
         if (nickname || false) set_name(nickname)
-        console.log("chat: connected", resp) 
+        console.log("chat: connected", resp)
     })
     .receive("error", resp => {
         console.log("chat: failed to connect", resp)
     })
 
-    channel.on("userlist", data => {
-        console.log("chat: userlist", data)
-
-        users = []
-        while (userlist.firstChild) userlist.removeChild(userlist.firstChild)
-
-        for (const user of data.list) {
-            if (user.username.length > 0) {
-                let users_contains = false
-                for (const u2 of users) {
-                    if (u2.username == user.username) {
-                        users_contains = true
-                        break
-                    }
-                }
-                if (users_contains) continue
-            }
-
-            users.push(user)
-            const e = document.createElement("div")
-            e.className = "user"
-
-            const user_name = document.createElement("span")
-            user_name.className = "user_name"
-            user_name.textContent = user.nickname
-            user_name.classList.toggle("mod", user.mod)
-            user_name.classList.toggle("guest", user.username.length == 0)
-
-            e.appendChild(user_name)
-            userlist.appendChild(e)
-        }
-        user_count.textContent = users.length + (users.length > 1 ? " users connected" : " user connected")
-    })
-
-    channel.on("chat", on_chat)
+    channel.on("chat", data => on_chat(socket, data))
 
     channel.on("history", on_history)
 
@@ -87,6 +71,8 @@ function init(socket, room) {
 
     window.addEventListener("focus", () => {
         messages.classList.toggle("freeze", false)
+        unread_messages = 0
+        document.title = unread_messages > 0 ? `${unread_messages} • ${socket.room}` : socket.room
     })
 
     window.addEventListener("blur", () => {
@@ -180,6 +166,32 @@ function make_change_nickname() {
     textfield.select()
 }
 
+function repaint_userlist(presence) {
+    console.log("chat: new presence", presence.list())
+    users = []
+    while (userlist.firstChild) userlist.removeChild(userlist.firstChild)
+    presence.list((_id, user) => {
+        users.push(user)
+
+        const nickname = user.member ? user.nickname : user.metas[0].nickname
+        
+        const e = document.createElement("div")
+        e.className = "user"
+
+        const user_name = document.createElement("span")
+        user_name.className = "user_name"
+        user_name.textContent = nickname
+
+        user_name.classList.toggle("mod", user.mod || false)
+        user_name.classList.toggle("guest", !user.member)
+
+        e.appendChild(user_name)
+        userlist.appendChild(e)
+    })
+
+    user_count.textContent = users.length + (users.length > 1 ? " users connected" : " user connected")
+}
+
 function chat_send_msg() {
     let text = chat_input.value.trim()
     chat_input.value = ""
@@ -189,7 +201,9 @@ function chat_send_msg() {
     channel.push("chat", {msg: text})
 }
 
-function on_chat(data) {
+let unread_messages = 0
+
+function on_chat(socket, data) {
     console.log("chat: chat", data)
     const msg = document.createElement("div")
     const username = document.createElement("span")
@@ -202,6 +216,12 @@ function on_chat(data) {
         msg.style.fontStyle = "italic"
         msg.appendChild(username)
         msg.appendChild(separator)
+    } else {
+        //notify browser title
+        if (!document.hasFocus()) {
+            unread_messages = unread_messages + 1
+            document.title = `${unread_messages} • ${socket.room}`
+        }
     }
 
     if (data.name != last_chat_user) {

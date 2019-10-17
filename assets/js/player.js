@@ -1,6 +1,6 @@
 const fonts = []
 
-function init(socket, room, player) {
+function init(socket, player) {
     fetch("https://res.cloudinary.com/okea/raw/list/font.json")
     .then(res => res.json())
     .then(data => {
@@ -14,13 +14,13 @@ function init(socket, room, player) {
         console.log("fonts: error fetching", err)
     })
     .finally(() => {
-        connect(socket, room, player)
+        connect(socket, player)
     })
 }
 
-function connect(socket, room, player) {
-    console.log("video: connecting to room " + room)
-    const channel = socket.channel("video:" + room, {})
+function connect(socket, player) {
+    console.log("video: connecting to room " + socket.room)
+    const channel = socket.channel("video:" + socket.room, {})
     channel.join()
         .receive("ok", resp => {
             console.log("video: connected", resp) 

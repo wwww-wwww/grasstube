@@ -4,8 +4,8 @@ defmodule Grasstube.Application do
   def start(_type, _args) do
     children = [
       Grasstube.Repo,
-      Grasstube.Supervisor,
-      GrasstubeWeb.Endpoint
+      GrasstubeWeb.Endpoint,
+      Grasstube.Supervisor
     ]
 
     opts = [strategy: :one_for_one, name: Grasstube.Supervisor]
