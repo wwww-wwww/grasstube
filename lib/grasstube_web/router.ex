@@ -49,7 +49,7 @@ defmodule GrasstubeWeb.Router do
 
     get "/sign_out", UserController, :sign_out
     
-    get "/user/:username", UserController, :show_user
+    get "/u/:username", UserController, :show_user
 
     scope "/" do
       pipe_through :logged_in
