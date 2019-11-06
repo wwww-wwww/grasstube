@@ -1,58 +1,67 @@
-function create_modal(root, show=true) {
-    root = root || body
+class Modal {
+    constructor({root=null, can_close=true, title=null}={}) {
+        this.root = root || body
 
-    const modal = document.createElement("div")
-    modal.className = "modal"
+        this.e = document.createElement("div")
+        this.e.className = "modal"
 
-    const modal_back = document.createElement("div")
-    modal_back.className = "modal-back"
-    modal_back.onclick = e => {
-        root.removeChild(modal)
-    }
-    modal.appendChild(modal_back)
+        this.back = document.createElement("div")
+        this.back.className = "modal-back"
+        this.e.appendChild(this.back)
 
-    modal.inner = document.createElement("div")
-    modal.inner.className = "modal-inner"
-    modal.appendChild(modal.inner)
+        this.e.inner = document.createElement("div")
+        this.e.inner.className = "modal-inner"
+        this.e.appendChild(this.e.inner)
 
-    const modal_header = document.createElement("div")
-    modal_header.className = "modal-header"
-    modal.inner.appendChild(modal_header)
-    
-    const modal_close = document.createElement("button")
-    modal_close.className = "modal-close square"
-    modal_close.textContent = "×"
-    modal_close.onclick = _ => {
-        root.removeChild(modal)
-    }
-    modal_header.appendChild(modal_close)
+        this.header = document.createElement("div")
+        this.header.className = "modal-header"
+        this.e.inner.appendChild(this.header)
+        
+        if (can_close) {
+            this.back.addEventListener("click", _ => this.close())
 
-    modal.label = document.createElement("span")
-    modal.label.className = "modal-title"
-    modal_header.appendChild(modal.label)
+            const modal_close = document.createElement("button")
+            modal_close.className = "modal-close square"
+            modal_close.textContent = "×"
+            modal_close.addEventListener("click", _ => this.close())
+            this.header.appendChild(modal_close)
+        }
 
-    modal.show = () => {
-        root.appendChild(modal)
+        if (title) {
+            this.add_title(title)
+        }
     }
 
-    if (show) modal.show()
+    show() {
+        this.root.appendChild(this.e)
+    }
 
-    modal.get_body = () => {
-        if (modal.body == "undefined" || modal.body == null) {
+    add_title(title) {
+        const label = document.createElement("span")
+        label.className = "modal-title"
+        label.textContent = title
+        this.header.appendChild(label)
+    }
+
+    get_body() {
+        if (this.e.body == "undefined" || this.e.body == null) {
             const body_outer = document.createElement("div")
             body_outer.style.overflow = "auto"
             body_outer.style.display = "flex"
             body_outer.style.borderTop = "1px solid rgba(255, 255, 255, 0.4)"
-            modal.inner.appendChild(body_outer)
-            modal.body = document.createElement("div")
-            modal.body.className = "modal-content"
-            body_outer.appendChild(modal.body)
+            this.e.inner.appendChild(body_outer)
+            this.e.body = document.createElement("div")
+            this.e.body.className = "modal-content"
+            body_outer.appendChild(this.e.body)
         }
     
-        return modal.body
+        return this.e.body
     }
 
-    return modal
+    close() {
+        this.root.removeChild(this.e)
+    }
+
 }
 
-export {create_modal}
+export default Modal

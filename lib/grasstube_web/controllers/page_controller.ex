@@ -2,6 +2,7 @@ defmodule GrasstubeWeb.PageController do
   use GrasstubeWeb, :controller
 
   alias Grasstube.Guardian
+  alias GrasstubeWeb.ChatAgent
 
   def index(conn, _) do
     live_render(conn, GrasstubeWeb.RoomsLive, session: %{can_make_room: can_make_room?(conn)})
@@ -11,26 +12,26 @@ defmodule GrasstubeWeb.PageController do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
         text(conn, "room not found")
-      _ ->
-        render(conn, "chat.html", room: room)
+      chat ->
+        render(conn, "chat.html", room: room, room_has_password: password_required?(conn, chat))
     end
   end
 
   def no_video(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :video) do
+    case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
         text(conn, "room not found")
-      _ ->
-        render(conn, "no_video.html", room: room)
+      chat ->
+        render(conn, "no_video.html", room: room, room_has_password: password_required?(conn, chat))
     end
   end
 
   def video(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :video) do
+    case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
         text(conn, "room not found")
-      _ ->
-        render(conn, "video.html", room: room)
+      chat ->
+        render(conn, "video.html", room: room, room_has_password: password_required?(conn, chat))
     end
   end
 
@@ -38,8 +39,8 @@ defmodule GrasstubeWeb.PageController do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
         text(conn, "room not found")
-      _ ->
-        render(conn, "room.html", room: room)
+      chat ->
+        render(conn, "room.html", room: room, room_has_password: password_required?(conn, chat))
     end
   end
 
@@ -57,8 +58,7 @@ defmodule GrasstubeWeb.PageController do
     room_names = Grasstube.ProcessRegistry.list_rooms()
     json(conn, room_names |> Enum.reduce(%{}, fn name, acc ->
       Map.put(acc, name, Grasstube.Presence.list("chat:#{name}") |> Enum.count())
-    end)
-    )
+    end))
   end
 
   def can_make_room?(conn) do
@@ -69,5 +69,10 @@ defmodule GrasstubeWeb.PageController do
     else
       false
     end
+  end
+
+  def password_required?(conn, chat) do
+    not (Guardian.Plug.authenticated?(conn) and
+      GrasstubeWeb.ChatAgent.mod?(chat, Guardian.Plug.current_resource(conn))) and ChatAgent.password?(chat)
   end
 end

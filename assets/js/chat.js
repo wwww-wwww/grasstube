@@ -1,15 +1,8 @@
 import css from "../css/chat.css"
-import socket from "./socket"
+import socket, { auth } from "./socket"
 
-import init_chat from "./grasschat"
+import Chat from "./grasschat"
 
-import {reload_emotes} from "./metadata"
-import {create_modal} from "./modals"
+const chat = new Chat()
 
-init_chat(socket)
-
-btn_show_emotes.addEventListener("click", () => {
-    const modal = create_modal()
-    modal.label.textContent = "emotes"
-    reload_emotes(socket.room, modal, chat_input)
-})
+auth(socket, [chat])

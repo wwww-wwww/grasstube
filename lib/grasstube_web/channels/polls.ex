@@ -7,14 +7,19 @@ defmodule GrasstubeWeb.PollsChannel do
   alias GrasstubeWeb.PollsAgent
   alias GrasstubeWeb.ChatAgent
 
-  def join("polls:" <> room_name, _, socket) do
+  def join("polls:" <> room_name, %{"password" => password}, socket) do
     case Grasstube.ProcessRegistry.lookup(room_name, :polls) do
       :not_found ->
         {:error, "no room"}
       
       _ ->
-        send(self(), {:after_join, nil})
-        {:ok, socket}
+        case ChatAgent.auth(socket, room_name, password) do
+          {:ok, socket} ->
+            send(self(), {:after_join, nil})
+            {:ok, socket}
+          resp ->
+            resp
+        end
     end
   end
   
@@ -31,7 +36,7 @@ defmodule GrasstubeWeb.PollsChannel do
       push(socket, "id", %{id: socket.id})
     end
 
-    {:ok, _} = Presence.track(socket, socket.assigns.user_id, %{})
+    Presence.track(socket, socket.assigns.user_id, %{})
 
     polls = Grasstube.ProcessRegistry.lookup(room_name, :polls)
 

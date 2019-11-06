@@ -19,14 +19,32 @@
 
 <% else %>
 
-    <%= form_for(@conn, Routes.user_path(@conn, :create_room), [class: "form"], fn f -> %>
+    <style>
+        .create_room_body > div {
+            margin-bottom: 1em;
+        }
+        .create_room_form {
+            margin: 1em;
+        }
+    </style>
+
+    <%= form_for(@conn, Routes.user_path(@conn, :create_room), [class: "create_room_form"], fn f -> %>
         <div>
             <div class="alerts">
                 <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
                 <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
             </div>
-            <%= text_input(f, :room_name, placeholder: "room name") %>
-            <%= submit "create" %>
+            <div class="create_room_body">
+                <div>
+                    <p>room name:</p>
+                    <%= text_input(f, :room_name) %>
+                </div>
+                <div>
+                    <p>password:</p>
+                    <%= text_input(f, :room_password, placeholder: "(optional)") %>
+                </div>
+            </div>
+            <%= submit("create", class: "create_room_submit") %>
         </div>
     <% end) %>
 

@@ -1,21 +1,25 @@
 defmodule GrasstubeWeb.PlaylistChannel do
   use Phoenix.Channel
-  require Logger
 
   alias GrasstubeWeb.Endpoint
   alias GrasstubeWeb.PlaylistAgent
   alias GrasstubeWeb.ChatAgent
   alias GrasstubeWeb.VideoAgent
   
-  def join("playlist:" <> room_name, _message, socket) do
+  def join("playlist:" <> room_name, %{"password" => password}, socket) do
     case Grasstube.ProcessRegistry.lookup(room_name, :playlist) do
       :not_found ->
         {:error, "no room"}
       
-      _channel ->
-        send(self(), {:after_join, nil})
+      _ ->
+        case ChatAgent.auth(socket, room_name, password) do
+          {:ok, socket} ->
+            send(self(), {:after_join, nil})
+            {:ok, socket}
+          resp ->
+            resp
+        end
     end
-    {:ok, socket}
   end
 
   def handle_info({:after_join, _}, socket) do

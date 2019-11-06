@@ -1,11 +1,11 @@
 <div class="outer">
 	<div style="margin: 0.5em 0">Rooms:</div>
-		<%= for {room_name, num_users} <- @rooms do %>
+		<%= for {room_name, num_users, has_password} <- @rooms do %>
 			<div class="room">
 				<div style="display: inline-block">
 					<a class="btn_room" href="<%= Routes.page_path(@socket, :room, room_name) %>">
 						<div>
-							<span><%= room_name %></span><span style="float: right;"><%= num_users %> 🙍</span>
+							<span><%= if has_password do %>🔒<% end %></span> <span><%= room_name %></span><span style="float: right;"><%= num_users %> 🙍</span>
 						</div>
 					</a>
 				</div>

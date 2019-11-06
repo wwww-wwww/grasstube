@@ -32,8 +32,8 @@ defmodule Grasstube.ProcessRegistry do
     Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", :"$4"}}, [], [:"$3"]}])
   end
 
-  def create_room(room_name, admin) do
-    DynamicSupervisor.start_child(Grasstube.DynamicSupervisor, {Grasstube.RoomSupervisor, room_name: room_name, admin: admin})
+  def create_room(room_name, admin, password) do
+    DynamicSupervisor.start_child(Grasstube.DynamicSupervisor, {Grasstube.RoomSupervisor, room_name: room_name, admin: admin, password: password})
   end
   
   def close_room(room_name) do

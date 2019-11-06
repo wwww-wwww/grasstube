@@ -1,10 +1,20 @@
 import {seconds_to_hms} from "./extras"
 import {get_cookie, set_cookie} from "./cookies"
+import Modal from "./modals"
 
 class GrassPlayer {
 
     constructor(attach) {
         this.fonts = []
+
+        const test_autoplay = document.createElement("video").play()
+        if (test_autoplay != undefined) {
+            test_autoplay.catch(_ => {
+                new Modal({title: "this is for autoplay", root: attach}).show()
+            })
+        } else {
+            new Modal({title: "this is for autoplay", root: attach}).show()
+        }
 
         const yt = document.createElement("script")
         yt.src = "https://www.youtube.com/iframe_api"
@@ -29,7 +39,7 @@ class GrassPlayer {
         this.settings.volume = (Math.pow(10, (get_cookie("video_volume") || 20) / 100) - 1) / 9
         
         this.playing_message = document.createElement("div")
-        this.playing_message.textContent = "nothing is playing"
+        this.playing_message.textContent = "disconnected"
         this.playing_message.style.position = "absolute"
         this.playing_message.style.textAlign = "center"
         this.playing_message.style.width = "100%"

@@ -1,118 +1,117 @@
-import {create_modal} from "./modals"
+import Modal from "./modals"
 import "phoenix_html"
 
-let channel = null
-let is_mod = false
-let myid = -1
-let username = ""
-
-function init(socket) {
-    console.log("polls: connecting to room " + socket.room)
-    channel = socket.channel("polls:" + socket.room, {})
-    channel.join()
-    .receive("ok", resp => {
-        console.log("polls: connected", resp) 
-    })
-    .receive("error", resp => {
-        console.log("polls: failed to connect", resp)
-    })
-
-    channel.on("controls", data => {
-        console.log("polls: controls", data)
-        is_mod = true
-        btn_create_poll.classList.toggle("hidden", false)
-        for (const poll_id in polls) {
-            polls[poll_id].btn_delete.classList.toggle("hidden", false)
-        }
-    })
-
-    channel.on("id", data => {
-        console.log("polls: id", data)
-        myid = data.id
-    })
-
-    channel.on("username", data => {
-        console.log("polls: username", data)
-        username = data.username
-    })
-
-    channel.on("polls", on_get_polls)
-    btn_create_poll.addEventListener("click", create_poll_modal)
-}
-
-const polls = {}
-
-function on_get_polls(data) {
-    console.log("polls: polls", data)
-    while (polls_list.firstChild) polls_list.removeChild(polls_list.firstChild)
-    for (const poll in polls) delete polls[poll]
-
-    for (const poll in data) polls[poll] = data[poll]
-
-    for (const poll_id in polls) {
-        const poll = polls[poll_id]
-
-        poll.e = document.createElement("div")
-        poll.e.className = "poll_item"
-
-        const inner = document.createElement("div")
-        inner.className = "poll_item-inner"
-        poll.e.appendChild(inner)
+class Polls {
+    constructor() {
+        this.channel = null
+        this.is_mod = false
+        this.myid = -1
+        this.username = ""
+        this.polls = {}
         
-        const header = document.createElement("div")
-        header.className = "poll_item-header"
-        inner.appendChild(header)
-
-        poll.btn_delete = document.createElement("button")
-        poll.btn_delete.className = "square poll_item-delete"
-        poll.btn_delete.classList.toggle("hidden", !is_mod)
-        poll.btn_delete.textContent = "×"
-        header.appendChild(poll.btn_delete)
-
-        poll.btn_delete.addEventListener("click", () => {
-            channel.push("poll_remove", {id: poll_id})
+        btn_create_poll.addEventListener("click", () => {
+            create_poll_modal(this.channel)
         })
-        
-        const poll_title = document.createElement("span")
-        poll_title.className = "poll_item-title"
-        poll_title.textContent = poll.title
-        header.appendChild(poll_title)
-
-        const poll_body = document.createElement("div")
-        poll_body.className = "poll_item-body"
-        inner.appendChild(poll_body)
-
-        polls_list.insertBefore(poll.e, polls_list.firstChild)
-        
-        poll.choices.forEach(choice => {
-            const poll_choice = document.createElement("div")
-            poll_choice.className = "poll_choice"
-
-            const poll_choose = document.createElement("button")
-            poll_choose.className = "square"
-            poll_choose.textContent = choice.users.length + choice.guests.length
-            poll_choose.disabled = choice.users.includes(username) || choice.guests.includes(myid)
-            poll_choose.addEventListener("click", () => {
-                channel.push("poll_vote", {id: poll_id, choice: choice.name})
-            })
-
-            poll_choice.appendChild(poll_choose)
-
-            const choice_name = document.createElement("span")
-            choice_name.textContent = choice.name
-            poll_choice.appendChild(choice_name)
-            poll_body.appendChild(poll_choice)
-        })
-
-        poll_body.lastChild.style.marginBottom = 0
     }
-}
 
-function polls_on_controls() {
-    is_mod = true
-    btn_create_poll.classList.toggle("hidden", false)
-    for (const id in polls) {
-        polls[id].e.children[0].children[0].classList.toggle("hidden", false)
+    connect(socket) {
+        console.log("polls: connecting to room " + socket.room)
+        this.channel = socket.channel("polls:" + socket.room, {password: socket.password})
+
+        this.channel.on("controls", data => {
+            console.log("polls: controls", data)
+            this.is_mod = true
+            btn_create_poll.classList.toggle("hidden", false)
+            for (const poll_id in this.polls) {
+                this.polls[poll_id].btn_delete.classList.toggle("hidden", false)
+            }
+        })
+
+        this.channel.on("id", data => {
+            console.log("polls: id", data)
+            this.myid = data.id
+        })
+
+        this.channel.on("username", data => {
+            console.log("polls: username", data)
+            this.username = data.username
+        })
+
+        this.channel.on("polls", data => this.on_get_polls(data))
+
+        return this.channel.join()
+        .receive("ok", resp => {
+            console.log("polls: connected", resp) 
+        })
+        .receive("error", resp => {
+            console.log("polls: failed to connect", resp)
+        })
+    }
+
+    on_get_polls(data) {
+        console.log("polls: polls", data)
+        while (polls_list.firstChild) polls_list.removeChild(polls_list.firstChild)
+        for (const poll in this.polls) delete this.polls[poll]
+    
+        for (const poll in data) this.polls[poll] = data[poll]
+    
+        for (const poll_id in this.polls) {
+            const poll = this.polls[poll_id]
+    
+            poll.e = document.createElement("div")
+            poll.e.className = "poll_item"
+    
+            const inner = document.createElement("div")
+            inner.className = "poll_item-inner"
+            poll.e.appendChild(inner)
+            
+            const header = document.createElement("div")
+            header.className = "poll_item-header"
+            inner.appendChild(header)
+    
+            poll.btn_delete = document.createElement("button")
+            poll.btn_delete.className = "square poll_item-delete"
+            poll.btn_delete.classList.toggle("hidden", !this.is_mod)
+            poll.btn_delete.textContent = "×"
+            header.appendChild(poll.btn_delete)
+    
+            poll.btn_delete.addEventListener("click", () => {
+                this.channel.push("poll_remove", {id: poll_id})
+            })
+            
+            const poll_title = document.createElement("span")
+            poll_title.className = "poll_item-title"
+            poll_title.textContent = poll.title
+            header.appendChild(poll_title)
+    
+            const poll_body = document.createElement("div")
+            poll_body.className = "poll_item-body"
+            inner.appendChild(poll_body)
+    
+            polls_list.insertBefore(poll.e, polls_list.firstChild)
+            
+            poll.choices.forEach(choice => {
+                const poll_choice = document.createElement("div")
+                poll_choice.className = "poll_choice"
+    
+                const poll_choose = document.createElement("button")
+                poll_choose.className = "square"
+                poll_choose.textContent = choice.users.length + choice.guests.length
+                poll_choose.disabled = choice.users.includes(this.username) || choice.guests.includes(this.myid)
+                poll_choose.addEventListener("click", () => {
+                    this.channel.push("poll_vote", {id: poll_id, choice: choice.name})
+                })
+    
+                poll_choice.appendChild(poll_choose)
+    
+                const choice_name = document.createElement("span")
+                choice_name.textContent = choice.name
+                poll_choice.appendChild(choice_name)
+                poll_body.appendChild(poll_choice)
+            })
+    
+            poll_body.lastChild.style.marginBottom = 0
+        }
     }
 }
 
@@ -149,9 +148,8 @@ function create_choice(choices, choices_list) {
     return choice
 }
 
-function create_poll_modal() {
-    const modal = create_modal()
-    modal.label.textContent = "create a poll"
+function create_poll_modal(channel) {
+    const modal = new Modal({title: "create a poll"})
     const modal_body = modal.get_body()
 
     const poll_title = document.createElement("input")
@@ -198,13 +196,13 @@ function create_poll_modal() {
 
         channel.push("poll_add", {title: final_title, choices: final_choices})
 
-        document.body.removeChild(modal)
+        modal.close()
     })
     
     modal_body.appendChild(poll_create)
 
+    modal.show()
     poll_title.focus()
 }
 
-export default init
-export {polls_on_controls}
+export default Polls

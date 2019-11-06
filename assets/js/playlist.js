@@ -1,29 +1,186 @@
 import "phoenix_html"
-import {create_modal} from "./modals"
+import Modal from "./modals"
 import {reload_hosted_videos} from "./metadata"
 import {seconds_to_hms, enter, unescape_html} from "./extras"
 
-let channel = null
-const playlist = []
-let has_controls = false
+class Playlist{
+    constructor() {
+        this.channel = null
+        this.has_controls = false
+        this.playlist = []
+        this.current_video = -1
 
-function init(socket) {
+        playlist_add.addEventListener("click", () => this.queue_add())
 
-    console.log("playlist: connecting to room " + socket.room)
-    channel = socket.channel("playlist:" + socket.room, {})
-    channel.join()
-    .receive("ok", resp => {
-        console.log("playlist: connected", resp) 
-    })
-    .receive("error", resp => {
-        console.log("playlist: failed to connect", resp)
-    })
+        add_url.addEventListener("keyup", event => { enter(event, () => { this.queue_add() }) })
+        add_sub.addEventListener("keyup", event => { enter(event, () => { this.queue_add() }) })
+    
+        const hosted_videos_modal = new Modal({title: "hosted videos"})
+        btn_show_hosted_videos.addEventListener("click", () => {
+            reload_hosted_videos(hosted_videos_modal, this.channel, "https://okea.moe/video/list.json")
+            hosted_videos_modal.show()
+        })
+    
+        const hosted_videos_ss_modal = new Modal({title: "ss"})
+        btn_show_ss.addEventListener("click", () => {
+            reload_hosted_videos(hosted_videos_ss_modal, this.channel, "https://okea.moe/ss/list.json")
+            hosted_videos_ss_modal.show()
+        })
+    
+        const yt_modal = create_yt_modal()
+    
+        btn_show_yt.addEventListener("click", () => {
+            yt_modal.show()
+            yt_modal.search_input.focus()
+            yt_modal.search_input.select()
+        })
+    }
 
-    let current_video = -1
+    queue_set(e) {
+        for (let i = 0; i < this.playlist.length; i++) {
+            if (this.playlist[i].q_set == e.target) {
+                this.channel.push("q_set", {id: this.playlist[i].id})
+                break
+            }
+        }
+    }
+    
+    queue_remove(e) {
+        for (let i = 0; i < this.playlist.length; i++) {
+            if (this.playlist[i].q_del == e.target) {
+                this.channel.push("q_del", {id: this.playlist[i].id})
+                break
+            }
+        }
+    }
+    
+    queue_start_drag(e) {
+        for (let i = 0; i < this.playlist.length; i++) {
+            if (this.playlist[i].q_move == (e.touches ? e.touches[0].target : e.target)) {
+                this.playlist[i].dragging = true
+                this.playlist[i].e.classList.toggle("playlist_dragging", true)
+                
+                document.addEventListener("mouseup", e => this.queue_stop_drag(e))
+                document.addEventListener("mousemove", e => this.queue_drag(e))
+                document.addEventListener("touchend", e => this.queue_stop_drag(e))
+                document.addEventListener("touchmove", e => this.queue_drag(e))
+                break
+            }
+        }
+    }
+    queue_stop_drag(_) {
+        for (let i = 0; i < this.playlist.length; i++) {
+            this.playlist[i].e.style.transform = "none"
+            if (this.playlist[i].dragging) {
+                this.playlist[i].dragging = false
+                this.playlist[i].e.classList.toggle("playlist_dragging", false)
 
-    channel.on("playlist", data => {
+                const new_order = []
+                this.playlist.forEach(playlist_item => {
+                    new_order.push(playlist_item.id)
+                })
+                this.channel.push("q_order", {order: new_order})
+            }
+        }
+        document.removeEventListener("mouseup", e => this.queue_stop_drag(e))
+        document.removeEventListener("mousemove", e => this.queue_drag(e))
+        document.removeEventListener("touchend", e => this.queue_stop_drag(e))
+        document.removeEventListener("touchmove", e => this.queue_drag(e))
+    }
+
+    queue_drag(e) {
+        for (let i = 0; i < this.playlist.length; i++) {
+            if (this.playlist[i].dragging) {
+                const playlist_item = this.playlist[i]
+                playlist_item.e.style.transform = "none"
+                let rect = playlist_item.e.getBoundingClientRect()
+                let mouse_y = Math.min(Math.max(e.touches ? e.touches[0].clientY : e.clientY,
+                    this.playlist[0].e.getBoundingClientRect().y), this.playlist[this.playlist.length - 1].e.getBoundingClientRect().bottom)
+                let y = rect.y
+                let off = mouse_y - y - rect.height / 2
+    
+                for (let j = i - 1; j <= i + 1; j++) { // only 1 before and after
+                    if (j < 0 || j == i || j >= this.playlist.length) continue
+                    const playlist_item2 = this.playlist[j]
+                    if ((j < i && mouse_y <= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)) || 
+                        (j > i && mouse_y >= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)))
+                    {
+                        this.playlist.splice(i, 1)
+                        this.playlist.splice(j, 0, playlist_item)
+    
+                        if (j < i) {
+                            playlist_item.e.parentNode.insertBefore(playlist_item.e, playlist_item2.e)
+                        } else {
+                            playlist_item.e.parentNode.insertBefore(playlist_item2.e, playlist_item.e)
+                        }
+    
+                        rect = playlist_item.e.getBoundingClientRect()
+                        y = rect.y
+                        off = mouse_y - y - rect.height / 2
+                        break
+                    }
+                }
+                playlist_item.e.style.transform = `translate(0, ${off}px)`
+                break
+            }
+        }
+    }
+
+    queue_add() {
+        this.channel.push("q_add", {
+            url: add_url.value,
+            sub: add_sub.value
+        })
+    
+        add_url.value = ""
+        add_sub.value = ""
+    }
+
+    connect(socket) {
+        console.log("playlist: connecting to room " + socket.room)
+        this.channel = socket.channel("playlist:" + socket.room, {password: socket.password})
+
+        this.channel.on("playlist", data => this.on_playlist(data))
+
+        this.channel.on("current", data => this.on_current(data))
+    
+        this.channel.on("controls", data => this.on_controls(data))
+
+        return this.channel.join()
+        .receive("ok", resp => {
+            console.log("playlist: connected", resp) 
+        })
+        .receive("error", resp => {
+            console.log("playlist: failed to connect", resp)
+        })
+    }
+
+    on_controls(data) {
+        console.log("playlist: controls", data)
+        this.has_controls = true
+    
+        playlist_controls.classList.toggle("hidden", false)
+
+        this.playlist.forEach(vid => {
+            vid.q_set.classList.toggle("hidden", false)
+            vid.q_del.classList.toggle("hidden", false)
+            vid.q_move.classList.toggle("hidden", false)
+        })
+    
+    }
+
+    on_current(data) {
+        console.log("playlist: current", data)
+
+        this.current_video = data.id
+        this.playlist.forEach(vid => {
+            vid.e.classList.toggle("isactive", this.current_video == vid.id)
+        })
+    }
+
+    on_playlist(data) {
         console.log("playlist: playlist", data)
-        playlist.length = 0
+        this.playlist.length = 0
         while (playlist_container.firstChild) playlist_container.removeChild(playlist_container.firstChild)
         
         if (data.playlist.length <= 0) {
@@ -64,182 +221,34 @@ function init(socket) {
                 vid.q_move.className = "playlist_drag"
                 vid.q_move.textContent = "☰"
 
-                vid.q_move.addEventListener("mousedown", queue_start_drag)
-                vid.q_move.addEventListener("touchstart", queue_start_drag)
+                vid.q_move.addEventListener("mousedown", e => this.queue_start_drag(e))
+                vid.q_move.addEventListener("touchstart", e => this.queue_start_drag(e))
 
-                vid.q_set.addEventListener("click", queue_set)
-                vid.q_del.addEventListener("click", queue_remove)
+                vid.q_set.addEventListener("click", e => this.queue_set(e))
+                vid.q_del.addEventListener("click", e => this.queue_remove(e))
         
-                vid.q_del.classList.toggle("hidden", !has_controls)
-                vid.q_set.classList.toggle("hidden", !has_controls)
-                vid.q_move.classList.toggle("hidden", !has_controls)
+                vid.q_del.classList.toggle("hidden", !this.has_controls)
+                vid.q_set.classList.toggle("hidden", !this.has_controls)
+                vid.q_move.classList.toggle("hidden", !this.has_controls)
 
                 e.prepend(vid.q_del)
                 e.append(vid.duration_e)
                 e.append(vid.q_set)
                 e.append(vid.q_move)
         
-                e.classList.toggle("isactive", vid.id == current_video)
+                e.classList.toggle("isactive", vid.id == this.current_video)
 
                 vid.e = e
                 playlist_container.appendChild(e)
-                playlist.push(vid)
+                this.playlist.push(vid)
             }
             playlist_header_time.textContent = seconds_to_hms(time)
         }
-    })
-
-    channel.on("current", data => {
-        console.log("playlist: current", data)
-
-        current_video = data.id
-        playlist.forEach(vid => {
-            vid.e.classList.toggle("isactive", current_video == vid.id)
-        })
-    })
-
-    channel.on("controls", data => {
-        console.log("playlist: controls", data)
-        has_controls = true
-    
-        playlist_controls.classList.toggle("hidden", false)
-
-        playlist.forEach(vid => {
-            vid.q_set.classList.toggle("hidden", false)
-            vid.q_del.classList.toggle("hidden", false)
-            vid.q_move.classList.toggle("hidden", false)
-        })
-    })
-    
-    playlist_add.addEventListener("click", queue_add)
-
-    add_url.addEventListener("keyup", event => { enter(event, () => { queue_add() }) })
-    add_sub.addEventListener("keyup", event => { enter(event, () => { queue_add() }) })
-
-    btn_show_hosted_videos.addEventListener("click", () => {
-        const modal = create_modal()
-        modal.label.textContent = "hosted videos"
-        reload_hosted_videos(modal, channel, "https://okea.moe/video/list.json")
-    })
-
-    btn_show_ss.addEventListener("click", () => {
-        const modal = create_modal()
-        modal.label.textContent = "ss"
-        reload_hosted_videos(modal, channel, "https://okea.moe/ss/list.json")
-    })
-
-    const yt_modal = create_yt_modal()
-
-    btn_show_yt.addEventListener("click", () => {
-        yt_modal.show()
-        yt_modal.search_input.focus()
-        yt_modal.search_input.select()
-    })
-
-}
-
-function queue_add() {
-    channel.push("q_add", {
-        url: add_url.value,
-        sub: add_sub.value
-    })
-
-    add_url.value = ""
-    add_sub.value = ""
-}
-
-function queue_set(e) {
-    for (let i = 0; i < playlist.length; i++) {
-        if (playlist[i].q_set == e.target) {
-            channel.push("q_set", {id: playlist[i].id})
-            break
-        }
     }
-}
-
-function queue_remove(e) {
-    for (let i = 0; i < playlist.length; i++) {
-        if (playlist[i].q_del == e.target) {
-            channel.push("q_del", {id: playlist[i].id})
-            break
-        }
-    }
-}
-
-function queue_start_drag(e) {
-    for (let i = 0; i < playlist.length; i++) {
-        if (playlist[i].q_move == (e.touches ? e.touches[0].target : e.target)) {
-            playlist[i].dragging = true
-            playlist[i].e.classList.toggle("playlist_dragging", true)
-            document.addEventListener("mouseup", queue_stop_drag)
-            document.addEventListener("mousemove", queue_drag)
-            document.addEventListener("touchend", queue_stop_drag)
-            document.addEventListener("touchmove", queue_drag)
-            break
-        }
-    }
-}
-
-function queue_drag(e) {
-    for (let i = 0; i < playlist.length; i++) {
-        if (playlist[i].dragging) {
-            const playlist_item = playlist[i]
-            playlist_item.e.style.transform = "none"
-            let rect = playlist_item.e.getBoundingClientRect()
-            let mouse_y = Math.min(Math.max(e.touches ? e.touches[0].clientY : e.clientY,
-                playlist[0].e.getBoundingClientRect().y), playlist[playlist.length - 1].e.getBoundingClientRect().bottom)
-            let y = rect.y
-            let off = mouse_y - y - rect.height / 2
-
-            for (let j = i - 1; j <= i + 1; j++) { // only 1 before and after
-                if (j < 0 || j == i || j >= playlist.length) continue
-                const playlist_item2 = playlist[j]
-                if ((j < i && mouse_y <= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)) || 
-                    (j > i && mouse_y >= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)))
-                {
-                    playlist.splice(i, 1)
-                    playlist.splice(j, 0, playlist_item)
-
-                    if (j < i) {
-                        playlist_item.e.parentNode.insertBefore(playlist_item.e, playlist_item2.e)
-                    } else {
-                        playlist_item.e.parentNode.insertBefore(playlist_item2.e, playlist_item.e)
-                    }
-
-                    rect = playlist_item.e.getBoundingClientRect()
-                    y = rect.y
-                    off = mouse_y - y - rect.height / 2
-                    break
-                }
-            }
-            playlist_item.e.style.transform = `translate(0, ${off}px)`
-            break
-        }
-    }
-}
-
-function queue_stop_drag(_) {
-    for (let i = 0; i < playlist.length; i++) {
-        playlist[i].e.style.transform = "none"
-        if (playlist[i].dragging) {
-            playlist[i].dragging = false
-            playlist[i].e.classList.toggle("playlist_dragging", false)
-            const new_order = []
-            playlist.forEach(playlist_item => {
-                new_order.push(playlist_item.id)
-            })
-            channel.push("q_order", {order: new_order})
-        }
-    }
-    document.removeEventListener("mouseup", queue_stop_drag)
-    document.removeEventListener("mousemove", queue_drag)
-    document.removeEventListener("touchend", queue_stop_drag)
-    document.removeEventListener("touchmove", queue_drag)
 }
 
 function create_yt_modal() {
-    const modal = create_modal(null, false)
-    modal.label.textContent = "yt"
+    const modal = new Modal({title: "yt"})
 
     const modal_body = modal.get_body()
     modal_body.style.display = "flex"
@@ -361,4 +370,4 @@ function create_yt_modal() {
     return modal
 }
 
-export default init
+export default Playlist

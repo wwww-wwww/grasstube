@@ -11,6 +11,7 @@ defmodule GrasstubeWeb.ChatAgent do
   require AutoLinker
 
   defstruct admin: "",
+            password: "",
             mods: [],
             history: [],
             room_name: "",
@@ -21,7 +22,8 @@ defmodule GrasstubeWeb.ChatAgent do
   def start_link(opts) do
     room_name = opts |> Keyword.get(:room_name)
     admin = opts |> Keyword.get(:admin)
-    Agent.start_link(fn -> %__MODULE__{room_name: room_name, admin: admin} end, name: via_tuple(room_name))
+    password = opts |> Keyword.get(:password)
+    Agent.start_link(fn -> %__MODULE__{room_name: room_name, admin: admin, password: password} end, name: via_tuple(room_name))
   end
 
   def via_tuple(room_name) do
@@ -287,6 +289,35 @@ defmodule GrasstubeWeb.ChatAgent do
 
           emote_html ->
             parse_emote(tail, acc <> before <> emote_html, emotes)
+        end
+    end
+  end
+
+  def password?(pid) do
+    password = Agent.get(pid, fn val -> val.password end)
+    String.length(password) > 0
+  end
+
+  def check_password(pid, password) do
+    Agent.get(pid, fn val -> val.password end) == password
+  end
+
+  def auth(socket, room_name, password) do
+    case Grasstube.ProcessRegistry.lookup(room_name, :chat) do
+      :not_found ->
+        {:error, "no room"}
+        
+      chat ->
+        if not password?(chat) or check_password(chat, password) do
+          send(self(), {:after_join, nil})
+          {:ok, socket}
+        else
+          if Guardian.Phoenix.Socket.authenticated?(socket) and
+            mod?(chat, Guardian.Phoenix.Socket.current_resource(socket)) do
+            {:ok, socket}
+          else
+            {:error, "bad password"}
+          end
         end
     end
   end

@@ -6,13 +6,18 @@ defmodule GrasstubeWeb.VideoChannel do
   alias GrasstubeWeb.ChatAgent
   alias GrasstubeWeb.PlaylistAgent
 
-  def join("video:" <> room_name, _message, socket) do
+  def join("video:" <> room_name, %{"password" => password}, socket) do
     case Grasstube.ProcessRegistry.lookup(room_name, :video) do
       :not_found ->
         {:error, "no room"}
-      _channel ->
-        send(self(), {:after_join, nil})
-        {:ok, socket}
+      _ ->
+        case ChatAgent.auth(socket, room_name, password) do
+          {:ok, socket} ->
+            send(self(), {:after_join, nil})
+            {:ok, socket}
+          resp ->
+            resp
+        end
     end
   end
 

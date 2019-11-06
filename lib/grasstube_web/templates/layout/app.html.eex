@@ -14,6 +14,9 @@
 		<%= if assigns[:room] do %>
 			<meta name="room" content="<%= @room %>">
 		<% end%>
+		<%= if assigns[:room_has_password] do %>
+			<meta name="room_has_password" content="1">
+		<% end%>
 	</head>
 	<body id="body">
 		<header>

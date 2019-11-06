@@ -155,7 +155,7 @@ defmodule GrasstubeWeb.UserController do
     end
   end
 
-  def create_room(conn, %{"room_name" => room_name}) do
+  def create_room(conn, %{"room_name" => room_name, "room_password" => room_password}) do
     user = Guardian.Plug.current_resource(conn)
     rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
 
@@ -164,7 +164,7 @@ defmodule GrasstubeWeb.UserController do
       |> put_flash("error", "you already have a room!")
       |> redirect(to: Routes.user_path(conn, :create_room_page))
     else
-      case Grasstube.ProcessRegistry.create_room(room_name, user.username) do
+      case Grasstube.ProcessRegistry.create_room(room_name, user.username, room_password) do
         {:ok, _} ->
           GrasstubeWeb.RoomsLive.update()
           redirect(conn, to: Routes.page_path(conn, :room, room_name))

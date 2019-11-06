@@ -15,7 +15,7 @@ defmodule GrasstubeWeb.YTController do
       Grasstube.YTCounter.increment()
       
       case HTTPoison.get("https://www.googleapis.com/youtube/v3/search", [],
-        params: %{key: key, part: "snippet", type: "video", maxResults: 10, q: query}) do
+        params: %{key: key, part: "snippet", type: "video", maxResults: 50, q: query}) do
         {:ok, %HTTPoison.Response{body: body, status_code: 200}} ->
           case Jason.decode(body) do
             {:ok, %{"items" => items}} ->

@@ -1,22 +1,19 @@
 defmodule GrasstubeWeb.ChatChannel do
   use GrasstubeWeb, :channel
 
-  require Logger
-
   alias Grasstube.Presence
 
   alias GrasstubeWeb.ChatAgent
 
   @max_name_length 24
   
-  def join("chat:" <> room_name, _message, socket) do
-    case Grasstube.ProcessRegistry.lookup(room_name, :chat) do
-      :not_found ->
-        {:error, "no room"}
-        
-      _ ->
+  def join("chat:" <> room_name, %{"password" => password}, socket) do
+    case ChatAgent.auth(socket, room_name, password) do
+      {:ok, socket} ->
         send(self(), {:after_join, nil})
         {:ok, socket}
+      resp ->
+        resp
     end
   end
 
@@ -28,7 +25,7 @@ defmodule GrasstubeWeb.ChatChannel do
 
     presence = Presence.list(socket)
 
-    {:ok, _} = Presence.track(socket, socket.assigns.user_id, meta)
+    Presence.track(socket, socket.assigns.user_id, meta)
     
     push(socket, "presence_state", Presence.list(socket))
 

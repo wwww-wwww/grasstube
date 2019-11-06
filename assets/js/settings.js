@@ -1,17 +1,17 @@
-import {create_modal} from "./modals"
+import Modal from "./modals"
 import {get_cookie, set_cookie} from "./cookies"
 import {change_layout} from "./drag"
 
 function init() {
-    btn_user_settings.addEventListener("click", make_settings)
+    const settings_modal = make_settings()
+    btn_user_settings.addEventListener("click", () => settings_modal.show())
 
     document.getElementsByTagName("header")[0].classList.toggle("hidden", (get_cookie("room_hide_header") || 0))
 }
 
 function make_settings() {
-    const modal = create_modal()
+    const modal = new Modal({title: "settings"})
     const modal_body = modal.get_body()
-    modal.label.textContent = "settings"
     
     let row = document.createElement("div")
     row.style.display = "block"
@@ -79,7 +79,7 @@ function make_settings() {
         toggle_header.textContent = !header_hide ? "off" : "on"
         document.getElementsByTagName("header")[0].classList.toggle("hidden", !header_hide)
     })
-
+    return modal
 }
 
 function set_layout(n) {
