@@ -31,7 +31,7 @@ function init() {
     })
 
     document.addEventListener("mouseup", e => {
-        if (dragging_v){
+        if (dragging_v) {
             set_cookie("drag_height", r_height + "px")
             maincontent.style.height = r_height + "px"
         }
@@ -42,15 +42,17 @@ function init() {
             container_chat.style.width = Math.round(w * window.innerWidth) + "px"
         }
 
-        document.removeEventListener("mousemove", drag_h)
-        document.removeEventListener("mousemove", drag_v)
-        
-        dragging_h = false
-        dragging_v = false
-        dragbar_h.style.opacity = 0
-        dragbar_v.style.opacity = 0
+        if (dragging_h || dragging_v) {
+            document.removeEventListener("mousemove", drag_h)
+            document.removeEventListener("mousemove", drag_v)
+            
+            dragging_h = false
+            dragging_v = false
+            dragbar_h.style.opacity = 0
+            dragbar_v.style.opacity = 0
 
-        window.dispatchEvent(new Event("resize"))
+            window.dispatchEvent(new Event("resize"))
+        }
     })
 }
 
