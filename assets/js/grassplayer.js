@@ -1,3 +1,4 @@
+import css from "../css/player.css"
 import {seconds_to_hms} from "./extras"
 import {get_cookie, set_cookie} from "./cookies"
 import Modal from "./modals"

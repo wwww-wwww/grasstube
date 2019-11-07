@@ -135,74 +135,6 @@ html, body {
     border: none;
 }
 
-#playlist_controls {
-    margin-bottom: 0.5em;
-}
-
-.playlist_outer {
-    display: inline-block;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.playlist_header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 0.5em;
-    text-align: left;
-}
-
-#playlist_header_time {
-    float: right;
-}
-
-.playlist_item {
-    padding: 0 0.5em;
-}
-
-.playlist_item_duration, .playlist_set {
-    margin-left: 0.5em;
-}
-
-.playlist_remove {
-    margin-right: 0.5em;
-}
-
-.playlist_dragging {
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.playlist_drag {
-    touch-action: none;
-}
-
-.playlist_drag, .playlist_drag:hover, .playlist_drag:active, .playlist_drag:focus {
-    cursor: grab;
-    background: none;
-    border: none;
-    box-shadow: none;
-    margin-left: 0.5em;
-    color: rgba(255, 255, 255, 0.7);
-}
-
-#playlist_container {
-    padding: 0.5em 0;
-}
-
-.yt-video { 
-    font-size: 0.75em;
-    display: flex;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.yt-video > div > div > a {
-    text-decoration: none;
-}
-
-@media (min-width: 768px) {
-    .yt-video { 
-        font-size: 1em;
-    }
-}
-
 #bottom {
     font-size: 0.8em;
     margin-top: 0.5em;
@@ -351,4 +283,17 @@ hr {
     transition: opacity 0.3s;
     width: 100%;
     height: 100%;
+}
+
+.hosted_videos_outer {
+    overflow: auto;
+    margin-top: 0.5em;
+    display: flex;
+}
+
+.hosted_videos {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 100%;
 }

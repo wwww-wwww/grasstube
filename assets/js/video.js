@@ -1,4 +1,3 @@
-import css from "../css/video.css"
 import GrassPlayer from "./grassplayer"
 import socket, { auth } from "./socket"
 
