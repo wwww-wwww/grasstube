@@ -1,6 +1,8 @@
 class Modal {
     constructor({root=null, can_close=true, title=null}={}) {
         this.root = root || body
+        this.tabs = []
+        this.selected_tab = null
 
         this.e = document.createElement("div")
         this.e.className = "modal"
@@ -13,9 +15,13 @@ class Modal {
         this.e.inner.className = "modal-inner"
         this.e.appendChild(this.e.inner)
 
+        const top = document.createElement("div")
+        top.className = "modal-top"
+        this.e.inner.appendChild(top)
+
         this.header = document.createElement("div")
         this.header.className = "modal-header"
-        this.e.inner.appendChild(this.header)
+        top.appendChild(this.header)
         
         if (can_close) {
             this.back.addEventListener("click", _ => this.close())
@@ -24,7 +30,7 @@ class Modal {
             modal_close.className = "modal-close square"
             modal_close.textContent = "×"
             modal_close.addEventListener("click", _ => this.close())
-            this.header.appendChild(modal_close)
+            top.appendChild(modal_close)
         }
 
         if (title) {
@@ -41,6 +47,44 @@ class Modal {
         label.className = "modal-title"
         label.textContent = title
         this.header.appendChild(label)
+    }
+
+    create_tab(title) {
+        const tab = document.createElement("div")
+        tab.style.overflow = "hidden"
+
+        tab.button = document.createElement("button")
+        tab.button.className = "modal-tab-button"
+        tab.button.textContent = title
+        this.header.appendChild(tab.button)
+
+        tab.button.addEventListener("click", () => {
+            if (tab != this.selected_tab) {
+                this.selected_tab.style.width = "0"
+                this.selected_tab.style.height = "0"
+                this.selected_tab.button.style.color = "rgba(255, 255, 255, 0.4)"
+                tab.style.width = "100%"
+                tab.style.height = "100%"
+                tab.button.style.color = "unset"
+                this.selected_tab = tab
+            }
+        })
+
+        this.tabs.push(tab)
+
+        this.get_body().appendChild(tab)
+
+        if (!this.selected_tab) {
+            this.selected_tab = tab
+            tab.style.height = "100%"
+            tab.style.width = "100%"
+        } else {
+            tab.style.height = "0"
+            tab.style.width = "0"
+            tab.button.style.color = "rgba(255, 255, 255, 0.4)"
+        }
+
+        return tab
     }
 
     get_body() {

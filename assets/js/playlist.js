@@ -1,3 +1,4 @@
+import css from "../css/playlist.css"
 import "phoenix_html"
 import Modal from "./modals"
 import {reload_hosted_videos} from "./metadata"
@@ -9,30 +10,75 @@ class Playlist{
         this.has_controls = false
         this.playlist = []
         this.current_video = -1
-
-        playlist_add.addEventListener("click", () => this.queue_add())
-
-        add_url.addEventListener("keyup", event => { enter(event, () => { this.queue_add() }) })
-        add_sub.addEventListener("keyup", event => { enter(event, () => { this.queue_add() }) })
     
-        const hosted_videos_modal = new Modal({title: "hosted videos"})
-        btn_show_hosted_videos.addEventListener("click", () => {
-            reload_hosted_videos(hosted_videos_modal, this.channel, "https://okea.moe/video/list.json")
-            hosted_videos_modal.show()
+        playlist_add.addEventListener("click", () => {
+            this.channel.push("q_add", {
+                title: add_title.value,
+                url: add_url.value,
+                sub: add_sub.value,
+                small: add_small.value
+            })
+            add_title.value = ""
+            add_url.value = ""
+            add_sub.value = ""
+            add_small.value = ""
+        })
+
+        let table_ss = document.getElementById("table_ss")
+        let table_videos = document.getElementById("table_videos")
+
+        ss_refresh.addEventListener("click", () => reload_hosted_videos(table_ss, () => this.channel, "https://okea.moe/ss/list.json"))
+        videos_refresh.addEventListener("click", () => reload_hosted_videos(table_videos, () => this.channel, "https://okea.moe/video/list.json"))
+
+        ss_refresh.click()
+        videos_refresh.click()
+
+        window.addEventListener("resize", () => {
+            if (table_ss.parentNode.scrollHeight > 0 && table_ss.parentNode.style.height != "0px") {
+                table_ss.parentNode.style.height = table_ss.parentNode.scrollHeight + "px"
+            }
+            if (table_videos.parentNode.scrollHeight > 0 && table_videos.parentNode.style.height != "0px") {
+                table_videos.parentNode.style.height = table_videos.parentNode.scrollHeight + "px"
+            }
+        })
+
+        ss_toggle.addEventListener("click", () => {
+            if (table_ss.parentNode.style.height == "0px") {
+                table_ss.parentNode.style.height = table_ss.parentNode.scrollHeight + "px"
+                if (table_videos.parentNode.style.height != "0px") {
+                    table_videos.parentNode.style.height = "0px"
+                }
+            } else {
+                table_ss.parentNode.style.height = "0px"
+            }
         })
     
-        const hosted_videos_ss_modal = new Modal({title: "ss"})
-        btn_show_ss.addEventListener("click", () => {
-            reload_hosted_videos(hosted_videos_ss_modal, this.channel, "https://okea.moe/ss/list.json")
-            hosted_videos_ss_modal.show()
+        videos_toggle.addEventListener("click", () => {
+            if (table_videos.parentNode.style.height == "0px") {
+                table_videos.parentNode.style.height = table_videos.parentNode.scrollHeight + "px"
+                if (table_ss.parentNode.style.height != "0px") {
+                    table_ss.parentNode.style.height = "0px"
+                }
+            } else {
+                table_videos.parentNode.style.height = "0px"
+            }
         })
+
+        let old_search = ""
+
+        let search_timer = null
     
-        const yt_modal = create_yt_modal(this)
-    
-        btn_show_yt.addEventListener("click", () => {
-            yt_modal.show()
-            yt_modal.search_input.focus()
-            yt_modal.search_input.select()
+        yt_input.addEventListener("keyup", () => [search_timer, old_search] = yt_search(old_search, yt_input.value.trim(), search_timer, this.channel))
+
+        const playlist_modal = new Modal()
+        const tab1 = playlist_modal.create_tab("hosted")
+        const tab2 = playlist_modal.create_tab("youtube")
+
+        tab1.appendChild(playlist_tab1)
+        tab2.appendChild(playlist_tab2)
+
+        show_playlist_dialog.addEventListener("click", () => {
+            playlist_modal.show()
         })
     }
 
@@ -194,8 +240,6 @@ class Playlist{
             for (let i = 0; i < data.playlist.length; i++) {
                 const vid = data.playlist[i]
 
-                time += vid.duration
-
                 const e = document.createElement("div")
                 e.className = "playlist_item"
 
@@ -209,6 +253,7 @@ class Playlist{
                 }
         
                 if (vid.duration != "unset") {
+                    time += vid.duration
                     vid.duration_e = document.createElement("span")
                     vid.duration_e.className = "playlist_item_duration"
                     vid.duration_e.textContent = seconds_to_hms(vid.duration)
@@ -252,129 +297,91 @@ class Playlist{
     }
 }
 
-function create_yt_modal(c) {
-    const modal = new Modal({title: "yt"})
-
-    const modal_body = modal.get_body()
-    modal_body.style.display = "flex"
-    modal_body.style.flexDirection = "column"
-
-    modal.search_input = document.createElement("input")
-    modal.search_input.style.display = "block"
-    modal.search_input.style.marginBottom = "0.5em"
-    modal.search_input.style.flex = "0"
-    modal_body.appendChild(modal.search_input)
-
-    let row = document.createElement("div")
-    row.style.display = "block"
-    row.style.flex = "1"
-    row.style.minHeight = "0"
-    row.style.overflow = "auto"
-    row.style.borderBottom = "1px solid rgba(255, 255, 255, 0.6)"
-    row.style.borderTop = "1px solid rgba(255, 255, 255, 0.6)"
-    modal_body.appendChild(row)
-
-    const videos_list = document.createElement("div")
-    row.appendChild(videos_list)
-
-    row = document.createElement("div")
-    row.style.display = "block"
-    row.style.flex = "0"
-    modal_body.appendChild(row)
-
-    let search_text = modal.search_input.value.trim()
-
-    let search_timer = null
-
-    modal.search_input.addEventListener("keyup", () => {
-        const new_text = modal.search_input.value.trim()
-
-        if (search_timer != null) clearTimeout(search_timer)
-
-        search_timer = setTimeout(() => {
-            if (search_text == new_text) return
-            
-            search_text = new_text
-            
-            fetch(`/api/yt_search?query=${encodeURIComponent(search_text)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    while (videos_list.firstChild) videos_list.removeChild(videos_list.firstChild)
-
-                    for (const video of data.items) {
-                        const video_id = unescape_html(video.id)
-                        const video_url = `https://youtube.com/watch?v=${video_id}`
+function yt_search(old_search, new_search, search_timer, channel) {
     
-                        const video_e = document.createElement("div")
-                        video_e.className = "yt-video"
-                        
-                        let column = document.createElement("div")
-                        column.style.display = "flex"
-                        column.style.alignItems = "center"
-                        video_e.appendChild(column)
+    if (search_timer != null) clearTimeout(search_timer)
 
-                        const video_e_thumbnail = document.createElement("img")
-                        video_e_thumbnail.style.height = "6em"
-                        video_e_thumbnail.src = `https://img.youtube.com/vi/${video_id}/mqdefault.jpg`
-                        column.appendChild(video_e_thumbnail)
-    
-                        column = document.createElement("div")
-                        column.style.padding = "0.5em"
-                        column.style.flex = "1"
-                        column.style.minWidth = "0"
-                        video_e.appendChild(column)
-    
-                        let row = document.createElement("div")
-                        column.appendChild(row)
-    
-                        const video_e_title = document.createElement("a")
-                        video_e_title.textContent = unescape_html(video.title)
-                        video_e_title.style.color = "rgba(255, 255, 255, 0.9)"
-                        video_e_title.href = video_url
-                        row.appendChild(video_e_title)
-                        
-                        row = document.createElement("div")
-                        column.appendChild(row)
-    
-                        const video_e_author = document.createElement("a")
-                        video_e_author.textContent = unescape_html(video.channel_title)
-                        video_e_author.style.fontSize = "0.9em"
-                        video_e_author.href = `https://youtube.com/channel/${video.channel_id}`
-                        row.appendChild(video_e_author)
-    
-                        row = document.createElement("div")
-                        column.appendChild(row)
-                        
-                        const video_add = document.createElement("button")
-                        video_add.textContent = "add"
-                        video_add.style.flex = "0"
-                        video_e.appendChild(video_add)
-    
-                        video_add.addEventListener("click", () => {
-                            c.channel.push("q_add", {
-                                title: "",
-                                url: video_url,
-                                sub: "",
-                                small: ""
-                            })
+    return [setTimeout(() => {
+        if (old_search == new_search) return
+        
+        old_search = new_search
+        
+        fetch(`/api/yt_search?query=${encodeURIComponent(new_search)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                while (yt_list.firstChild) yt_list.removeChild(yt_list.firstChild)
+
+                for (const video of data.items) {
+                    const video_id = unescape_html(video.id)
+                    const video_url = `https://youtube.com/watch?v=${video_id}`
+
+                    const video_e = document.createElement("div")
+                    video_e.className = "yt-video"
+                    
+                    let column = document.createElement("div")
+                    column.style.display = "flex"
+                    column.style.alignItems = "center"
+                    video_e.appendChild(column)
+
+                    const video_e_thumbnail = document.createElement("img")
+                    video_e_thumbnail.style.height = "6em"
+                    video_e_thumbnail.src = `https://img.youtube.com/vi/${video_id}/mqdefault.jpg`
+                    column.appendChild(video_e_thumbnail)
+
+                    column = document.createElement("div")
+                    column.style.padding = "0.5em"
+                    column.style.flex = "1"
+                    column.style.minWidth = "0"
+                    video_e.appendChild(column)
+
+                    let row = document.createElement("div")
+                    column.appendChild(row)
+
+                    const video_e_title = document.createElement("a")
+                    video_e_title.textContent = unescape_html(video.title)
+                    video_e_title.style.color = "rgba(255, 255, 255, 0.9)"
+                    video_e_title.href = video_url
+                    row.appendChild(video_e_title)
+                    
+                    row = document.createElement("div")
+                    column.appendChild(row)
+
+                    const video_e_author = document.createElement("a")
+                    video_e_author.textContent = unescape_html(video.channel_title)
+                    video_e_author.style.fontSize = "0.9em"
+                    video_e_author.href = `https://youtube.com/channel/${video.channel_id}`
+                    row.appendChild(video_e_author)
+
+                    row = document.createElement("div")
+                    column.appendChild(row)
+                    
+                    const video_add = document.createElement("button")
+                    video_add.textContent = "add"
+                    video_add.style.flex = "0"
+                    video_e.appendChild(video_add)
+
+                    video_add.addEventListener("click", () => {
+                        channel.push("q_add", {
+                            title: "",
+                            url: video_url,
+                            sub: "",
+                            small: ""
                         })
-    
-                        videos_list.appendChild(video_e)
-                    }
-    
-                    if (videos_list.lastChild) videos_list.lastChild.style.borderBottom = "none"
+                    })
+
+                    yt_list.appendChild(video_e)
                 }
 
-                search_timer = null
-            })
-            .catch(err => {
-                console.log("yt_search: error fetching", err)
-            })
-        }, 500)
-    })
+                if (yt_list.lastChild) yt_list.lastChild.style.borderBottom = "none"
+            }
 
-    return modal
+            search_timer = null
+        })
+        .catch(err => {
+            console.log("yt_search: error fetching", err)
+        })
+    }, 500), old_search]
 }
 
 export default Playlist

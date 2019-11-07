@@ -1,0 +1,133 @@
+
+#playlist_controls {
+    display: inline-block;
+}
+
+#playlist_controls.hidden {
+    display: none;
+}
+
+.playlist_outer {
+    display: inline-block;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.playlist_header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5em;
+    text-align: left;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.playlist_header_left {
+    flex: 1;
+}
+
+.playlist_header_right > * {
+    vertical-align: middle;
+}
+
+#show_playlist_dialog {
+    font-weight: 600;
+}
+
+.playlist_item {
+    padding: 0 0.5em;
+}
+
+.playlist_item_duration, .playlist_set {
+    margin-left: 0.5em;
+}
+
+.playlist_remove {
+    margin-right: 0.5em;
+}
+
+.playlist_dragging {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6), 0 -1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.playlist_drag {
+    touch-action: none;
+}
+
+.playlist_drag, .playlist_drag:hover, .playlist_drag:active, .playlist_drag:focus {
+    cursor: grab;
+    background: none;
+    border: none;
+    box-shadow: none;
+    margin-left: 0.5em;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+#playlist_container {
+    padding: 0.5em 0;
+}
+
+.yt-video { 
+    font-size: 0.75em;
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.yt-video > div > div > a {
+    text-decoration: none;
+}
+
+@media (min-width: 768px) {
+    .yt-video { 
+        font-size: 1em;
+    }
+}
+
+#playlist_tab1, #playlist_tab2 {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#yt_input {
+    display: block;
+    margin-bottom: 0.5em;
+}
+
+.yt_list_outer {
+    display: block;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.hosted_videos_outer {
+    overflow: auto;
+    margin-top: 0.5em;
+    display: flex;
+}
+
+.hosted_videos {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.table_outer {
+    overflow: auto;
+    transition: height 0.25s;
+}
+
+table {
+    width: 100%;
+      border-collapse: collapse;
+}
+
+th {
+    padding: 0.25em;
+    text-align: left;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}

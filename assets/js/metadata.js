@@ -53,9 +53,7 @@ function reload_emotes(room, modal, chatbox, refresh = true, new_data = false) {
     }
 }
 
-function reload_hosted_videos(modal, channel, url, download=true) {
-    if (modal == null || modal == undefined) return
-    console.log(url)
+function reload_hosted_videos(table, channel, url, download=true) {
     if (download) {
         const xhr = new XMLHttpRequest()
         xhr.open("GET", url)
@@ -65,7 +63,7 @@ function reload_hosted_videos(modal, channel, url, download=true) {
         xhr.onload = function() {
             if (!(url in hosted_videos) || xhr.response != hosted_videos[url]) {
                 hosted_videos[url] = xhr.response
-                reload_hosted_videos(modal, channel, url, false)
+                reload_hosted_videos(table, channel, url, false)
             }
             console.log("videos: fetched")
         }
@@ -77,40 +75,63 @@ function reload_hosted_videos(modal, channel, url, download=true) {
         return
     }
     
-    const modal_body = modal.get_body()
-    
-    while (modal_body.firstChild) modal_body.removeChild(modal_body.firstChild)
+    while (table.children[1]) table.removeChild(table.children[1])
     let color = "rgba(255, 255, 255, 0)"
     
     hosted_videos[url].forEach(v => {
-        const item = document.createElement("div")
+        const item = document.createElement("tr")
         item.className = "list-item"
         item.style.backgroundColor = color
         color = (color == "rgba(255, 255, 255, 0.15)") ? "rgba(255, 255, 255, 0)" : "rgba(255, 255, 255, 0.15)"
+        table.appendChild(item)
 
-        const title = document.createElement("span")
+        const title = document.createElement("td")
         title.textContent = v.title
-        title.style.marginRight = "0.5em"
+        title.style.padding = "0.25em 0.5em 0.25em 0.25em"
         item.appendChild(title)
+
+        let column = document.createElement("td")
+        column.textContent = v.sub ? "✔️" : "❌"
+        item.appendChild(column)
+        
+        column = document.createElement("td")
+        column.textContent = v.small ? "✔️" : "❌"
+        item.appendChild(column)
+
+        column = document.createElement("td")
+        item.appendChild(column)
+
+        const btn_fill = document.createElement("button")
+        btn_fill.textContent = "fill"
+        btn_fill.style.lineHeight = "1em"
+        btn_fill.style.padding = "0.25em 0.5em"
+
+        btn_fill.addEventListener("click", () => {
+            add_url.value = v.url
+            add_sub.value = v.sub || ""
+            add_small.value = v.small || ""
+        })
+
+        column.appendChild(btn_fill)
+
+        column = document.createElement("td")
+        item.appendChild(column)
 
         const btn_add = document.createElement("button")
         btn_add.textContent = "add"
-        btn_add.style.float = "right"
         btn_add.style.lineHeight = "1em"
-        btn_add.style.padding = "0em 0.5em"
+        btn_fill.style.padding = "0.25em 0.5em"
 
         btn_add.addEventListener("click", () => {
-            channel.push("q_add", {
+            channel().push("q_add", {
                 title: "",
                 url: v.url,
-                sub: v.sub,
+                sub: v.sub || "",
                 small: v.small || ""
             })
         })
 
-        item.appendChild(btn_add)
-        
-        modal_body.appendChild(item)
+        column.appendChild(btn_add)
     })
 }
 

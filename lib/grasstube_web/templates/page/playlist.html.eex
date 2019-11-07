@@ -1,17 +1,66 @@
 <div id="playlist_div">
-	<div id="playlist_controls" class="hidden">
-		<input id="add_url" placeholder="url"/>
-		<input id="add_sub" placeholder="subtitles"/>
-		<button id="playlist_add">add</button>
-		<button id="btn_show_ss">ss</button>
-		<button id="btn_show_hosted_videos">video</button>
-		<button id="btn_show_yt">yt</button>
+	<div id="playlist_tab1">
+		<div>
+			<input id="add_title" placeholder="title (auto)"/>
+			<input id="add_url" placeholder="url"/>
+			<input id="add_sub" placeholder="subtitles"/>
+			<input id="add_small" placeholder="small"/>
+			<button id="playlist_add">add</button>
+		</div>
+		<div class="hosted_videos_outer">
+			<div class="hosted_videos">
+				<div style="display: flex">
+					<button id="ss_toggle" style="flex: 1; min-height: 0">ss</button>
+					<button id="ss_refresh">↻</button>
+				</div>
+				<div class="table_outer" style="height: 0px">
+					<table id="table_ss">
+						<tr>
+							<th>file name</th>
+							<th>subs</th>
+							<th>2mbps</th>
+							<th></th>
+							<th></th>
+						</tr>
+					</table>
+				</div>
+				<div style="display: flex">
+					<button id="videos_toggle" style="flex: 1; min-height: 0">videos</button>
+					<button id="videos_refresh">↻</button>
+				</div>
+				<div class="table_outer" style="height: 0px">
+					<table id="table_videos">
+						<tr>
+							<th>file name</th>
+							<th>subs</th>
+							<th>2mbps</th>
+							<th></th>
+							<th></th>
+						</tr>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div id="playlist_tab2">
+		<input id="yt_input" placeholder="search">
+		<div class="yt_list_outer">
+			<div id="yt_list">
+			</div>
+		</div>
 	</div>
 
 	<div class="playlist_outer">
 		<div class="playlist_header">
-			<span id="playlist_header_count"></span>
-			<span id="playlist_header_time"></span>
+			<div class="playlist_header_left">
+				<span id="playlist_header_count"></span>
+			</div>
+			<div class="playlist_header_right">
+				<span id="playlist_header_time"></span>
+				<div id="playlist_controls" class="hidden">
+					<button id="show_playlist_dialog" class="square">＋</button>
+				</div>
+			</div>
 		</div>
 		<div id="playlist_container"></div>
 	</div>
