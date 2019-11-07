@@ -63,22 +63,34 @@ defmodule GrasstubeWeb.PlaylistAgent do
     end)
   end
   
-  def add_queue(pid, title, url, sub, small, type, duration) do
+  def add_queue(pid, title, url, sub, small) do
     Agent.update(pid, fn val ->
       new_videos =
         Map.put(val.videos, val.current_qid, %Video{
           id: val.current_qid,
-          title: title,
-          url: url,
-          sub: sub,
-          small: small,
-          type: type,
-          duration: duration
+          title: "loading",
+          url: url
         })
 
       new_queue = val.queue ++ [val.current_qid]
 
       %{val | videos: new_videos, queue: new_queue, current_qid: val.current_qid + 1}
+    end)
+
+    room_name = get_room_name(pid)
+    Endpoint.broadcast("playlist:" <> room_name, "playlist", %{ playlist: get_playlist(pid) })
+
+    queue_id = Agent.get(pid, fn val -> val.current_qid - 1 end)
+
+    Task.Supervisor.async_nolink(Tasks, fn -> queue_lookup(pid, room_name, queue_id, title, url, sub, small) end)
+  end
+
+  def update_queue_item(pid, queue_id, opts) do
+    Agent.update(pid, fn val ->
+      new_videos = Map.update(val.videos, queue_id, %Video{}, fn video ->
+        Map.merge(video, opts)
+      end)
+      %{val | videos: new_videos}
     end)
   end
 
@@ -146,10 +158,11 @@ defmodule GrasstubeWeb.PlaylistAgent do
     end
   end
 
-  def q_add(pid, url, sub, small) do
-    case URI.parse(url) do
+  def queue_lookup(pid, room_name, queue_id, custom_title, url, sub, small) do
+    success = case URI.parse(url) do
       %URI{host: nil} ->
-        nil
+        update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+        false
 
       %URI{host: host} ->
         cond do
@@ -157,24 +170,28 @@ defmodule GrasstubeWeb.PlaylistAgent do
             info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_yt_info(url) end)
 
             case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
-              {:ok, {:ok, %{id: id, duration: duration, title: title}}} ->
-                add_queue(pid, title, id, sub, "", "yt", duration)
+              {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
+                title = if custom_title |> String.length > 0, do: custom_title, else: new_title
+                update_queue_item(pid, queue_id, %{title: title, url: id, sub: sub, type: "yt", duration: duration, ready: true})
+                true
 
               _ ->
-                IO.inspect("FAILED YT")
-                :failed
+                update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                false
             end
 
           Enum.member?(@gdrive_domains, String.downcase(host)) ->
             info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_yt_info(url) end)
 
             case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
-              {:ok, {:ok, %{id: id, duration: duration, title: title}}} ->
-                add_queue(pid, title, id, sub, "", "gdrive", duration)
+              {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
+                title = if custom_title |> String.length > 0, do: custom_title, else: new_title
+                update_queue_item(pid, queue_id, %{title: title, url: id, sub: sub, type: "gdrive", duration: duration, ready: true})
+                true
 
               _ ->
-                IO.inspect("FAILED GDRIVE")
-                :failed
+                update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                false
             end
 
           true ->
@@ -187,16 +204,30 @@ defmodule GrasstubeWeb.PlaylistAgent do
 
             case Task.yield(info_task, @ffprobe_timeout) || Task.shutdown(info_task) do
               {:ok, duration} ->
-                add_queue(pid, title, url, sub, small, "default", duration)
+                update_queue_item(pid, queue_id, %{title: title, url: url, sub: sub, small: small, type: "default", duration: duration, ready: true})
+                true
 
               _ ->
-                IO.inspect("FAILED")
-                :failed
+                update_queue_item(pid, queue_id, %{title: "failed"})
+                false
             end
         end
-
-        Endpoint.broadcast("playlist:" <> get_room_name(pid), "playlist", %{ playlist: get_playlist(pid) })
     end
+
+    if success do
+      video = Grasstube.ProcessRegistry.lookup(room_name, :video)
+      current_video = VideoAgent.get_current_video(video)
+      if current_video != :nothing and current_video.id == queue_id do
+        VideoAgent.set_current_video(video, get_video(pid, queue_id))
+        
+        if VideoAgent.play_on_ready?(video) do
+          Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+          |> GrasstubeWeb.VideoScheduler.delayed_start(5000)
+        end
+      end
+    end
+
+    Endpoint.broadcast("playlist:" <> room_name, "playlist", %{ playlist: get_playlist(pid) })
   end
 
   def next_video(pid) do
@@ -215,16 +246,38 @@ defmodule GrasstubeWeb.PlaylistAgent do
           end
           
         current ->
-          case queue |> Enum.at(Enum.find_index(queue, fn val -> val == current.id end) + 1) do
-            nil -> :nothing
-            id -> get_video(pid, id)
-          end
+          get_next_video(pid, queue, current.id)
       end
-      
-    VideoAgent.set_current_video(video, next)
+
     if next != :nothing do
-      scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
-      GrasstubeWeb.VideoScheduler.delayed_start(scheduler, 5000)
+      case next.ready do
+        :failed ->
+          next_video(pid)
+
+        true ->
+          VideoAgent.set_current_video(video, next)
+          Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+          |> GrasstubeWeb.VideoScheduler.delayed_start(5000)
+
+        false ->
+          VideoAgent.set_play_on_ready(video, true)
+          VideoAgent.set_current_video(video, next)
+      end
+    else
+      VideoAgent.set_current_video(video, next)
+    end
+  end
+
+  def get_next_video(pid, queue, id) do
+    case queue |> Enum.at(Enum.find_index(queue, fn val -> val == id end) + 1) do
+      nil -> :nothing
+      id ->
+        video = get_video(pid, id)
+        if video.ready == :failed do
+          get_next_video(pid, queue, video.id)
+        else
+          video
+        end
     end
   end
 end

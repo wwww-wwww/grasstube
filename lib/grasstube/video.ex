@@ -1,5 +1,5 @@
 defmodule GrasstubeWeb.Video do
-  defstruct id: 0, title: "", type: "default", url: "", sub: "", small: "", duration: :unset
+  defstruct id: 0, title: "", type: "default", url: "", sub: "", small: "", duration: :unset, ready: false
 end
 
 defmodule GrasstubeWeb.VideoAgent do
@@ -11,6 +11,7 @@ defmodule GrasstubeWeb.VideoAgent do
 
   defstruct current_video: :nothing,
             playing: false,
+            play_on_ready: false,
             time_started: :not_started,
             time_seek: 0,
             room_name: ""
@@ -24,22 +25,28 @@ defmodule GrasstubeWeb.VideoAgent do
   end
 
   def set_playing(pid, playing) do
-    Agent.update(pid, fn val ->
-      %{
-        val
-        | playing: playing,
-          time_seek: actual_get_time(val),
-          time_started: DateTime.to_unix(DateTime.utc_now())
-      }
-    end)
+    if not get_current_video(pid).ready do
+      set_play_on_ready(pid, true)
+    else
+      set_play_on_ready(pid, false)
 
-    room_name = Agent.get(pid, fn val -> val.room_name end)
+      Agent.update(pid, fn val ->
+        %{
+          val
+          | playing: playing,
+            time_seek: actual_get_time(val),
+            time_started: DateTime.to_unix(DateTime.utc_now())
+        }
+      end)
 
-    scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
-    GrasstubeWeb.VideoScheduler.cancel_play(scheduler)
+      room_name = Agent.get(pid, fn val -> val.room_name end)
 
-    Endpoint.broadcast("video:" <> room_name, "playing", %{playing:  playing?(pid)})
-    Endpoint.broadcast("video:" <> room_name, "seek", %{t: get_time(pid)})
+      scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+      GrasstubeWeb.VideoScheduler.cancel_play(scheduler)
+
+      Endpoint.broadcast("video:" <> room_name, "playing", %{playing:  playing?(pid)})
+      Endpoint.broadcast("video:" <> room_name, "seek", %{t: get_time(pid)})
+    end
   end
 
   def playing?(pid) do
@@ -87,8 +94,9 @@ defmodule GrasstubeWeb.VideoAgent do
     GrasstubeWeb.VideoScheduler.cancel_set(scheduler)
     GrasstubeWeb.VideoScheduler.cancel_play(scheduler)
     
+    Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
+
     if next == :nothing do
-      Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
       Endpoint.broadcast("video:" <> room_name, "setvid", %{id: -1, type: "default", url: "", sub: "", small: ""})
       Endpoint.broadcast("playlist:" <> room_name, "current", %{id: -1})
       GrasstubeWeb.VideoScheduler.stop_timer(scheduler)
@@ -117,6 +125,17 @@ defmodule GrasstubeWeb.VideoAgent do
     end)
   end
 
+  def set_play_on_ready(pid, b) do
+    Agent.update(pid, fn val ->
+      %{val | play_on_ready: b}
+    end)
+  end
+
+  def play_on_ready?(pid) do
+    Agent.get(pid, fn val ->
+      val.play_on_ready
+    end)
+  end
 end
 
 defmodule GrasstubeWeb.VideoScheduler do
@@ -146,11 +165,14 @@ defmodule GrasstubeWeb.VideoScheduler do
     if state.play_task != :nothing do
       Process.cancel_timer(state.play_task)
     end
+
     video = Grasstube.ProcessRegistry.lookup(state.room_name, :video)
+
     VideoAgent.set_seek(video, VideoAgent.get_time(video))
     VideoAgent.set_playing(video, true)
     start_timer(self(), 0)
     Endpoint.broadcast("video:" <> state.room_name, "playing", %{playing: true})
+
     {:noreply, %{state | play_task: :nothing}}
   end
 

@@ -11,7 +11,7 @@ defmodule Grasstube.DefaultRooms do
     Grasstube.ProcessRegistry.create_room("jade room", "w", "test")
 
     playlist2 = Grasstube.ProcessRegistry.lookup("jade room", :playlist)
-    Enum.each(@default_videos, &(GrasstubeWeb.PlaylistAgent.q_add(playlist2, &1, "", "")))
+    Enum.each(@default_videos, &(GrasstubeWeb.PlaylistAgent.add_queue(playlist2, "", &1, "", "")))
     
     chat2 = Grasstube.ProcessRegistry.lookup("jade room", :chat)
     GrasstubeWeb.ChatAgent.add_mod(chat2, "clara")

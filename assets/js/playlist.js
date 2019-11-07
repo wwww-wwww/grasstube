@@ -27,7 +27,7 @@ class Playlist{
             hosted_videos_ss_modal.show()
         })
     
-        const yt_modal = create_yt_modal()
+        const yt_modal = create_yt_modal(this)
     
         btn_show_yt.addEventListener("click", () => {
             yt_modal.show()
@@ -128,8 +128,10 @@ class Playlist{
 
     queue_add() {
         this.channel.push("q_add", {
+            title: "",
             url: add_url.value,
-            sub: add_sub.value
+            sub: add_sub.value,
+            small: ""
         })
     
         add_url.value = ""
@@ -206,16 +208,20 @@ class Playlist{
                     vid.title_e.href = vid.url
                 }
         
-                vid.duration_e = document.createElement("span")
-                vid.duration_e.className = "playlist_item_duration"
-                vid.duration_e.textContent = seconds_to_hms(vid.duration)
+                if (vid.duration != "unset") {
+                    vid.duration_e = document.createElement("span")
+                    vid.duration_e.className = "playlist_item_duration"
+                    vid.duration_e.textContent = seconds_to_hms(vid.duration)
+                    e.append(vid.duration_e)
+                }
+
+                vid.q_del = document.createElement("button")
+                vid.q_del.className = "playlist_remove square"
+                vid.q_del.textContent = "×"
 
                 vid.q_set = document.createElement("button")
                 vid.q_set.className = "playlist_set"
                 vid.q_set.textContent = "set"
-                vid.q_del = document.createElement("button")
-                vid.q_del.className = "playlist_remove square"
-                vid.q_del.textContent = "×"
 
                 vid.q_move = document.createElement("button")
                 vid.q_move.className = "playlist_drag"
@@ -232,7 +238,6 @@ class Playlist{
                 vid.q_move.classList.toggle("hidden", !this.has_controls)
 
                 e.prepend(vid.q_del)
-                e.append(vid.duration_e)
                 e.append(vid.q_set)
                 e.append(vid.q_move)
         
@@ -247,7 +252,7 @@ class Playlist{
     }
 }
 
-function create_yt_modal() {
+function create_yt_modal(c) {
     const modal = new Modal({title: "yt"})
 
     const modal_body = modal.get_body()
@@ -347,9 +352,11 @@ function create_yt_modal() {
                         video_e.appendChild(video_add)
     
                         video_add.addEventListener("click", () => {
-                            channel.push("q_add", {
+                            c.channel.push("q_add", {
+                                title: "",
                                 url: video_url,
-                                sub: ""
+                                sub: "",
+                                small: ""
                             })
                         })
     

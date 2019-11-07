@@ -53,28 +53,14 @@ defmodule GrasstubeWeb.PlaylistChannel do
     {:noreply, socket}
   end
   
-  def handle_in("q_add", %{"url" => user_url, "sub" => sub, "small" => small}, socket) do
+  def handle_in("q_add", %{"title" => title, "url" => user_url, "sub" => sub, "small" => small}, socket) do
     "playlist:" <> room_name = socket.topic
 
     if Guardian.Phoenix.Socket.authenticated?(socket) do
       user = Guardian.Phoenix.Socket.current_resource(socket)
       if ChatAgent.room_mod?(room_name, user) do
         playlist = Grasstube.ProcessRegistry.lookup(room_name, :playlist)
-        Task.Supervisor.async_nolink(Tasks, fn -> PlaylistAgent.q_add(playlist, user_url, sub, small) end)
-      end
-    end
-
-    {:noreply, socket}
-  end
-
-  def handle_in("q_add", %{"url" => user_url, "sub" => sub}, socket) do
-    "playlist:" <> room_name = socket.topic
-
-    if Guardian.Phoenix.Socket.authenticated?(socket) do
-      user = Guardian.Phoenix.Socket.current_resource(socket)
-      if ChatAgent.room_mod?(room_name, user) do
-        playlist = Grasstube.ProcessRegistry.lookup(room_name, :playlist)
-        Task.Supervisor.async_nolink(Tasks, fn -> PlaylistAgent.q_add(playlist, user_url, sub, "") end)
+        PlaylistAgent.add_queue(playlist, title, user_url, sub, small)
       end
     end
 

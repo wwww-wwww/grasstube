@@ -101,9 +101,10 @@ function reload_hosted_videos(modal, channel, url, download=true) {
 
         btn_add.addEventListener("click", () => {
             channel.push("q_add", {
+                title: "",
                 url: v.url,
                 sub: v.sub,
-                small: v.small
+                small: v.small || ""
             })
         })
 
