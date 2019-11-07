@@ -10,11 +10,17 @@ if (token.length > 0) {
     params.token = token
 }
 
+const socket_modal = new Modal({title: "connecting to socket", can_close: false})
+socket_modal.show()
+
 const socket = new Socket("/tube", {params: params})
 socket.room = get_meta("room")
 socket.password = ""
 
-socket.onOpen(() => document.title = socket.room)
+socket.onOpen(() => {
+    document.title = socket.room
+    socket_modal.close()
+})
 
 socket.onError(() => document.title = "disconnected")
 
