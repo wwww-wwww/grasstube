@@ -75,7 +75,7 @@ function auth(socket, channels) {
                         channel.status.textContent = "✔"
                         let complete = true
                         for (const channel2 of channels) {
-                            if (channel2.status.textContent == "↻") {
+                            if (channel2.status.textContent != "✔") {
                                 complete = false
                                 break
                             }
