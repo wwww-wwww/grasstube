@@ -38,6 +38,11 @@ defmodule GrasstubeWeb.ChatChannel do
       push(socket, "history", %{"list" => history})
     end
 
+    motd = ChatAgent.get_motd(chat)
+    if String.length(motd) > 0 do
+      push(socket, "chat", %{sender: "sys", name: room_name, content: motd})
+    end
+
     {:noreply, socket}
   end
   

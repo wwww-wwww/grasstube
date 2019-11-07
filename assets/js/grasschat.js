@@ -274,7 +274,11 @@ class Chat {
         row.appendChild(change_nickname)
 
         const change_nickname_modal = this.make_change_nickname()
-        change_nickname.addEventListener("click", () => change_nickname_modal.show())
+        change_nickname.addEventListener("click", () => {
+            change_nickname_modal.show()
+            change_nickname_modal.textfield.focus()
+            change_nickname_modal.textfield.select()
+        })
 
         return modal
     }
@@ -285,12 +289,12 @@ class Chat {
         const modal_body = modal.get_body()
         modal_body.style.textAlign = "right"
 
-        const textfield = document.createElement("input")
-        modal_body.appendChild(textfield)
+        modal.textfield = document.createElement("input")
+        modal_body.appendChild(modal.textfield)
 
-        textfield.style.display = "block"
-        textfield.style.width = "100%"
-        textfield.value = get_cookie("nickname") || "anon"
+        modal.textfield.style.display = "block"
+        modal.textfield.style.width = "100%"
+        modal.textfield.value = get_cookie("nickname") || "anon"
 
         const btn_set = document.createElement("button")
         modal_body.appendChild(btn_set)
@@ -299,26 +303,23 @@ class Chat {
         btn_set.style.marginTop = "0.5em"
 
         btn_set.addEventListener("click", () => {
-            if (this.set_name(textfield.value.trim())) {
+            if (this.set_name(modal.textfield.value.trim())) {
                 modal.close()
             } else {
-                textfield.focus()
-                textfield.select()
+                modal.textfield.focus()
+                modal.textfield.select()
             }
         })
         
-        textfield.addEventListener("keyup", event => {
+        modal.textfield.addEventListener("keyup", event => {
             event.preventDefault()
             if (event.keyCode !== 13) return
-            if (this.set_name(textfield.value.trim())) {
+            if (this.set_name(modal.textfield.value.trim())) {
                 modal.close()
             } else {
-                textfield.select()
+                modal.textfield.select()
             }
         })
-
-        textfield.focus()
-        textfield.select()
 
         return modal
     }
