@@ -185,7 +185,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
 
             case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
               {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
-                title = if custom_title |> String.length > 0, do: custom_title, else: new_title
+                title = if String.length(custom_title) > 0, do: custom_title, else: new_title
                 update_queue_item(pid, queue_id, %{title: title, url: id, sub: sub, type: "gdrive", duration: duration, ready: true})
                 true
 
@@ -195,15 +195,11 @@ defmodule GrasstubeWeb.PlaylistAgent do
             end
 
           true ->
-            title =
-              url
-              |> URI.decode()
-              |> Path.basename()
-
             info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_file_duration(url) end)
 
             case Task.yield(info_task, @ffprobe_timeout) || Task.shutdown(info_task) do
               {:ok, duration} ->
+                title = if String.length(custom_title) > 0, do: custom_title, else: Path.basename(URI.decode(url))
                 update_queue_item(pid, queue_id, %{title: title, url: url, sub: sub, small: small, type: "default", duration: duration, ready: true})
                 true
 
