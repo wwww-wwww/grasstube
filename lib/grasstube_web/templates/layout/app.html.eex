@@ -29,7 +29,7 @@
 				</nav>
 			</section>
 		</header>
-		<main role="main">
+		<main id="main" role="main">
 			<%= render @view_module, @view_template, assigns %>
 		</main>
 	</body>

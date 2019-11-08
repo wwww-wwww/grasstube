@@ -1,6 +1,6 @@
 class Modal {
     constructor({root=null, can_close=true, title=null}={}) {
-        this.root = root || body
+        this.root = root || main || body
         this.tabs = []
         this.selected_tab = null
 
