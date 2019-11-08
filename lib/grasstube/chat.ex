@@ -352,7 +352,6 @@ defmodule GrasstubeWeb.ChatAgent do
         
       chat ->
         if not password?(chat) or check_password(chat, password) do
-          send(self(), {:after_join, nil})
           {:ok, socket}
         else
           if Guardian.Phoenix.Socket.authenticated?(socket) and
