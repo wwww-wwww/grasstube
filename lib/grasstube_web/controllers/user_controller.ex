@@ -159,27 +159,35 @@ defmodule GrasstubeWeb.UserController do
     user = Guardian.Plug.current_resource(conn)
     rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
 
-    if length(rooms) > 0 do
-      conn
-      |> put_flash("error", "you already have a room!")
-      |> redirect(to: Routes.user_path(conn, :create_room_page))
-    else
-      case Grasstube.ProcessRegistry.create_room(room_name, user.username, room_password) do
-        {:ok, _} ->
-          GrasstubeWeb.RoomsLive.update()
-          redirect(conn, to: Routes.page_path(conn, :room, room_name))
-        {:error, {reason, _}} ->
-          case reason do
-            :already_started ->
-              conn
-              |> put_flash("error", "room already exists with this name")
-              |> redirect(to: Routes.user_path(conn, :create_room_page))
-            _ ->
-              conn
-              |> put_flash("error", "error creating room")
-              |> redirect(to: Routes.user_path(conn, :create_room_page))
-          end
-      end
+    cond do
+      length(rooms) > 0 ->
+        conn
+        |> put_flash("error", "you already have a room")
+        |> redirect(to: Routes.user_path(conn, :create_room_page))
+        
+      String.length(room_name) == 0 ->
+        conn
+        |> put_flash("error", "room name is too short")
+        |> redirect(to: Routes.user_path(conn, :create_room_page))
+
+      true ->
+        case Grasstube.ProcessRegistry.create_room(room_name, user.username, room_password) do
+          {:ok, _} ->
+            GrasstubeWeb.RoomsLive.update()
+            redirect(conn, to: Routes.page_path(conn, :room, room_name))
+          {:error, {reason, _}} ->
+            case reason do
+              :already_started ->
+                conn
+                |> put_flash("error", "room already exists with this name")
+                |> redirect(to: Routes.user_path(conn, :create_room_page))
+              _ ->
+                conn
+                |> put_flash("error", "error creating room")
+                |> redirect(to: Routes.user_path(conn, :create_room_page))
+            end
+        end
+
     end
   end
 
