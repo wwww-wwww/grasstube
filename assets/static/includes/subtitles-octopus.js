@@ -214,14 +214,9 @@ var SubtitlesOctopus = function (options) {
         var data = self.renderFramesData;
         var beforeDrawTime = performance.now();
         self.ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
-        for (var i = 0; i < data.canvases.length; i++) {
-            var image = data.canvases[i];
-            self.bufferCanvas.width = image.w;
-            self.bufferCanvas.height = image.h;
-            var imageBuffer = new Uint8ClampedArray(image.buffer);
-            var imageData = new ImageData(imageBuffer, image.w, image.h);
-            self.bufferCanvasCtx.putImageData(imageData, 0, 0);
-            self.ctx.drawImage(self.bufferCanvas, image.x, image.y);
+        for (var i = 0; i < data.bitmaps.length; i++) {
+            var image = data.bitmaps[i];
+            self.ctx.drawImage(image.bitmap, image.x, image.y);
         }
         if (self.debug) {
             var drawTime = Math.round(performance.now() - beforeDrawTime);
