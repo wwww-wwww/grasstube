@@ -27,14 +27,14 @@ body {
 header {
     font-family: 'Google Sans', sans-serif;
     border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-    height: 2em;
     z-index: 99;
     transition: 0.1s opacity;
 }
 
 header > section > nav > span > a {
-    margin: 4px;
-    line-height: 2em;
+    display: inline-block;
+    margin: 0.25em;
+    line-height: 1.5em;
 }
 
 main {
