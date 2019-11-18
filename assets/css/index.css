@@ -24,3 +24,14 @@
 .btn_room > div > span {
     font-size: 0.9em;
 }
+
+footer {
+    margin-top: 1.5em;
+    margin-bottom: 1em;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+footer > a {
+    color: rgba(255, 255, 255, 0.6);
+}

@@ -1,0 +1,8 @@
+<%= live_render(@conn, GrasstubeWeb.RoomsLive, session: %{can_make_room: @can_make_room}) %>
+
+<footer>
+	<a href="https://github.com/wwww-wwww/grasstube">GitHub</a>
+</footer>
+
+<link rel="stylesheet" type="text/css" href="/css/index.css">
+<script src="/js/index.js"></script>

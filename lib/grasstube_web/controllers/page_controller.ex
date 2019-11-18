@@ -5,7 +5,7 @@ defmodule GrasstubeWeb.PageController do
   alias GrasstubeWeb.ChatAgent
 
   def index(conn, _) do
-    live_render(conn, GrasstubeWeb.RoomsLive, session: %{can_make_room: can_make_room?(conn)})
+    render(conn, "index.html", can_make_room: can_make_room?(conn))
   end
 
   def chat(conn, %{"room" => room}) do
@@ -13,7 +13,7 @@ defmodule GrasstubeWeb.PageController do
       :not_found ->
         text(conn, "room not found")
       chat ->
-        render(conn, "chat.html", room: room, room_has_password: password_required?(conn, chat))
+        render(conn, "chat_only.html", room: room, room_has_password: password_required?(conn, chat))
     end
   end
 
