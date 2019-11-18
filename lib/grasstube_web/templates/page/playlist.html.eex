@@ -7,40 +7,6 @@
 			<input id="add_small" placeholder="small"/>
 			<button id="playlist_add">add</button>
 		</div>
-		<div class="hosted_videos_outer">
-			<div class="hosted_videos">
-				<div style="display: flex">
-					<button id="ss_toggle" style="flex: 1; min-height: 0">ss</button>
-					<button id="ss_refresh">↻</button>
-				</div>
-				<div class="table_outer" style="height: 0px">
-					<table id="table_ss">
-						<tr>
-							<th>file name</th>
-							<th>subs</th>
-							<th>2mbps</th>
-							<th></th>
-							<th></th>
-						</tr>
-					</table>
-				</div>
-				<div style="display: flex">
-					<button id="videos_toggle" style="flex: 1; min-height: 0">videos</button>
-					<button id="videos_refresh">↻</button>
-				</div>
-				<div class="table_outer" style="height: 0px">
-					<table id="table_videos">
-						<tr>
-							<th>file name</th>
-							<th>subs</th>
-							<th>2mbps</th>
-							<th></th>
-							<th></th>
-						</tr>
-					</table>
-				</div>
-			</div>
-		</div>
 	</div>
 	<div id="playlist_tab2">
 		<input id="yt_input" placeholder="search">

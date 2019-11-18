@@ -1,8 +1,7 @@
 import css from "../css/playlist.css"
 import "phoenix_html"
 import Modal from "./modals"
-import {reload_hosted_videos} from "./metadata"
-import {seconds_to_hms, enter, unescape_html} from "./extras"
+import {seconds_to_hms, unescape_html} from "./extras"
 
 class Playlist{
     constructor() {
@@ -22,46 +21,6 @@ class Playlist{
             add_url.value = ""
             add_sub.value = ""
             add_small.value = ""
-        })
-
-        let table_ss = document.getElementById("table_ss")
-        let table_videos = document.getElementById("table_videos")
-
-        ss_refresh.addEventListener("click", () => reload_hosted_videos(table_ss, () => this.channel, "https://okea.moe/ss/list.json"))
-        videos_refresh.addEventListener("click", () => reload_hosted_videos(table_videos, () => this.channel, "https://okea.moe/video/list.json"))
-
-        ss_refresh.click()
-        videos_refresh.click()
-
-        window.addEventListener("resize", () => {
-            if (table_ss.parentNode.scrollHeight > 0 && table_ss.parentNode.style.height != "0px") {
-                table_ss.parentNode.style.height = table_ss.parentNode.scrollHeight + "px"
-            }
-            if (table_videos.parentNode.scrollHeight > 0 && table_videos.parentNode.style.height != "0px") {
-                table_videos.parentNode.style.height = table_videos.parentNode.scrollHeight + "px"
-            }
-        })
-
-        ss_toggle.addEventListener("click", () => {
-            if (table_ss.parentNode.style.height == "0px") {
-                table_ss.parentNode.style.height = table_ss.parentNode.scrollHeight + "px"
-                if (table_videos.parentNode.style.height != "0px") {
-                    table_videos.parentNode.style.height = "0px"
-                }
-            } else {
-                table_ss.parentNode.style.height = "0px"
-            }
-        })
-    
-        videos_toggle.addEventListener("click", () => {
-            if (table_videos.parentNode.style.height == "0px") {
-                table_videos.parentNode.style.height = table_videos.parentNode.scrollHeight + "px"
-                if (table_ss.parentNode.style.height != "0px") {
-                    table_ss.parentNode.style.height = "0px"
-                }
-            } else {
-                table_videos.parentNode.style.height = "0px"
-            }
         })
 
         let old_search = ""
