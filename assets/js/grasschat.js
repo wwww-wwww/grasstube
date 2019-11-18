@@ -5,7 +5,7 @@ import {Presence} from "phoenix"
 
 import Modal from "./modals"
 
-import {reload_emotes} from "./metadata"
+import reload_emotes from "./emotes"
 import {pad, enter} from "./extras"
 import {get_cookie, set_cookie} from "./cookies"
 
