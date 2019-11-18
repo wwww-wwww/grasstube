@@ -44,18 +44,6 @@ html, body {
     border-right: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.template {
-    display: none;
-}
-
-.message_content img {
-    max-height: 100px;
-}
-
-.message_user {
-    font-weight: 500;
-}
-
 #bottom:after {
     content: "";
     display: table;
@@ -91,11 +79,6 @@ html, body {
     float: top;
     height: 3px;
     cursor: row-resize;
-}
-
-#user_settings {
-    display: inline-block;
-    transition: opacity 0.1s;
 }
 
 #polls_list {
@@ -169,131 +152,6 @@ html, body {
     color: rgb(220, 220, 220);
 }
 
-.user_name {
-    color: rgb(200, 200, 200);
-}
-
-.mod {
-    text-decoration: underline;
-    text-decoration-color: rgb(150, 150, 150);
-}
-
-.guest {
-    color: rgb(150, 150, 150);
-}
-
-#chat_div {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.chat_header {
-    font-size: 1em;
-    padding: 4px;
-    height: 2em;
-}
-
-.chat_main_area {
-    position: relative;
-    border-top: 1px solid rgba(255, 255, 255, 0.4);
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-}
-
-#userlist {
-    position: absolute;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 0.5em;
-    width: 8em;
-    left: 0;
-    top: 0;
-    z-index: 1;
-    overflow-y: auto;
-    word-wrap: break-word;
-    text-align: left;
-    height: unset;
-    max-height: 10em;
-    border-right: 1px solid rgba(255, 255, 255, 0.4);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-#messages_outer {
-    flex: 1;
-    overflow-y: auto;
-}
-
-#messages {
-    padding: 0.5em;
-    word-wrap: break-word;
-    color: rgba(255, 255, 255, 0.7);
-    background: none;
-}
-
-#input_area {
-    border: none;
-    background: none;
-    font-size: 1em;
-    display: flex;
-}
-
-#chat_input {
-    z-index: 1;
-    flex: 1;
-    font-size: 1em;
-    min-width: 0;
-}
-
-#btn_show_emotes {
-    width: 2em;
-    height: 2em;
-}
-
-.message_timestamp {
-    font-size: 10px;
-    line-height: 14px;
-}
-
-.message_content > img {
-    max-height: 6em;
-}
-
-.message_user {
-    font-weight: 500;
-}
-
-hr {
-    margin-bottom: 0.5em;
-}
-
-#userlist.hidden, #seekbar.hidden {
-    display: none;
-}
-
 .hidden {
     display: none;
-}
-
-.ff-container.ff-loading-icon:before {
-    background: none;
-}
-
-.ff-container.ff-inactive .ff-image {
-    opacity: 1;
-    transition: none;
-}
-
-.ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
-    opacity: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.freeze > div > .message_content > .ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
-    opacity: 1;
-    transition: opacity 0.3s;
-    width: 100%;
-    height: 100%;
 }

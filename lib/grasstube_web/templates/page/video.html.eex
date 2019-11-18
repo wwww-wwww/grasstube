@@ -15,7 +15,6 @@
 
 	header:hover {
 		opacity: 1;
-		height: 2em;
 	}
 	
 	main {

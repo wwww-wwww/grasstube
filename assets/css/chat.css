@@ -24,6 +24,16 @@
     font-weight: 500;
 }
 
+#userlist {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 0.5em;
+    overflow-y: auto;
+    border-right: 1px solid rgba(255, 255, 255, 0.4);
+    word-wrap: break-word;
+    max-width: 8em;
+    z-index: 2;
+}
+
 #userlist.hidden, #seekbar.hidden {
     display: none;
 }
@@ -35,15 +45,6 @@
     height: 100%;
 }
 
-#header {
-    border: none;
-    background: none;
-    width: 100%;
-    vertical-align: middle;
-    padding: 4px;
-    height: 2em;
-}
-
 .chat_main_area {
     display: flex;
     flex-direction: column;
@@ -52,19 +53,21 @@
     min-height: 0;
 }
 
+.chat_header {
+    font-size: 1em;
+    padding: 0.25em;
+}
+
 .top {
     display: flex;
     min-height: 0;
     flex: 1;
 }
 
-#userlist {
-    background: none;
-    padding: 0.5em;
-    overflow-y: auto;
-    border-right: 1px solid rgba(255, 255, 255, 0.4);
-    word-wrap: break-word;
-    max-width: 8em;
+.userlist-float {
+    position: absolute;
+    max-height: 10em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 #messages_outer {
@@ -121,6 +124,10 @@ hr {
     opacity: 0;
     width: 100%;
     height: 100%;
+}
+
+.message_content > .ff-container {
+    margin-bottom: 0.25em;
 }
 
 .freeze > div > .message_content > .ff-container.ff-inactive .ff-canvas.ff-canvas-ready {

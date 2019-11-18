@@ -1,3 +1,4 @@
+import css from "../css/chat.css"
 import "phoenix_html"
 
 import {Presence} from "phoenix"
@@ -50,6 +51,13 @@ class Chat {
         btn_userlist_toggle.addEventListener("click", e => {
             userlist.classList.toggle("hidden")
         })
+
+        window.addEventListener("resize", _ => {
+            if (document.getElementById("chat_div")) {
+                userlist.classList.toggle("userlist-float", chat_div.getBoundingClientRect().width < 400)
+            }
+        })
+        window.dispatchEvent(new Event("resize"))
 
         const settings_modal = this.make_settings()
         btn_chat_settings.addEventListener("click", () => settings_modal.show())

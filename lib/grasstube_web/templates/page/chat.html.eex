@@ -1,5 +1,5 @@
 <div id="chat_div">
-	<div id="header">
+	<div class="chat_header">
 		<button id="btn_userlist_toggle" class="square">👨‍👦</button>
 		<button id="btn_chat_settings" class="square">⚙</button>
 		<span id="user_count">disconnected</span>
@@ -19,6 +19,3 @@
 		</div>
 	</div>
 </div>
-
-<link rel="stylesheet" type="text/css" href="/css/chat.css">
-<script src="/js/chat.js"></script>
