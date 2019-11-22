@@ -1,3 +1,4 @@
+<%= csrf_meta_tag() %>
 <%= live_render(@conn, GrasstubeWeb.RoomsLive, session: %{can_make_room: @can_make_room}) %>
 
 <footer>

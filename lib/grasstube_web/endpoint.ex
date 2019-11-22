@@ -6,7 +6,14 @@ defmodule GrasstubeWeb.Endpoint do
     longpoll: false
   )
   
-  socket("/live", Phoenix.LiveView.Socket)
+  @session_options [
+    store: :cookie,
+    key: "_grasstube_key",
+    signing_salt: "gvBU6+ko",
+    max_age: 604800
+  ]
+
+  socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -41,12 +48,7 @@ defmodule GrasstubeWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
-  plug(Plug.Session,
-    store: :cookie,
-    key: "_grasstube_key",
-    signing_salt: "gvBU6+ko",
-    max_age: 604800
-  )
+  plug(Plug.Session, @session_options)
 
   plug(GrasstubeWeb.Router)
 end
