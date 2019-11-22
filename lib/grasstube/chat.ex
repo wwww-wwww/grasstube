@@ -37,21 +37,25 @@ defmodule GrasstubeWeb.ChatAgent do
       "/" <> command = String.trim(msg)
       command(channel, socket, command)
     else
-      escaped =
-        msg
-        |> HTML.html_escape()
-        |> HTML.safe_to_string()
-      
-      new_msg = do_emote(channel, AutoLinker.link(escaped))
+      if String.length(msg) > 250 do
+       Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "message must be 250 characters or less"})
+      else
+        escaped =
+          msg
+          |> HTML.html_escape()
+          |> HTML.safe_to_string()
+        
+        new_msg = do_emote(channel, AutoLinker.link(escaped))
 
-      sender = Grasstube.Presence.get_by_key(socket, socket.assigns.user_id)
-      
-      id = if sender.member, do: sender.username, else: sender.id
-      nickname = if sender.member, do: sender.nickname, else: Enum.at(sender.metas, 0).nickname
+        sender = Grasstube.Presence.get_by_key(socket, socket.assigns.user_id)
+        
+        id = if sender.member, do: sender.username, else: sender.id
+        nickname = if sender.member, do: sender.nickname, else: Enum.at(sender.metas, 0).nickname
 
-      add_to_history(channel, nickname, new_msg)
-      
-      Endpoint.broadcast(socket.topic, "chat", %{sender: id, name: nickname, content: new_msg})
+        add_to_history(channel, nickname, new_msg)
+        
+        Endpoint.broadcast(socket.topic, "chat", %{sender: id, name: nickname, content: new_msg})
+      end
     end
 
     {:noreply}

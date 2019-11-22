@@ -58,15 +58,8 @@ defmodule GrasstubeWeb.ChatChannel do
     "chat:" <> room_name = socket.topic
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
     
-    cond do
-      String.length(msg) <= 0 ->
-        nil
-
-      String.length(msg) > 250 ->
-        push(socket, "chat", %{sender: "sys", name: "System", content: "message must be 250 characters or less"})
-
-      true ->
-        ChatAgent.chat(chat, socket, msg)
+    if String.length(msg) > 0 do
+      ChatAgent.chat(chat, socket, msg)
     end
 
     {:noreply, socket}
