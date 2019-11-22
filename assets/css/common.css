@@ -116,15 +116,3 @@ a {
 a:focus {
     box-shadow: 0 0 0 1pt rgba(255, 255, 255, 0.6);
 }
-
-@keyframes fadein {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-
-@keyframes fadein2 {
-    from { transform: scale(1.1); }
-    to   { transform: scale(1); }
-}
-
-@import url("./modals.css")

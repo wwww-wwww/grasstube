@@ -1,3 +1,5 @@
+import css from "../css/modals.css"
+
 class Modal {
     constructor({root=null, can_close=true, title=null}={}) {
         this.root = root || main || body
