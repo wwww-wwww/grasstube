@@ -147,11 +147,6 @@ html, body {
     margin-top: 0.5em;
 }
 
-.isactive, .isactive > a {
-    background-color: rgb(60, 60, 60);
-    color: rgb(220, 220, 220);
-}
-
 .hidden {
     display: none;
 }
