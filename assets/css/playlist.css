@@ -36,6 +36,17 @@
 
 .playlist_item {
     padding: 0 0.5em;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.playlist_item_title {
+    margin: 0;
+}
+
+.playlist_item_title, .playlist_item_duration {
+    line-height: 1.5em;
 }
 
 .playlist_item_duration, .playlist_set {
