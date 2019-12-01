@@ -4,7 +4,7 @@
 		<meta charset="utf-8"/>
 		<meta name="theme-color" content="#000000"/>
 		<link rel="icon" type="image/x-icon" href="/favicon.ico"/>
-		<title>grasstube 2.8</title>
+		<title>grasstube 29</title>
 		<link rel="stylesheet" type="text/css" href="/css/common.css">
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 		<meta name="user_token" content="<%= assigns[:user_token] %>">
