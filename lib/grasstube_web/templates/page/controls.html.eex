@@ -1,0 +1,76 @@
+<script src="/includes/subtitles-octopus.js"></script>
+
+<link rel="stylesheet" type="text/css" href="/css/controls.css">
+
+<style>
+	#seekbar {
+		width: 100%;
+	}
+
+	#video_time, #video_length {
+		display: inline-block;
+
+	}
+
+	#container1 {
+		display: flex;
+		flex-direction: column;
+		overflow-y: hidden;
+	}
+
+	#maincontent > * {
+		margin-right: 0.5em;
+	}
+
+	#maincontent > *:first-child {
+		margin-left: 0.5em;
+	}
+
+	#playlist_container {
+		height: 100%;
+		overflow-y: auto;
+	}
+
+	#bottom {
+		flex: 1;
+		min-height: 0;
+	}
+
+	#bottom > div {
+		height: 100%;
+		display: flex;
+
+	}
+
+	.playlist_outer {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+	}
+
+	.playlist_item {
+		display: flex;
+		align-items: center;
+		border-top: 1px solid rgba(255, 255, 255, 0.3);
+	}
+
+	.playlist_item_duration {
+		flex: 1;
+		text-align: right;
+	}
+</style>
+
+<div id="container1">
+	<div id="maincontent" style="height: unset">
+		<button id="button_play">▶</button>
+		<button id="button_next">▶❙</button>
+		<span style="flex-shrink: 0; display: flex; align-items: center;"><span id="video_time">00:00</span> / <span id="video_duration">00:00</span></span>
+		<input id="seekbar" type="range" min="0" max="0" value="0">
+	</div>
+	<div id="bottom">
+		<%= render @view_module, "playlist.html", assigns %>
+	</div>
+</div>
+
+<script src="/js/controls.js"></script>

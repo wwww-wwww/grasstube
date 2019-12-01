@@ -44,6 +44,15 @@ defmodule GrasstubeWeb.PageController do
     end
   end
 
+  def controls(conn, %{"room" => room}) do
+    case Grasstube.ProcessRegistry.lookup(room, :chat) do
+      :not_found ->
+        text(conn, "room not found")
+      chat ->
+        render(conn, "controls.html", room: room, room_has_password: password_required?(conn, chat))
+    end
+  end
+
   def emotes(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->

@@ -97,7 +97,8 @@ defmodule GrasstubeWeb.VideoAgent do
     Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
 
     if next == :nothing do
-      Endpoint.broadcast("video:" <> room_name, "setvid", %{id: -1, type: "default", url: "", sub: "", small: ""})
+      Endpoint.broadcast("video:" <> room_name, "setvid", %{id: -1, type: "default", url: "", sub: "", small: "", duration: 0})
+      Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
       Endpoint.broadcast("playlist:" <> room_name, "current", %{id: -1})
       GrasstubeWeb.VideoScheduler.stop_timer(scheduler)
     else
@@ -106,7 +107,8 @@ defmodule GrasstubeWeb.VideoAgent do
         type: next.type,
         url: next.url,
         sub: next.sub,
-        small: next.small
+        small: next.small,
+        duration: next.duration
       })
       Endpoint.broadcast("playlist:" <> room_name, "current", %{id: next.id})
       GrasstubeWeb.VideoScheduler.start_timer(scheduler, 0)

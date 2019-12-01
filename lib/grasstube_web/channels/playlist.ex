@@ -114,7 +114,8 @@ defmodule GrasstubeWeb.PlaylistChannel do
             type: vid.type,
             url: vid.url,
             sub: vid.sub,
-            small: vid.small
+            small: vid.small,
+            duration: vid.duration
           })
 
           Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})

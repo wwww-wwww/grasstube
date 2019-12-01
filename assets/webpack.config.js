@@ -18,6 +18,7 @@ module.exports = (env, options) => ({
       'chat': ['./js/chat.js'].concat(glob.sync('./vendor/**/*.js')),
       'video': ['./js/video.js'].concat(glob.sync('./vendor/**/*.js')),
       'no_video': ['./js/no_video.js'].concat(glob.sync('./vendor/**/*.js')),
+      'controls': ['./js/controls.js'].concat(glob.sync('./vendor/**/*.js')),
       'room': ['./js/room.js'].concat(glob.sync('./vendor/**/*.js')),
       'sign_in': ['./js/sign_in.js'].concat(glob.sync('./vendor/**/*.js')),
       'sign_up': ['./js/sign_up.js'].concat(glob.sync('./vendor/**/*.js')),

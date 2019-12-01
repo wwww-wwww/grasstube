@@ -109,8 +109,6 @@ defmodule GrasstubeWeb.PlaylistAgent do
     if current != :nothing and current.id == id do
       VideoAgent.set_current_video(video, :nothing)
       Endpoint.broadcast("playlist:" <> room_name, "current", %{id: -1})
-      Endpoint.broadcast("video:" <> room_name, "setvid", %{id: -1, type: "default", url: "", sub: "", small: ""})
-      Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
     end
     
     Endpoint.broadcast("playlist:" <> room_name, "playlist", %{ playlist: get_playlist(pid) })

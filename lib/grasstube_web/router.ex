@@ -33,6 +33,7 @@ defmodule GrasstubeWeb.Router do
     
     get "/", PageController, :index
     
+    get "/r/:room/controls", PageController, :controls
     get "/r/:room/chat", PageController, :chat
     get "/r/:room/no_video", PageController, :no_video
     get "/r/:room/video", PageController, :video

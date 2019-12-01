@@ -173,7 +173,6 @@ class Playlist{
             vid.q_del.classList.toggle("hidden", false)
             vid.q_move.classList.toggle("hidden", false)
         })
-    
     }
 
     on_current(data) {
@@ -183,6 +182,17 @@ class Playlist{
         this.playlist.forEach(vid => {
             vid.e.classList.toggle("isactive", this.current_video == vid.id)
         })
+
+        let current_video = 0
+        if (this.current_video != -1) {
+            for (let i = 0; i < this.playlist.length; i++) {
+                if (this.playlist[i].id == this.current_video) {
+                    current_video = i + 1
+                    break
+                }
+            }
+        }
+        playlist_header_count.textContent = `${current_video} / ${this.playlist.length}`
     }
 
     on_playlist(data) {
@@ -191,10 +201,21 @@ class Playlist{
         while (playlist_container.firstChild) playlist_container.removeChild(playlist_container.firstChild)
         
         if (data.playlist.length <= 0) {
-            playlist_header_count.textContent = "playlist is empty"
+            playlist_header_count.textContent = "0 / 0"
             playlist_header_time.textContent = ""
         } else {
-            playlist_header_count.textContent = data.playlist.length + " item" + ((data.playlist.length == 1) ? "" : "s")
+            let current_video = 0
+            if (this.current_video != -1) {
+                for (let i = 0; i < this.playlist.length; i++) {
+                    if (this.playlist[i].id == this.current_video) {
+                        current_video = i + 1
+                        break
+                    }
+                }
+            }
+
+            playlist_header_count.textContent = `${current_video} / ${data.playlist.length}`
+
             let time = 0
             for (let i = 0; i < data.playlist.length; i++) {
                 const vid = data.playlist[i]

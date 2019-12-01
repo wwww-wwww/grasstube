@@ -40,7 +40,8 @@ defmodule GrasstubeWeb.VideoChannel do
         type: current.type,
         url: current.url,
         sub: current.sub,
-        small: current.small
+        small: current.small,
+        duration: current.duration
       })
 
       current_time = VideoAgent.get_time(video)
