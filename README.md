@@ -4,9 +4,6 @@
 
 Includes soft subtitle rendering using [SubtitlesOctopus](https://github.com/Dador/JavascriptSubtitlesOctopus)
 
-[o2.okea.moe](https://o2.okea.moe)
-[o.okea.moe](https://o.okea.moe)
-
 ### features
 
 - [x] custom player
