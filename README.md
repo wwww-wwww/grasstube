@@ -20,7 +20,7 @@ Includes soft subtitle rendering using [SubtitlesOctopus](https://github.com/Dad
 ### deps
 
 ```
-ffmpeg (ffprobe)
+ffmpeg
 youtube-dl
 ```
 
@@ -29,6 +29,7 @@ youtube-dl
 ```
 git clone https://github.com/wwww-wwww/grasstube.git
 cd grasstube && mix deps.get
+mix ecto.migrate
 cd assets && npm install && cd ..
 iex -S mix phx.server
 ```
