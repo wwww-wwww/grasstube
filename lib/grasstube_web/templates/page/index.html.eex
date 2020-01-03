@@ -1,5 +1,6 @@
 <%= csrf_meta_tag() %>
-<%= live_render(@conn, GrasstubeWeb.RoomsLive, session: %{can_make_room: @can_make_room}) %>
+<%= live_render(@conn, GrasstubeWeb.RoomsLive) %>
+<%= if @can_make_room do link("create a room", to: Routes.user_path(@conn, :create_room_page)) end %>
 
 <footer>
 	<a href="https://github.com/wwww-wwww/grasstube">GitHub</a>
