@@ -3,7 +3,7 @@
 <%= if @can_make_room do link("create a room", to: Routes.user_path(@conn, :create_room_page)) end %>
 
 <footer>
-	<a href="https://github.com/wwww-wwww/grasstube">GitHub</a>
+    <%= link("GitHub", to: "https://github.com/wwww-wwww/grasstube") %>
 </footer>
 
 <link rel="stylesheet" type="text/css" href="/css/index.css">

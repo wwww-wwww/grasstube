@@ -32,7 +32,7 @@ footer {
     text-align: center;
 }
 
-footer > a {
+footer a {
     color: rgba(255, 255, 255, 0.6);
 }
 

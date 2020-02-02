@@ -8,7 +8,7 @@ defmodule Grasstube.DefaultRooms do
   end
 
   def run() do
-    Grasstube.ProcessRegistry.create_room("jade room", "w", "test")
+    Grasstube.ProcessRegistry.create_room("jade room", "w", "")
 
     playlist2 = Grasstube.ProcessRegistry.lookup("jade room", :playlist)
     Enum.each(@default_videos, &(GrasstubeWeb.PlaylistAgent.add_queue(playlist2, "", &1, "", "")))
@@ -17,7 +17,7 @@ defmodule Grasstube.DefaultRooms do
     GrasstubeWeb.ChatAgent.add_mod(chat2, "clara")
     GrasstubeWeb.ChatAgent.add_mod(chat2, "mathguy2357")
     GrasstubeWeb.ChatAgent.add_emotelist(chat2, "w")
-    #GrasstubeWeb.ChatAgent.add_emotelist(chat2, "clara")
-    #GrasstubeWeb.ChatAgent.add_emotelist(chat2, "mathguy2357")
+    GrasstubeWeb.ChatAgent.add_emotelist(chat2, "clara")
+    GrasstubeWeb.ChatAgent.add_emotelist(chat2, "mathguy2357")
   end
 end

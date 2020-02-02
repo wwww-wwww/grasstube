@@ -4,7 +4,7 @@
 // @version      0.1
 // @description  nm
 // @author       w
-// @match        https://o.okea.moe/*
+// @match        https://tube.grass.moe/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM.xmlHttpRequest
 // ==/UserScript==

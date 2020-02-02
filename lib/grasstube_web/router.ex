@@ -32,12 +32,15 @@ defmodule GrasstubeWeb.Router do
     pipe_through [:browser, :auth]
     
     get "/", PageController, :index
+    get "/gdrive", PageController, :gdrive
     
-    get "/r/:room/controls", PageController, :controls
-    get "/r/:room/chat", PageController, :chat
-    get "/r/:room/no_video", PageController, :no_video
-    get "/r/:room/video", PageController, :video
-    get "/r/:room", PageController, :room
+    scope "/r" do
+      get "/:room/controls", PageController, :controls
+      get "/:room/chat", PageController, :chat
+      get "/:room/no_video", PageController, :no_video
+      get "/:room/video", PageController, :video
+      get "/:room", PageController, :room
+    end
 
     scope "/" do
       pipe_through :logged_out
@@ -49,7 +52,6 @@ defmodule GrasstubeWeb.Router do
     end
 
     get "/sign_out", UserController, :sign_out
-    
     get "/u/:username", UserController, :show_user
 
     scope "/" do
@@ -61,14 +63,14 @@ defmodule GrasstubeWeb.Router do
       post "/create_room", UserController, :create_room
       post "/close_room", UserController, :close_room
     end
-  end
 
-  scope "/api", GrasstubeWeb do
-    pipe_through :api
-    post "/auth", UserController, :auth
-    get "/list_rooms", PageController, :list_rooms
-    get "/emotes/r/:room", PageController, :emotes
-    get "/emotes/u/:username", UserController, :emotes_json
-    get "/yt_search", YTController, :yt_search
+    scope "/api" do
+      pipe_through :api
+      post "/auth", UserController, :auth
+      get "/list_rooms", PageController, :list_rooms
+      get "/emotes/r/:room", PageController, :emotes
+      get "/emotes/u/:username", UserController, :emotes_json
+      get "/yt_search", YTController, :yt_search
+    end
   end
 end

@@ -24,6 +24,7 @@
 				<nav role="navigation">
 					<span style="float: left"><%= link("grasstube", to: Routes.page_path(@conn, :index)) %></span>
 					<span style="float: right">
+						<%= link("google drive", to: Routes.page_path(@conn, :gdrive)) %>
 						<%= get_user_links(@conn) %>
 					</span>
 				</nav>

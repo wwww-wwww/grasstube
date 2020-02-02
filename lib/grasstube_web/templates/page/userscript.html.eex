@@ -1,0 +1,21 @@
+<style>
+    main {
+        display: flex;
+        justify-content: center;
+    }
+</style>
+
+<div style="width: 1000px; max-width: calc(100% - 1em);text-align: center;margin-top: 1em;">
+    <div style="margin-bottom: 1em">Google Drive requires a userscript</div>
+
+    Install either
+    <br>
+        <%= link("Tampermonkey", to: "https://www.tampermonkey.net/") %>
+        or
+        <%= link("Greasemonkey", to: "https://www.greasespot.net/") %>
+    <br>
+    <br>
+    Then install the
+    <br>
+    <%= link("userscript", to: Routes.static_path(@conn, "/gdrive.user.js")) %>
+</div>

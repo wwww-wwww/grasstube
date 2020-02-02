@@ -70,6 +70,10 @@ defmodule GrasstubeWeb.PageController do
     end))
   end
 
+  def gdrive(conn, _) do
+    render(conn, "userscript.html")
+  end
+
   def can_make_room?(conn) do
     if Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil do
       user = Guardian.Plug.current_resource(conn)
