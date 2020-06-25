@@ -4,7 +4,7 @@
 			<input id="add_title" placeholder="title (auto)"/>
 			<input id="add_url" placeholder="url"/>
 			<input id="add_sub" placeholder="subtitles"/>
-			<input id="add_small" placeholder="small"/>
+			<input id="add_small" placeholder="alts"/>
 			<button id="playlist_add">add</button>
 		</div>
 	</div>

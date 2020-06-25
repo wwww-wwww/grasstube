@@ -52,14 +52,20 @@ defmodule GrasstubeWeb.PlaylistChannel do
     {:noreply, socket}
   end
   
-  def handle_in("q_add", %{"title" => title, "url" => user_url, "sub" => sub, "small" => small}, socket) do
+  def handle_in("q_add", %{"title" => title, "url" => user_url, "sub" => sub, "alts" => alts}, socket) do
     "playlist:" <> room_name = socket.topic
 
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
     if ChatAgent.controls?(chat, socket) do
+      alts = case Jason.decode(alts) do
+        {:ok, alts} ->
+          alts
+        {:error, _} ->
+          {}
+      end
       Grasstube.ProcessRegistry.lookup(room_name, :playlist)
-      |> PlaylistAgent.add_queue(title, user_url, sub, small)
+      |> PlaylistAgent.add_queue(title, user_url, sub, alts)
     end
 
     {:noreply, socket}
@@ -114,7 +120,7 @@ defmodule GrasstubeWeb.PlaylistChannel do
             type: vid.type,
             url: vid.url,
             sub: vid.sub,
-            small: vid.small,
+            alts: vid.alts,
             duration: vid.duration
           })
 

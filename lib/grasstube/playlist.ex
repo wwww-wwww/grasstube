@@ -63,7 +63,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
     end)
   end
   
-  def add_queue(pid, title, url, sub, small) do
+  def add_queue(pid, title, url, sub, alts) do
     Agent.update(pid, fn val ->
       new_videos =
         Map.put(val.videos, val.current_qid, %Video{
@@ -82,7 +82,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
 
     queue_id = Agent.get(pid, fn val -> val.current_qid - 1 end)
 
-    Task.Supervisor.async_nolink(Tasks, fn -> queue_lookup(pid, room_name, queue_id, title, url, sub, small) end)
+    Task.Supervisor.async_nolink(Tasks, fn -> queue_lookup(pid, room_name, queue_id, title, url, sub, alts) end)
   end
 
   def update_queue_item(pid, queue_id, opts) do
@@ -156,7 +156,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
     end
   end
 
-  def queue_lookup(pid, room_name, queue_id, custom_title, url, sub, small) do
+  def queue_lookup(pid, room_name, queue_id, custom_title, url, sub, alts) do
     success = case URI.parse(url) do
       %URI{host: nil} ->
         update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
@@ -198,7 +198,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
             case Task.yield(info_task, @ffprobe_timeout) || Task.shutdown(info_task) do
               {:ok, duration} ->
                 title = if String.length(custom_title) > 0, do: custom_title, else: Path.basename(URI.decode(url))
-                update_queue_item(pid, queue_id, %{title: title, url: url, sub: sub, small: small, type: "default", duration: duration, ready: true})
+                update_queue_item(pid, queue_id, %{title: title, url: url, sub: sub, alts: alts, type: "default", duration: duration, ready: true})
                 true
 
               _ ->
