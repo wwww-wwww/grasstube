@@ -40,7 +40,7 @@ defmodule GrasstubeWeb.VideoChannel do
         type: current.type,
         url: current.url,
         sub: current.sub,
-        small: current.small,
+        alts: current.alts,
         duration: current.duration
       })
 
