@@ -15,7 +15,7 @@ defmodule GrasstubeWeb.RoomsLive do
     end) |> Enum.sort_by(&{-elem(&1, 1), elem(&1, 0)})
   end
   
-  def mount(_, socket) do
+  def mount(_, _, socket) do
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(@topic)
     {:ok, assign(socket, rooms: get_rooms())}
   end
