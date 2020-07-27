@@ -1,7 +1,7 @@
 import css from "../css/room.css"
 import socket, { auth } from "./socket"
 
-import {seconds_to_hms} from "./extras"
+import {seconds_to_hms} from "./util"
 
 import Playlist from "./playlist"
 

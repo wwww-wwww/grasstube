@@ -1,5 +1,5 @@
 import {Socket} from "phoenix"
-import {get_meta, enter} from "./extras"
+import {get_meta, enter, create_element} from "./util"
 import {get_cookie, set_cookie} from "./cookies"
 import Modal from "./modals"
 
@@ -40,20 +40,16 @@ function auth(socket, channels) {
         const connecting_modal_body = connecting_modal.get_body()
 
         for (const channel of channels) {
-            const channel_div = document.createElement("div")
+            const channel_div = create_element(connecting_modal_body, "div")
             channel_div.style.lineHeight = "1em"
             if (channel != channels[0]) channel_div.style.marginTop = "0.5em"
 
-            const channel_name = document.createElement("span")
+            const channel_name = create_element(channel_div, "span")
             channel_name.textContent = channel.constructor.name
-            channel_div.appendChild(channel_name)
 
-            channel.status = document.createElement("span")
+            channel.status = create_element(channel_div, "span")
             channel.status.style.float = "right"
             channel.status.style.marginLeft = "1em"
-            channel_div.appendChild(channel.status)
-
-            connecting_modal_body.appendChild(channel_div)
         }
         
         const first_channel = channels[0]
@@ -113,18 +109,16 @@ function auth(socket, channels) {
             const password_modal = new Modal({title: "password", can_close: false})
             const modal_body = password_modal.get_body()
 
-            const password_input = document.createElement("input")
+            const password_input = create_element(modal_body, "input")
             password_modal.back.addEventListener("click", _ => password_input.focus())
-            
             password_input.addEventListener("keyup", event => enter(event, () => connect(password_input.value, password_modal)))
-            modal_body.appendChild(password_input)
 
-            const password_submit = document.createElement("button")
+            const password_submit = create_element(modal_body, "button")
             password_submit.textContent = "join"
             password_submit.style.display = "block"
             password_submit.style.marginTop = "0.5em"
             password_submit.addEventListener("click", () => connect(password_input.value, password_modal))
-            modal_body.appendChild(password_submit)
+            
             password_modal.show()
             password_input.focus()
 

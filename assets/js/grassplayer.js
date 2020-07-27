@@ -1,5 +1,5 @@
 import css from "../css/player.css"
-import {seconds_to_hms} from "./extras"
+import {seconds_to_hms, create_element} from "./util"
 import {get_cookie, set_cookie} from "./cookies"
 import Modal from "./modals"
 
@@ -8,18 +8,17 @@ class GrassPlayer {
   constructor(root, fonts=[], controls=true) {
     this.fonts = fonts
 
-    const test_autoplay = document.createElement("video").play()
+    /*const test_autoplay = document.createElement("video").play()
     if (test_autoplay != undefined) {
       test_autoplay.catch(_ => {
         new Modal({title: "this is for autoplay", root: attach}).show()
       })
     } else {
       new Modal({title: "this is for autoplay", root: attach}).show()
-    }
+    }*/
 
-    const yt = document.createElement("script")
+    const yt = create_element(document.head, "script")
     yt.src = "https://www.youtube.com/iframe_api"
-    document.head.appendChild(yt)
     window.onYouTubeIframeAPIReady = () => {
       this.yt_loaded = YT.loaded
       if (YT.loaded == 1) {
@@ -33,33 +32,22 @@ class GrassPlayer {
     this.current_video.videos = {}
     this.current_video.subs = ""
     this.current_video.yt = null
+
+    this.playing = false
     
     this.settings = {}
     this.settings.default_quality = get_cookie("video_quality") || "big"
     this.settings.volume = (Math.pow(10, (get_cookie("video_volume") || 20) / 100) - 1) / 9
-    
-    this.playing_message = document.createElement("div")
-    this.playing_message.textContent = "disconnected"
-    this.playing_message.style.position = "absolute"
-    this.playing_message.style.textAlign = "center"
-    this.playing_message.style.width = "100%"
-    attach.appendChild(this.playing_message)
 
-    this.video = document.createElement("video")
+    this.video = create_element(root, "video", "player_video")
     this.video.id = "video"
-    this.video.className = "player_video"
     this.video.volume = this.settings.volume
 
-    this.video2 = document.createElement("div")
+    this.video2 = create_element(root, "div", "player_video")
     this.video2.id = "video2"
-    this.video2.className = "player_video"
 
-    this.overlay = document.createElement("div")
-    this.overlay.className = "player_overlay player_overlay_hidden"
+    this.overlay = create_element(root, "div", "player_overlay player_overlay_hidden")
     
-    attach.appendChild(this.video)
-    attach.appendChild(this.video2)
-    attach.appendChild(this.overlay)
     this.octopusInstance = new SubtitlesOctopus({
       video: this.video,
       subUrl: "/empty.ass",
@@ -67,50 +55,46 @@ class GrassPlayer {
       workerUrl: "/includes/subtitles-octopus-worker.js"
     })
 
-    const bottom_shade = document.createElement("div")
+    const bottom_shade = create_element(this.overlay, "div")
     bottom_shade.style.position = "absolute"
     bottom_shade.style.width = "100%"
     bottom_shade.style.height = "3em"
     bottom_shade.style.bottom = "0"
     bottom_shade.style.background = "rgba(0, 0, 0, 0.5)"
-    this.overlay.appendChild(bottom_shade)
 
-    this.btn_play = document.createElement("button")
+    this.btn_play = create_element(bottom_shade, "button", "player_btn")
     this.btn_play.textContent = "▶"
-    this.btn_play.className = "player_btn"
     this.btn_play.disabled = true
 
-    bottom_shade.appendChild(this.btn_play)
-
     this.btn_play.addEventListener("click", () => {
-      if (this.btn_play.textContent == "▶") {
+      const playing = this.btn_play.textContent == "▶"
+      if (playing) {
         this.btn_play.textContent = "❚❚"
-        this.on_toggle_playing(true)
       } else {
         this.btn_play.textContent = "▶"
-        this.on_toggle_playing(false)
+      }
+      if (this.on_toggle_playing != null) {
+        this.on_toggle_playing(playing)
+      } else {
+        this.set_playing(playing)
       }
     })
     
-    this.btn_next = document.createElement("button")
-    this.btn_next.className = "player_btn"
+    this.btn_next = create_element(bottom_shade, "button", "player_btn")
     this.btn_next.style.fontSize = "1em"
     this.btn_next.textContent = "▶❙"
-    bottom_shade.appendChild(this.btn_next)
 
     this.on_next = void 0
     this.btn_next.addEventListener("click", () => {
       this.on_next()
     })
 
-    this.slider_volume = document.createElement("input")
-    this.slider_volume.className = "player_volume"
+    this.slider_volume = create_element(bottom_shade, "input", "player_volume")
     this.slider_volume.type = "range"
     this.slider_volume.min = 0
     this.slider_volume.max = 100
     this.slider_volume.step = 1
     this.slider_volume.value = (get_cookie("video_volume") || 20)
-    bottom_shade.appendChild(this.slider_volume)
 
     this.slider_volume.addEventListener("input", () => {
       set_cookie("video_volume", this.slider_volume.value)
@@ -119,26 +103,21 @@ class GrassPlayer {
       this.video.volume = this.settings.volume
     })
 
-    this.lbl_time = document.createElement("span")
-    this.lbl_time.className = "player_time"
+    this.lbl_time = create_element(bottom_shade, "span", "player_time")
     this.lbl_time.textContent = "00:00 / 00:00"
-    bottom_shade.appendChild(this.lbl_time)
 
-    const right_side = document.createElement("div")
+    const right_side = create_element(bottom_shade, "div")
     right_side.style.float = "right"
-    bottom_shade.appendChild(right_side)
 
-    this.btn_cc = document.createElement("button")
-    this.btn_cc.className = "player_btn player_btn_cc hidden"
+    this.btn_cc = create_element(right_side, "button", "player_btn player_btn_cc")
 
     const _cc = get_cookie("video_cc")
     if (_cc == null) this.btn_cc.checked = true
-    else this.btn_cc.checked = get_cookie("video_cc")
+    else this.btn_cc.checked = _cc
 
     this.btn_cc.classList.toggle("player_btn_toggle_on", this.btn_cc.checked)
 
     this.btn_cc.textContent = "CC"
-    right_side.appendChild(this.btn_cc)
 
     this.btn_cc.addEventListener("click", () => {
       this.btn_cc.checked = !this.btn_cc.checked
@@ -165,28 +144,25 @@ class GrassPlayer {
       }
     })
 
-    this.select_quality = document.createElement("select")
-    this.select_quality.className = "player_select_quality hidden"
-    right_side.appendChild(this.select_quality)
+    this.select_quality = create_element(right_side, "select", "player_select_quality")
+    this.select_quality.style.display = "none"
 
     this.select_quality.addEventListener("change", () => {
       this.video.src = this.current_video.videos[this.select_quality.value]
       set_cookie("video_quality", this.select_quality.value)
     })
 
-    this.btn_fullscreen = document.createElement("button")
-    this.btn_fullscreen.className = "player_btn"
+    this.btn_fullscreen = create_element(right_side, "button", "player_btn")
     this.btn_fullscreen.textContent = "⛶"
-    right_side.appendChild(this.btn_fullscreen)
     
     this.btn_fullscreen.addEventListener("click", () => {
       if (document.fullscreenElement) document.exitFullscreen()
-      else attach.requestFullscreen()
+      else root.requestFullscreen()
     })
 
-    this.on_toggle_playing = void 0
-    this.on_seek = void 0
-    create_seekbar(this)
+    this.on_toggle_playing = null
+    this.on_seek = () => void 0
+    create_seekbar(this, true)
 
     this.video.addEventListener("progress", () => {
       this.seekbar.set_buffers((this.video.buffered), this.video.duration)
@@ -225,6 +201,10 @@ class GrassPlayer {
       if (!this.seeking)
         this.overlay.classList.toggle("player_overlay_hidden", true)
     })
+
+    this.allow_controls(controls)
+  }
+
   set_fonts(fonts) {
     this.octopusInstance.dispose()
     this.octopusInstance = new SubtitlesOctopus({
@@ -254,21 +234,19 @@ class GrassPlayer {
     this.seekbar.dial.style.left = "0%"
     this.seekbar.current.style.width = "0%"
     this.lbl_time.textContent = "00:00 / 00:00"
-    this.playing_message.textContent = "nothing is playing"
 
     this.octopusInstance.freeTrack()
 
     while (this.select_quality.firstChild)
       this.select_quality.removeChild(this.select_quality.firstChild)
     
-    this.select_quality.classList.toggle("hidden", true)
+    this.select_quality.style.display = "none"
 
     if (Object.keys(videos).length == 0) {
       this.btn_play.disabled = true
       return
     }
 
-    this.playing_message.textContent = ""
     this.btn_play.disabled = false
 
     switch (type) {
@@ -288,11 +266,10 @@ class GrassPlayer {
           }
         }
         if (Object.keys(videos).length > 1) {
-          this.select_quality.classList.toggle("hidden", false)
+          this.select_quality.style.display = ""
           for (const video in videos) {
-            const opt = document.createElement("option")
+            const opt = create_element(this.select_quality, "option")
             opt.textContent = video
-            this.select_quality.appendChild(opt)
             if (video == this.settings.default_quality) {
               this.select_quality.value = video
             }
@@ -310,7 +287,7 @@ class GrassPlayer {
   }
 
   set_playing(playing) {
-    this.seekbar.paused = !playing
+    this.playing = playing
     if (this.seeking) return
     if (this.current_video.yt) {
       if (!this.current_video.yt.playVideo) return
@@ -329,7 +306,6 @@ class GrassPlayer {
       else if (!playing && !this.video.paused) this.video.pause()
     }
 
-    this.seekbar.paused = !playing
     if (playing)
       this.btn_play.textContent = "❚❚"
     else
@@ -352,9 +328,9 @@ class GrassPlayer {
     }
   }
 
-  toggle_controls(controls) {
-    this.btn_play.classList.toggle("hidden", !controls)
-    this.btn_next.classList.toggle("hidden", !controls)
+  allow_controls(controls) {
+    this.btn_play.style.display = controls ? "" : "none"
+    this.btn_next.style.display = controls ? "" : "none"
     this.seekbar.classList.toggle("seekbar_controls", controls)
   }
 
@@ -388,21 +364,20 @@ class GrassPlayer {
   }
   
   set_gdrive(video_id, subs) {
-    const url = "https://docs.google.com/get_video_info?" +
-      `docid=${video_id}&sle=true&hl=en`
+    const url = `https://docs.google.com/get_video_info?docid=${video_id}&sle=true&hl=en`
     
     httpRequest({
-      method: 'GET',
+      method: "GET",
       url: url,
       onload: resp => {
         resp = resp.responseText
         const data = {}
-        resp.split('&').forEach(kv => {
-          const pair = kv.split('=')
+        resp.split("&").forEach(kv => {
+          const pair = kv.split("=")
           data[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1])
         })
 
-        if (data.status === 'fail') {
+        if (data.status === "fail") {
           console.log("Google Drive request failed: " +
             unescape(data.reason).replace(/\+/g, ""))
         }
@@ -415,8 +390,8 @@ class GrassPlayer {
         }
 
         data.links = {}
-        data.fmt_stream_map.split(',').forEach(function (item) {
-          const pair = item.split('|')
+        data.fmt_stream_map.split(",").forEach(function (item) {
+          const pair = item.split("|")
           data.links[pair[0]] = pair[1]
         })
 
@@ -451,54 +426,42 @@ class GrassPlayer {
   }
 }
 
-function create_seekbar(player) {
-  const seekbar = document.createElement("div")
-  seekbar.className = "player_seekbar"
+function create_seekbar(player, controls) {
+  player.seekbar = create_element(player.overlay, "div", "player_seekbar")
+  player.seekbar.classList.toggle("seekbar_controls", controls)
 
-  player.overlay.appendChild(seekbar)
+  player.seekbar.graphic = create_element(player.seekbar, "div", "player_seekbar_bar")
 
-  player.seekbar = seekbar
+  player.seekbar.buffers = []
 
-  seekbar.graphic = document.createElement("div")
-  seekbar.graphic.className = "player_seekbar_bar"
+  player.seekbar.current = create_element(player.seekbar.graphic, "div")
+  player.seekbar.current.style.position = "absolute"
+  player.seekbar.current.style.width = "0%"
+  player.seekbar.current.style.height = "100%"
+  player.seekbar.current.style.background = "rgba(0, 70, 255, 0.6)"
+  player.seekbar.current.style.pointerEvents = "none"
+  player.seekbar.current.style.zIndex = "1"
 
-  seekbar.appendChild(seekbar.graphic)
+  player.seekbar.dial = create_element(player.seekbar, "div", "player_seekbar_dial")
 
-  seekbar.buffers = []
-
-  seekbar.current = document.createElement("div")
-  seekbar.current.style.position = "absolute"
-  seekbar.current.style.width = "0%"
-  seekbar.current.style.height = "100%"
-  seekbar.current.style.background = "rgba(0, 70, 255, 0.6)"
-  seekbar.current.style.pointerEvents = "none"
-  seekbar.current.style.zIndex = "1"
-  
-  seekbar.graphic.appendChild(seekbar.current)
-
-  seekbar.dial = document.createElement("div")
-  seekbar.dial.className = "player_seekbar_dial"
-  
-  seekbar.appendChild(seekbar.dial)
-  
-  seekbar.paused = false
-
-  seekbar._seek = e => { return seekbar_mouse_move(e, player) }
-  seekbar._mouseup = e => {
+  player.seekbar._seek = e => { return seekbar_mouse_move(e, player) }
+  player.seekbar._mouseup = e => {
     e.preventDefault()
     player.seeking = false
     if (Object.keys(player.current_video.videos).length == 0) return
-    body.removeEventListener("mousemove", seekbar._seek)
-    body.removeEventListener("mouseup", seekbar._mouseup)
+    body.removeEventListener("mousemove", player.seekbar._seek)
+    body.removeEventListener("mouseup", player.seekbar._mouseup)
 
-    if (!seekbar.paused) 
+    if (player.playing) 
       if (player.current_video.yt) player.current_video.yt.playVideo()
       else player.video.play()
 
-    const t = seekbar._seek(e)
+    const t = player.seekbar._seek(e)
+
     player.on_seek(t)
-    seekbar.graphic.classList.toggle("seeking", false)
-    seekbar.dial.classList.toggle("seeking", false)
+
+    player.seekbar.graphic.classList.toggle("seeking", false)
+    player.seekbar.dial.classList.toggle("seeking", false)
     if (player.overlay_hide) clearTimeout(player.overlay_hide)
     player.overlay.classList.toggle("player_overlay_hidden", false)
     player.overlay_hide = setTimeout(() => {
@@ -506,16 +469,16 @@ function create_seekbar(player) {
     }, 2000)
   }
 
-  seekbar.addEventListener("mousedown", e => {
+  player.seekbar.addEventListener("mousedown", e => {
     e.preventDefault()
     if (Object.keys(player.current_video.videos).length == 0) return
-    body.addEventListener("mousemove", seekbar._seek)
-    body.addEventListener("mouseup", seekbar._mouseup)
+    body.addEventListener("mousemove", player.seekbar._seek)
+    body.addEventListener("mouseup", player.seekbar._mouseup)
 
     if (player.current_video.yt)
-      seekbar.paused = player.current_video.yt.getPlayerState() != 1
+      player.playing = player.current_video.yt.getPlayerState() != 1
     else
-      seekbar.paused = player.video.paused
+      player.playing = player.video.paused
 
     player.seeking = true
     
@@ -524,39 +487,38 @@ function create_seekbar(player) {
     else
       player.video.pause()
 
-    seekbar._seek(e)
-    seekbar.graphic.classList.toggle("seeking", true)
-    seekbar.dial.classList.toggle("seeking", true)
+    player.seekbar._seek(e)
+    player.seekbar.graphic.classList.toggle("seeking", true)
+    player.seekbar.dial.classList.toggle("seeking", true)
   })
 
-  seekbar.set_buffers = (buffers, duration) => {
-    while (seekbar.buffers.length < buffers.length) {
-      const buffer = document.createElement("div")
+  player.seekbar.set_buffers = (buffers, duration) => {
+    while (player.seekbar.buffers.length < buffers.length) {
+      const buffer = create_element(player.seekbar.graphic, "div")
       buffer.style.position = "absolute"
       buffer.style.width = "0%"
       buffer.style.height = "100%"
       buffer.style.background = "rgba(255, 255, 255, 0.3)"
       buffer.style.pointerEvents = "none"
       buffer.style.zIndex = "0"
-      seekbar.buffers.push(buffer)
-      seekbar.graphic.appendChild(buffer)
+      player.seekbar.buffers.push(buffer)
     }
-    while (seekbar.buffers.length > buffers.length) {
-      const buffer = seekbar.buffers.pop()
-      seekbar.graphic.removeChild(buffer)
+    while (player.seekbar.buffers.length > buffers.length) {
+      const buffer = player.seekbar.buffers.pop()
+      player.seekbar.graphic.removeChild(buffer)
     }
     for (let i = 0; i < buffers.length; i++) {
       const start = buffers.start(i) / duration
       let end = buffers.end(i) / duration
       if (end > 0.999) end = 1
-      seekbar.buffers[i].style.left = start * 100 + "%"
-      seekbar.buffers[i].style.width = (end - start) * 100 + "%"
+      player.seekbar.buffers[i].style.left = start * 100 + "%"
+      player.seekbar.buffers[i].style.width = (end - start) * 100 + "%"
     }
   }
 
-  seekbar.set_time = t => {
-    seekbar.current.style.width = t * 100 + "%"
-    seekbar.dial.style.left = t * 100 + "%"
+  player.seekbar.set_time = t => {
+    player.seekbar.current.style.width = t * 100 + "%"
+    player.seekbar.dial.style.left = t * 100 + "%"
   }
 }
 

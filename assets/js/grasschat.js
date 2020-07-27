@@ -6,7 +6,7 @@ import {Presence} from "phoenix"
 import Modal from "./modals"
 
 import reload_emotes from "./emotes"
-import {pad, enter} from "./extras"
+import {pad, enter, create_element} from "./util"
 import {get_cookie, set_cookie} from "./cookies"
 
 let freezeframe_loaded = false
@@ -21,7 +21,7 @@ class Chat {
         this.unread_messages = 0
         
         if (!freezeframe_loaded) {
-            const freezeframe_script = document.createElement("script")
+            const freezeframe_script = create_element(document.head, "script")
             freezeframe_script.src = "https://unpkg.com/freezeframe/dist/freezeframe.min.js"
             freezeframe_script.addEventListener("load", () => {
                 console.log("freezeframe: loaded")
@@ -30,7 +30,6 @@ class Chat {
                 for (const e of document.getElementsByClassName("message_content"))
                     freeze_gifs(e)
             })
-            document.head.appendChild(freezeframe_script)
             
             window.addEventListener("focus", () => {
                 messages.classList.toggle("freeze", false)
@@ -114,18 +113,13 @@ class Chat {
 
             const nickname = user.member ? user.nickname : user.metas[0].nickname
             
-            const e = document.createElement("div")
-            e.className = "user"
+            const e = create_element(userlist, "div", "user")
 
-            const user_name = document.createElement("span")
-            user_name.className = "user_name"
+            const user_name = create_element(e, "span", "user_name")
             user_name.textContent = nickname
 
             user_name.classList.toggle("mod", user.mod || false)
             user_name.classList.toggle("guest", !user.member)
-
-            e.appendChild(user_name)
-            userlist.appendChild(e)
         })
 
         user_count.textContent = this.users.length + (this.users.length > 1 ? " users connected" : " user connected")
@@ -133,12 +127,12 @@ class Chat {
 
     on_chat(data) {
         console.log("chat: chat", data)
-        const msg = document.createElement("div")
-        const username = document.createElement("span")
-        const separator = document.createElement("span")
-        separator.textContent = ": "
-        username.className = "message_user"
+        const msg = create_element(messages, "div")
+        const username = create_element(null, "span", "message_user")
         username.textContent = data.name
+
+        const separator = create_element(null, "span")
+        separator.textContent = ": "
     
         if (data.sender == "sys") {
             msg.style.fontStyle = "italic"
@@ -158,31 +152,26 @@ class Chat {
             
             if (data.sender != "sys") {
                 const d = new Date()
-                const timestamp = document.createElement("span")
+                const timestamp = create_element(msg, "span")
                 timestamp.className = "message_timestamp"
                 timestamp.textContent = "["
                     + pad(d.getHours(), 2) + ":"
                     + pad(d.getMinutes(), 2) + ":"
                     + pad(d.getSeconds(), 2) + "] "
     
-                msg.appendChild(timestamp)
                 msg.appendChild(username)
                 msg.appendChild(separator)
             }
             this.last_chat_user = data.name
         }
     
-        const message_content = document.createElement("span")
-        message_content.className = "message_content"
-        msg.appendChild(message_content)
+        const message_content = create_element(msg, "span", "message_content")
         
         if (data.content.indexOf("&gt;") == 0) {
             message_content.style.color = "#789922"
         }
     
         message_content.innerHTML = data.content
-    
-        messages.appendChild(msg)
     
         freeze_gifs(message_content)
     
@@ -206,11 +195,10 @@ class Chat {
         console.log("chat: history", data)
         
         data.list.reverse().forEach(message => {
-            const msg = document.createElement("div")
-            const username = document.createElement("span")
-            const separator = document.createElement("span")
+            const msg = create_element(messages, "div")
+            const username = create_element(null, "span", "message_user")
+            const separator = create_element(null, "span")
             separator.textContent = ": "
-            username.className = "message_user"
 
             if (this.last_chat_user != message.name) {
                 if (this.last_chat_user.length != 0)
@@ -224,9 +212,7 @@ class Chat {
 
             this.last_chat_user = message.name
 
-            const message_content = document.createElement("span")
-            message_content.className = "message_content"
-            msg.appendChild(message_content)
+            const message_content = create_element(msg, "span", "message_content")
             
             if (message.msg.indexOf("&gt;") == 0) {
                 message_content.style.color = "#789922"
@@ -234,33 +220,28 @@ class Chat {
 
             message_content.innerHTML = message.msg
 
-            messages.appendChild(msg)
-
             freeze_gifs(message_content)
 
             messages_outer.scrollTop = messages_outer.scrollHeight
         })
 
-        messages.appendChild(document.createElement("hr"))
+        create_element(messages, "hr")
     }
 
     make_settings() {
         const modal = new Modal({title: "chat settings", root: chat_div})
         const modal_body = modal.get_body()
         
-        let row = document.createElement("div")
+        let row = create_element(modal_body, "div")
         row.style.display = "block"
         row.style.marginBottom = "0.5em"
-        modal_body.appendChild(row)
 
-        let lbl = document.createElement("span")
+        let lbl = create_element(row, "span")
         lbl.textContent = "freeze gifs:"
         lbl.style.marginRight = "0.5em"
-        row.appendChild(lbl)
 
-        const toggle_freezeframe = document.createElement("button")
+        const toggle_freezeframe = create_element(row, "button")
         toggle_freezeframe.textContent = (get_cookie("freezeframe") || 0) ? "on" : "off"
-        row.appendChild(toggle_freezeframe)
 
         toggle_freezeframe.addEventListener("click", () => {
             const freezeframe = (get_cookie("freezeframe") || 0)
@@ -268,18 +249,15 @@ class Chat {
             toggle_freezeframe.textContent = !freezeframe ? "on" : "off"
         })
 
-        row = document.createElement("div")
+        row = create_element(modal_body, "div")
         row.style.display = "block"
-        modal_body.appendChild(row)
 
-        lbl = document.createElement("span")
+        lbl = create_element(row, "span")
         lbl.textContent = "nickname:"
         lbl.style.marginRight = "0.5em"
-        row.appendChild(lbl)
 
-        const change_nickname = document.createElement("button")
+        const change_nickname = create_element(row, "button")
         change_nickname.textContent = "change"
-        row.appendChild(change_nickname)
 
         const change_nickname_modal = this.make_change_nickname()
         change_nickname.addEventListener("click", () => {
@@ -297,15 +275,13 @@ class Chat {
         const modal_body = modal.get_body()
         modal_body.style.textAlign = "right"
 
-        modal.textfield = document.createElement("input")
-        modal_body.appendChild(modal.textfield)
+        modal.textfield = create_element(modal_body, "input")
 
         modal.textfield.style.display = "block"
         modal.textfield.style.width = "100%"
         modal.textfield.value = get_cookie("nickname") || "anon"
 
-        const btn_set = document.createElement("button")
-        modal_body.appendChild(btn_set)
+        const btn_set = create_element(modal_body, "button")
 
         btn_set.textContent = "set"
         btn_set.style.marginTop = "0.5em"

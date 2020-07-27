@@ -15,7 +15,7 @@ console.log("room: init")
 console.log("room:", socket.room)
 
 const player = document.getElementById("player")
-const wplayer = new GrassPlayer(player)
+const wplayer = new GrassPlayer(player, [], false)
 
 const chat = new Chat()
 const video = new Video(wplayer)

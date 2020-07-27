@@ -10,6 +10,17 @@ function enter(event, cb) {
     cb()
 }
 
+function create_element(root, type, classes="") {
+    const e = document.createElement(type)
+    if (classes.length > 0) {
+      for (const class_name of classes.split(" "))
+        e.classList.toggle(class_name, true)
+    }
+    if (root)
+      root.appendChild(e)
+    return e
+  }
+
 function seconds_to_hms(seconds, hide_hours = false) {
     seconds = Math.ceil(seconds)
     const hours = Math.floor(seconds / 3600)
@@ -42,4 +53,4 @@ function get_meta(meta_name) {
     return ""
 }
 
-export {pad, enter, seconds_to_hms, unescape_html, get_meta}
+export {pad, enter, seconds_to_hms, unescape_html, get_meta, create_element}

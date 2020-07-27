@@ -35,8 +35,6 @@ class Video {
     this.player.on_next = () => {
       this.channel.push("next")
     }
-  
-    this.player.toggle_controls(false)
   }
 
   connect(socket) {
@@ -79,13 +77,12 @@ class Video {
     this.channel.on("controls", data => {
       console.log("video: controls", data)
       
-      this.player.toggle_controls(true)
+      this.player.allow_controls(true)
     })
 
     return this.channel.join()
     .receive("ok", resp => {
       console.log("video: connected", resp)
-      this.player.playing_message.textContent = "nothing is playing"
     })
     .receive("error", resp => {
       console.log("video: failed to connect", resp)

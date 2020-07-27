@@ -1,7 +1,8 @@
 import css from "../css/playlist.css"
 import "phoenix_html"
 import Modal from "./modals"
-import {seconds_to_hms, unescape_html} from "./extras"
+import build_hosted_videos from "./okea_hosted_videos" // OKEA ONLY
+import {seconds_to_hms, unescape_html, create_element} from "./util"
 
 class Playlist{
   constructor() {
@@ -220,12 +221,12 @@ class Playlist{
       for (let i = 0; i < data.playlist.length; i++) {
         const vid = data.playlist[i]
 
-        const e = document.createElement("div")
-        e.className = "playlist_item"
+        const e = create_element(playlist_container, "div", "playlist_item")
 
-        vid.title_e = document.createElement("a")
-        vid.title_e.className = "playlist_item_title"
-        e.appendChild(vid.title_e)
+        vid.q_del = create_element(e, "button", "playlist_remove square")
+        vid.q_del.textContent = "×"
+
+        vid.title_e = create_element(e, "a", "playlist_item_title")
         
         vid.title_e.textContent = vid.title
         if (vid.url.length > 0) {
@@ -234,22 +235,14 @@ class Playlist{
     
         if (vid.duration != "unset") {
           time += vid.duration
-          vid.duration_e = document.createElement("span")
-          vid.duration_e.className = "playlist_item_duration"
+          vid.duration_e = create_element(e, "span", "playlist_item_duration")
           vid.duration_e.textContent = seconds_to_hms(vid.duration)
-          e.append(vid.duration_e)
         }
 
-        vid.q_del = document.createElement("button")
-        vid.q_del.className = "playlist_remove square"
-        vid.q_del.textContent = "×"
-
-        vid.q_set = document.createElement("button")
-        vid.q_set.className = "playlist_set"
+        vid.q_set = create_element(e, "button", "playlist_set")
         vid.q_set.textContent = "set"
 
-        vid.q_move = document.createElement("button")
-        vid.q_move.className = "playlist_drag"
+        vid.q_move = create_element(e, "button", "playlist_drag")
         vid.q_move.textContent = "☰"
 
         vid.q_move.addEventListener("mousedown", e => this.queue_start_drag(e))
@@ -261,15 +254,10 @@ class Playlist{
         vid.q_del.classList.toggle("hidden", !this.has_controls)
         vid.q_set.classList.toggle("hidden", !this.has_controls)
         vid.q_move.classList.toggle("hidden", !this.has_controls)
-
-        e.prepend(vid.q_del)
-        e.append(vid.q_set)
-        e.append(vid.q_move)
     
         e.classList.toggle("isactive", vid.id == this.current_video)
 
         vid.e = e
-        playlist_container.appendChild(e)
         this.playlist.push(vid)
       }
       playlist_header_time.textContent = seconds_to_hms(time)
@@ -296,50 +284,40 @@ function yt_search(old_search, new_search, search_timer, channel) {
           const video_id = unescape_html(video.id)
           const video_url = `https://youtube.com/watch?v=${video_id}`
 
-          const video_e = document.createElement("div")
-          video_e.className = "yt-video"
+          const video_e = create_element(yt_list, "div", "yt-video")
           
-          let column = document.createElement("div")
+          let column = create_element(video_e, "div")
           column.style.display = "flex"
           column.style.alignItems = "center"
-          video_e.appendChild(column)
 
-          const video_e_thumbnail = document.createElement("img")
+          const video_e_thumbnail = create_element(column, "img")
           video_e_thumbnail.style.height = "6em"
           video_e_thumbnail.src = `https://img.youtube.com/vi/${video_id}/mqdefault.jpg`
-          column.appendChild(video_e_thumbnail)
 
-          column = document.createElement("div")
+          column = create_element(video_e, "div")
           column.style.padding = "0.5em"
           column.style.flex = "1"
           column.style.minWidth = "0"
-          video_e.appendChild(column)
 
-          let row = document.createElement("div")
-          column.appendChild(row)
+          let row = create_element(column, "div")
 
-          const video_e_title = document.createElement("a")
+          const video_e_title = create_element(row, "a")
           video_e_title.textContent = unescape_html(video.title)
           video_e_title.style.color = "rgba(255, 255, 255, 0.9)"
           video_e_title.href = video_url
-          row.appendChild(video_e_title)
           
-          row = document.createElement("div")
-          column.appendChild(row)
+          row = create_element(column, "div")
 
-          const video_e_author = document.createElement("a")
+          const video_e_author = create_element(row, "a")
           video_e_author.textContent = unescape_html(video.channel_title)
           video_e_author.style.fontSize = "0.9em"
           video_e_author.href = `https://youtube.com/channel/${video.channel_id}`
-          row.appendChild(video_e_author)
 
-          row = document.createElement("div")
-          column.appendChild(row)
+          row = create_element(column, "div")
           
-          const video_add = document.createElement("button")
+          const video_add = create_element(video_e, "button")
           video_add.textContent = "add"
           video_add.style.flex = "0"
-          video_e.appendChild(video_add)
 
           video_add.addEventListener("click", () => {
             channel.push("q_add", {
@@ -349,8 +327,6 @@ function yt_search(old_search, new_search, search_timer, channel) {
               alts: "{}"
             })
           })
-
-          yt_list.appendChild(video_e)
         }
 
         if (yt_list.lastChild) yt_list.lastChild.style.borderBottom = "none"
