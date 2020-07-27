@@ -5,8 +5,8 @@ import Modal from "./modals"
 
 class GrassPlayer {
 
-  constructor(attach) {
-    this.fonts = []
+  constructor(root, fonts=[], controls=true) {
+    this.fonts = fonts
 
     const test_autoplay = document.createElement("video").play()
     if (test_autoplay != undefined) {
@@ -33,7 +33,6 @@ class GrassPlayer {
     this.current_video.videos = {}
     this.current_video.subs = ""
     this.current_video.yt = null
-    this.octopusInstance = null
     
     this.settings = {}
     this.settings.default_quality = get_cookie("video_quality") || "big"
@@ -61,6 +60,12 @@ class GrassPlayer {
     attach.appendChild(this.video)
     attach.appendChild(this.video2)
     attach.appendChild(this.overlay)
+    this.octopusInstance = new SubtitlesOctopus({
+      video: this.video,
+      subUrl: "/empty.ass",
+      fonts: fonts,
+      workerUrl: "/includes/subtitles-octopus-worker.js"
+    })
 
     const bottom_shade = document.createElement("div")
     bottom_shade.style.position = "absolute"
@@ -149,20 +154,13 @@ class GrassPlayer {
             else
               this.current_video.yt.unloadModule(option)
         })
+        this.octopusInstance.freeTrack()
       } else {
         if (this.btn_cc.checked) {
-          this.octopusInstance = new SubtitlesOctopus({
-            video: this.video,
-            subUrl: this.current_video.subs,
-            fonts: this.fonts,
-            workerUrl: '/includes/subtitles-octopus-worker.js'
-          })
+          if (this.current_video.subs.length > 0)
+            this.octopusInstance.setTrackByUrl(this.current_video.subs)
         } else {
-          try{
-            this.octopusInstance.dispose()
-          }
-          catch(e) {}
-          this.octopusInstance = null
+          this.octopusInstance.freeTrack()
         }
       }
     })
@@ -227,6 +225,14 @@ class GrassPlayer {
       if (!this.seeking)
         this.overlay.classList.toggle("player_overlay_hidden", true)
     })
+  set_fonts(fonts) {
+    this.octopusInstance.dispose()
+    this.octopusInstance = new SubtitlesOctopus({
+      video: this.video,
+      subUrl: this.current_video.subs.length > 0 ? this.current_video.subs : "/empty.ass",
+      fonts: fonts,
+      workerUrl: "/includes/subtitles-octopus-worker.js"
+    })
   }
 
   set_video(type, videos, subs = "") {
@@ -250,13 +256,7 @@ class GrassPlayer {
     this.lbl_time.textContent = "00:00 / 00:00"
     this.playing_message.textContent = "nothing is playing"
 
-    if (this.octopusInstance) {
-      try{
-        this.octopusInstance.dispose()
-      }
-      catch(e) {}
-      this.octopusInstance = null
-    }
+    this.octopusInstance.freeTrack()
 
     while (this.select_quality.firstChild)
       this.select_quality.removeChild(this.select_quality.firstChild)
@@ -298,16 +298,15 @@ class GrassPlayer {
             }
           }
         }
-        if (this.btn_cc.checked) {
-          this.octopusInstance = new SubtitlesOctopus({
-            video: this.video,
-            subUrl: subs,
-            fonts: this.fonts,
-            workerUrl: '/includes/subtitles-octopus-worker.js'
-          })
-        }
+        if (this.btn_cc.checked && subs.length > 0)
+          this.octopusInstance.setTrackByUrl(subs)
         break
     }
+  }
+
+  set_subtitles(subs) {
+    this.current_video.subs = subs
+    this.octopusInstance.setTrackByUrl(subs)
   }
 
   set_playing(playing) {
@@ -441,10 +440,6 @@ class GrassPlayer {
         setTimeout(() => { this.update_youtube_time() }, 200)
       this.lbl_time.textContent = `${seconds_to_hms(current, true)} / ${seconds_to_hms(duration, true)}`
     }
-  }
-
-  set_fonts(fonts) {
-    this.fonts = fonts
   }
 
   current_time() {
