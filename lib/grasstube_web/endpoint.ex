@@ -1,10 +1,9 @@
 defmodule GrasstubeWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :grasstube
 
-  socket("/tube", GrasstubeWeb.UserSocket,
+  socket "/tube", GrasstubeWeb.UserSocket,
     websocket: true,
     longpoll: false
-  )
   
   @session_options [
     store: :cookie,
@@ -13,17 +12,19 @@ defmodule GrasstubeWeb.Endpoint do
     max_age: 604800
   ]
 
-  socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
+  socket "/live",
+    Phoenix.LiveView.Socket,
+    websocket: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest
   # when deploying your static files in production.
-  plug(Plug.Static,
+  plug Plug.Static,
     at: "/",
     from: :grasstube,
-    gzip: false
-  )
+    gzip: false,
+    content_types: %{"subtitles-octopus-worker.wasm" => "application/wasm"}
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
@@ -33,22 +34,21 @@ defmodule GrasstubeWeb.Endpoint do
     plug(Phoenix.CodeReloader)
   end
 
-  plug(Plug.RequestId)
-  plug(Plug.Logger)
+  plug Plug.RequestId
+  plug Plug.Logger
 
-  plug(Plug.Parsers,
+  plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
-  )
 
-  plug(Plug.MethodOverride)
-  plug(Plug.Head)
+  plug Plug.MethodOverride
+  plug Plug.Head
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
-  plug(Plug.Session, @session_options)
+  plug Plug.Session, @session_options
 
-  plug(GrasstubeWeb.Router)
+  plug GrasstubeWeb.Router
 end
