@@ -31,7 +31,7 @@
 			</section>
 		</header>
 		<main id="main" role="main">
-			<%= render @view_module, @view_template, assigns %>
+      <%= @inner_content %>
 		</main>
 	</body>
 </html>

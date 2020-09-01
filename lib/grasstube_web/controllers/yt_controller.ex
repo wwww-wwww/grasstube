@@ -1,6 +1,6 @@
 defmodule GrasstubeWeb.YTController do
   use GrasstubeWeb, :controller
-
+  
   def yt_search(conn, %{"query" => query}) do
     referer = get_req_header(conn, "referer")
 

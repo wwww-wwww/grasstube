@@ -1,25 +1,3 @@
-defmodule Grasstube.Supervisor do
-  use Supervisor
-
-  def start_link(opts) do
-    Supervisor.start_link(__MODULE__, :ok, opts)
-  end
-
-  def init(:ok) do
-    children = [
-      {Task.Supervisor, name: Tasks},
-      GrasstubeWeb.Counter,
-      Grasstube.YTCounter,
-      Grasstube.ProcessRegistry,
-      Grasstube.Presence,
-      {DynamicSupervisor, name: Grasstube.DynamicSupervisor, strategy: :one_for_one},
-      Grasstube.DefaultRooms
-    ]
-
-    Supervisor.init(children, strategy: :one_for_one)
-  end
-end
-
 defmodule Grasstube.RoomSupervisor do
   use Supervisor, restart: :transient
   

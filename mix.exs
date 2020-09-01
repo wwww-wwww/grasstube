@@ -5,7 +5,7 @@ defmodule Grasstube.MixProject do
     [
       app: :grasstube,
       version: "0.1.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:phoenix, :gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -25,17 +25,18 @@ defmodule Grasstube.MixProject do
 
   defp deps do
     [
-      {:guardian, "~> 1.2"},
+      {:guardian, "~> 2.0"},
+      {:guardian_phoenix, "~> 2.0"},
       {:comeonin, "~> 5.1"},
       {:bcrypt_elixir, "~> 2.0"},
-      {:phoenix, "~> 1.4.0"},
-      {:phoenix_pubsub, "~> 1.1"},
-      {:phoenix_ecto, "~> 4.0"},
-      {:ecto_sql, "~> 3.0"},
+      {:phoenix, "~> 1.5.4"},
+      {:phoenix_ecto, "~> 4.1"},
+      {:ecto_sql, "~> 3.4"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 2.11"},
+      {:phoenix_live_view, "~> 0.14.2"},
+      {:floki, ">= 0.0.0", only: :test},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, github: "phoenixframework/phoenix_live_view"},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},

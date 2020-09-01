@@ -7,7 +7,7 @@ config :grasstube, GrasstubeWeb.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "",
   render_errors: [view: GrasstubeWeb.ErrorView, accepts: ~w(html json)],
-  pubsub: [name: Grasstube.PubSub, adapter: Phoenix.PubSub.PG2],
+  pubsub_server: Grasstube.PubSub,
   live_view: [
     signing_salt: ""
   ]

@@ -1,5 +1,5 @@
 defmodule GrasstubeWeb.ChatChannel do
-  use GrasstubeWeb, :channel
+  use Phoenix.Channel
 
   alias Grasstube.Presence
 

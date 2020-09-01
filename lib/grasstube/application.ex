@@ -5,7 +5,14 @@ defmodule Grasstube.Application do
     children = [
       Grasstube.Repo,
       GrasstubeWeb.Endpoint,
-      Grasstube.Supervisor
+      {Phoenix.PubSub, [name: Grasstube.PubSub, adapter: Phoenix.PubSub.PG2]},
+      {Task.Supervisor, name: Tasks},
+      GrasstubeWeb.Counter,
+      Grasstube.YTCounter,
+      Grasstube.ProcessRegistry,
+      Grasstube.Presence,
+      {DynamicSupervisor, name: Grasstube.DynamicSupervisor, strategy: :one_for_one},
+      Grasstube.DefaultRooms
     ]
 
     opts = [strategy: :one_for_one, name: Grasstube.Supervisor]

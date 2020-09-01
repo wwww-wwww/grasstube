@@ -5,7 +5,7 @@ defmodule GrasstubeWeb do
 
       import Plug.Conn
       import GrasstubeWeb.Gettext
-      import Phoenix.LiveView.Controller, only: [live_render: 3]
+      import Phoenix.LiveView.Controller
       alias GrasstubeWeb.Router.Helpers, as: Routes
     end
   end
@@ -19,15 +19,8 @@ defmodule GrasstubeWeb do
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
 
-      # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
-
-      import GrasstubeWeb.ErrorHelpers
-      import GrasstubeWeb.Gettext
-      alias GrasstubeWeb.Router.Helpers, as: Routes
-
-      #import Phoenix.LiveView, only: [live_render: 2, live_render: 3, live_link: 1, live_link: 2]
-      import Phoenix.LiveView.Helpers
+      # Include shared imports and aliases for views
+      unquote(view_helpers())
     end
   end
 
@@ -44,6 +37,22 @@ defmodule GrasstubeWeb do
     quote do
       use Phoenix.Channel
       import GrasstubeWeb.Gettext
+    end
+  end
+
+  defp view_helpers do
+    quote do
+      # Use all HTML functionality (forms, tags, etc)
+      use Phoenix.HTML
+
+      # Import basic rendering functionality (render, render_layout, etc)
+      import Phoenix.View
+
+      import GrasstubeWeb.ErrorHelpers
+      import GrasstubeWeb.Gettext
+      alias GrasstubeWeb.Router.Helpers, as: Routes
+
+      import Phoenix.LiveView.Helpers
     end
   end
 
