@@ -81,6 +81,8 @@ class Chat {
     this.presence.onSync(() => this.repaint_userlist())
   
     this.channel.on("chat", data => this.on_chat(data))
+
+    this.channel.on("clear", _ => this.on_clear())
   
     this.channel.on("history", data => this.on_history(data))
   
@@ -123,6 +125,11 @@ class Chat {
     })
 
     user_count.textContent = this.users.length + (this.users.length > 1 ? " users connected" : " user connected")
+  }
+
+  on_clear() {
+    console.log("chat: cleared chat")
+    while (messages.firstChild) messages.removeChild(messages.firstChild)
   }
 
   on_chat(data) {

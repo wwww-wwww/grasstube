@@ -27,7 +27,7 @@ class Video {
     this.player.on_seek = t => {
       this.channel.push("seek", {t: Math.round(t)})
     }
-  
+
     this.player.on_toggle_playing = playing => {
       this.channel.push(playing ? "play" : "pause")
     }
@@ -51,8 +51,6 @@ class Video {
         for (const alt in data.alts) {
           videos[alt] = data.alts[alt]
         }
-        //if (data.small.length > 0)
-        //  videos["small"] = data.small
       } else {
         videos = data.url
       }

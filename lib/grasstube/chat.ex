@@ -128,6 +128,18 @@ defmodule GrasstubeWeb.ChatAgent do
     end
   end
 
+  defp command(channel, socket, "clear") do
+    if Guardian.Phoenix.Socket.authenticated?(socket) 
+      and mod?(channel, Guardian.Phoenix.Socket.current_resource(socket)) do
+      Agent.update(channel, fn val ->
+        %{val | history: []}
+      end)
+      Endpoint.broadcast(socket.topic, "clear", %{})
+    else
+      Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "you can't do this!"})
+    end
+  end
+
   defp command(channel, socket, "emotelists") do
     Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System",
       content: "emotelists: " <> (get_emotelists(channel) |> Enum.join(", "))})
