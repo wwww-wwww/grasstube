@@ -152,7 +152,8 @@ class Playlist{
 
     this.channel.on("current", data => this.on_current(data))
   
-    this.channel.on("controls", data => this.on_controls(data))
+    this.channel.on("controls", _ => this.set_controls(true))
+    this.channel.on("revoke_controls", _ => this.set_controls(false))
 
     return this.channel.join()
     .receive("ok", resp => {
@@ -163,16 +164,16 @@ class Playlist{
     })
   }
 
-  on_controls(data) {
-    console.log("playlist: controls", data)
-    this.has_controls = true
+  set_controls(controls) {
+    console.log("playlist: controls", controls)
+    this.has_controls = controls
   
-    playlist_controls.classList.toggle("hidden", false)
+    playlist_controls.classList.toggle("hidden", !controls)
 
     this.playlist.forEach(vid => {
-      vid.q_set.classList.toggle("hidden", false)
-      vid.q_del.classList.toggle("hidden", false)
-      vid.q_move.classList.toggle("hidden", false)
+      vid.q_set.classList.toggle("hidden", !controls)
+      vid.q_del.classList.toggle("hidden", !controls)
+      vid.q_move.classList.toggle("hidden", !controls)
     })
   }
 

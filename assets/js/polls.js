@@ -18,14 +18,9 @@ class Polls {
     console.log("polls: connecting to room " + socket.room)
     this.channel = socket.channel("polls:" + socket.room, {password: socket.password})
 
-    this.channel.on("controls", data => {
-      console.log("polls: controls", data)
-      this.is_mod = true
-      btn_create_poll.classList.toggle("hidden", false)
-      for (const poll_id in this.polls) {
-        this.polls[poll_id].btn_delete.classList.toggle("hidden", false)
-      }
-    })
+    this.channel.on("controls", _ => this.set_controls(true))
+
+    this.channel.on("revoke_controls", _ => this.set_controls(false))
 
     this.channel.on("id", data => {
       console.log("polls: id", data)
@@ -46,6 +41,15 @@ class Polls {
     .receive("error", resp => {
       console.log("polls: failed to connect", resp)
     })
+  }
+
+  set_controls(controls) {
+    console.log("polls: controls", controls)
+    this.is_mod = controls
+    btn_create_poll.classList.toggle("hidden", !controls)
+    for (const poll_id in this.polls) {
+      this.polls[poll_id].btn_delete.classList.toggle("hidden", !controls)
+    }
   }
 
   on_get_polls(data) {

@@ -76,7 +76,10 @@ defmodule GrasstubeWeb.ChatAgent do
         Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: username_lower <> " is already an op"})
       else
         add_mod(channel, username_lower)
+
         Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "opped " <> username_lower})
+        Endpoint.broadcast("user:#{get_room_name(channel)}:#{username_lower}", "presence", %{mod: true})
+        Endpoint.broadcast("user:#{get_room_name(channel)}:#{username_lower}", "controls", %{})
       end
     else
       Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "you can't do this!"})
@@ -92,6 +95,8 @@ defmodule GrasstubeWeb.ChatAgent do
       else
         remove_mod(channel, username_lower)
         Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "de-opped " <> username_lower})
+        Endpoint.broadcast("user:#{get_room_name(channel)}:#{username_lower}", "presence", %{mod: false})
+        Endpoint.broadcast("user:#{get_room_name(channel)}:#{username_lower}", "revoke_controls", %{})
       end
     else
       Phoenix.Channel.push(socket, "chat", %{sender: "sys", name: "System", content: "you can't do this!"})
@@ -301,7 +306,7 @@ defmodule GrasstubeWeb.ChatAgent do
   def set_name(socket, name) do
     if Guardian.Phoenix.Socket.authenticated?(socket) do
       changeset = Repo.get(Grasstube.User, socket.assigns.user_id)
-        |> Ecto.Changeset.change(nickname: name)
+      |> Ecto.Changeset.change(nickname: name)
       Repo.update(changeset)
     else
       {:ok}

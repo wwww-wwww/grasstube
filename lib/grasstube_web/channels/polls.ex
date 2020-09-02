@@ -15,6 +15,9 @@ defmodule GrasstubeWeb.PollsChannel do
       _ ->
         case ChatAgent.auth(socket, room_name, password) do
           {:ok, socket} ->
+            if not String.starts_with?(socket.assigns.user_id, "$") do
+              :ok = GrasstubeWeb.Endpoint.subscribe("user:#{room_name}:#{socket.assigns.user_id}")
+            end
             send(self(), {:after_join, nil})
             {:ok, socket}
           resp ->
@@ -45,6 +48,11 @@ defmodule GrasstubeWeb.PollsChannel do
     polls = Grasstube.ProcessRegistry.lookup(room_name, :polls)
 
     push(socket, "polls", PollsAgent.get_polls(polls))
+    {:noreply, socket}
+  end
+
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "user:" <> _, event: ev, payload: payload}, socket) do
+    push(socket, ev, payload)
     {:noreply, socket}
   end
 

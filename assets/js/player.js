@@ -78,6 +78,12 @@ class Video {
       this.player.allow_controls(true)
     })
 
+    this.channel.on("revoke_controls", data => {
+      console.log("video: revoke_controls", data)
+      
+      this.player.allow_controls(false)
+    })
+
     return this.channel.join()
     .receive("ok", resp => {
       console.log("video: connected", resp)

@@ -14,6 +14,9 @@ defmodule GrasstubeWeb.PlaylistChannel do
       _ ->
         case ChatAgent.auth(socket, room_name, password) do
           {:ok, socket} ->
+            if not String.starts_with?(socket.assigns.user_id, "$") do
+              :ok = GrasstubeWeb.Endpoint.subscribe("user:#{room_name}:#{socket.assigns.user_id}")
+            end
             send(self(), {:after_join, nil})
             {:ok, socket}
           resp ->
@@ -44,6 +47,11 @@ defmodule GrasstubeWeb.PlaylistChannel do
     {:noreply, socket}
   end
 
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "user:" <> _, event: ev, payload: payload}, socket) do
+    push(socket, ev, payload)
+    {:noreply, socket}
+  end
+  
   def handle_info({:DOWN, _, :process, _pid, _reason}, socket) do
     {:noreply, socket}
   end

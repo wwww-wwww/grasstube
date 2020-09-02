@@ -10,9 +10,13 @@ defmodule GrasstubeWeb.VideoChannel do
     case Grasstube.ProcessRegistry.lookup(room_name, :video) do
       :not_found ->
         {:error, "no room"}
+
       _ ->
         case ChatAgent.auth(socket, room_name, password) do
           {:ok, socket} ->
+            if not String.starts_with?(socket.assigns.user_id, "$") do
+              :ok = GrasstubeWeb.Endpoint.subscribe("user:#{room_name}:#{socket.assigns.user_id}")
+            end
             send(self(), {:after_join, nil})
             {:ok, socket}
           resp ->
@@ -50,6 +54,11 @@ defmodule GrasstubeWeb.VideoChannel do
       push(socket, "playing", %{playing: VideoAgent.playing?(video)})
     end
 
+    {:noreply, socket}
+  end
+
+  def handle_info(%Phoenix.Socket.Broadcast{topic: "user:" <> _, event: ev, payload: payload}, socket) do
+    push(socket, ev, payload)
     {:noreply, socket}
   end
 
