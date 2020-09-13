@@ -70,7 +70,7 @@ defmodule GrasstubeWeb.PlaylistChannel do
         {:ok, alts} ->
           alts
         {:error, _} ->
-          {}
+          %{}
       end
       Grasstube.ProcessRegistry.lookup(room_name, :playlist)
       |> PlaylistAgent.add_queue(title, user_url, sub, alts)
