@@ -8,7 +8,7 @@ class Polls {
     this.myid = -1
     this.username = ""
     this.polls = {}
-    
+
     btn_create_poll.addEventListener("click", () => {
       create_poll_modal(this.channel)
     })
@@ -16,7 +16,7 @@ class Polls {
 
   connect(socket) {
     console.log("polls: connecting to room " + socket.room)
-    this.channel = socket.channel("polls:" + socket.room, {password: socket.password})
+    this.channel = socket.channel("polls:" + socket.room, { password: socket.password })
 
     this.channel.on("controls", _ => this.set_controls(true))
 
@@ -35,12 +35,12 @@ class Polls {
     this.channel.on("polls", data => this.on_get_polls(data))
 
     return this.channel.join()
-    .receive("ok", resp => {
-      console.log("polls: connected", resp) 
-    })
-    .receive("error", resp => {
-      console.log("polls: failed to connect", resp)
-    })
+      .receive("ok", resp => {
+        console.log("polls: connected", resp)
+      })
+      .receive("error", resp => {
+        console.log("polls: failed to connect", resp)
+      })
   }
 
   set_controls(controls) {
@@ -56,64 +56,64 @@ class Polls {
     console.log("polls: polls", data)
     while (polls_list.firstChild) polls_list.removeChild(polls_list.firstChild)
     for (const poll in this.polls) delete this.polls[poll]
-  
+
     for (const poll in data) this.polls[poll] = data[poll]
-  
+
     for (const poll_id in this.polls) {
       const poll = this.polls[poll_id]
-  
+
       poll.e = document.createElement("div")
       poll.e.className = "poll_item"
-  
+
       const inner = document.createElement("div")
       inner.className = "poll_item-inner"
       poll.e.appendChild(inner)
-      
+
       const header = document.createElement("div")
       header.className = "poll_item-header"
       inner.appendChild(header)
-  
+
       poll.btn_delete = document.createElement("button")
       poll.btn_delete.className = "square poll_item-delete"
       poll.btn_delete.classList.toggle("hidden", !this.is_mod)
       poll.btn_delete.textContent = "×"
       header.appendChild(poll.btn_delete)
-  
+
       poll.btn_delete.addEventListener("click", () => {
-        this.channel.push("poll_remove", {id: poll_id})
+        this.channel.push("poll_remove", { id: poll_id })
       })
-      
+
       const poll_title = document.createElement("span")
       poll_title.className = "poll_item-title"
       poll_title.textContent = poll.title
       header.appendChild(poll_title)
-  
+
       const poll_body = document.createElement("div")
       poll_body.className = "poll_item-body"
       inner.appendChild(poll_body)
-  
+
       polls_list.insertBefore(poll.e, polls_list.firstChild)
-      
+
       poll.choices.forEach(choice => {
         const poll_choice = document.createElement("div")
         poll_choice.className = "poll_choice"
-  
+
         const poll_choose = document.createElement("button")
         poll_choose.className = "square"
         poll_choose.textContent = choice.users.length + choice.guests.length
         poll_choose.disabled = choice.users.includes(this.username) || choice.guests.includes(this.myid)
         poll_choose.addEventListener("click", () => {
-          this.channel.push("poll_vote", {id: poll_id, choice: choice.name})
+          this.channel.push("poll_vote", { id: poll_id, choice: choice.name })
         })
-  
+
         poll_choice.appendChild(poll_choose)
-  
+
         const choice_name = document.createElement("span")
         choice_name.textContent = choice.name
         poll_choice.appendChild(choice_name)
         poll_body.appendChild(poll_choice)
       })
-  
+
       poll_body.lastChild.style.marginBottom = 0
     }
   }
@@ -153,7 +153,7 @@ function create_choice(choices, choices_list) {
 }
 
 function create_poll_modal(channel) {
-  const modal = new Modal({title: "create a poll"})
+  const modal = new Modal({ title: "create a poll" })
   const modal_body = modal.get_body()
 
   const poll_title = document.createElement("input")
@@ -163,7 +163,7 @@ function create_poll_modal(channel) {
   const choices_list = document.createElement("div")
   choices_list.style.marginTop = "0.5em"
   modal_body.appendChild(choices_list)
-  
+
   const choices = []
   create_choice(choices, choices_list)
 
@@ -198,11 +198,11 @@ function create_poll_modal(channel) {
 
     if (final_choices.length <= 0) return
 
-    channel.push("poll_add", {title: final_title, choices: final_choices})
+    channel.push("poll_add", { title: final_title, choices: final_choices })
 
     modal.close()
   })
-  
+
   modal_body.appendChild(poll_create)
 
   modal.show()

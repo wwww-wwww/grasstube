@@ -1,16 +1,15 @@
 import css from "../css/playlist.css"
 import "phoenix_html"
 import Modal from "./modals"
-import build_hosted_videos from "./okea_hosted_videos" // OKEA ONLY
-import {seconds_to_hms, unescape_html, create_element} from "./util"
+import { seconds_to_hms, unescape_html, create_element } from "./util"
 
-class Playlist{
+class Playlist {
   constructor() {
     this.channel = null
     this.has_controls = false
     this.playlist = []
     this.current_video = -1
-  
+
     playlist_add.addEventListener("click", () => {
       this.channel.push("q_add", {
         title: add_title.value,
@@ -27,7 +26,7 @@ class Playlist{
     let old_search = ""
 
     let search_timer = null
-  
+
     yt_input.addEventListener("keyup", () => [search_timer, old_search] = yt_search(old_search, yt_input.value.trim(), search_timer, this.channel))
 
     const playlist_modal = new Modal()
@@ -45,27 +44,27 @@ class Playlist{
   queue_set(e) {
     for (let i = 0; i < this.playlist.length; i++) {
       if (this.playlist[i].q_set == e.target) {
-        this.channel.push("q_set", {id: this.playlist[i].id})
+        this.channel.push("q_set", { id: this.playlist[i].id })
         break
       }
     }
   }
-  
+
   queue_remove(e) {
     for (let i = 0; i < this.playlist.length; i++) {
       if (this.playlist[i].q_del == e.target) {
-        this.channel.push("q_del", {id: this.playlist[i].id})
+        this.channel.push("q_del", { id: this.playlist[i].id })
         break
       }
     }
   }
-  
+
   queue_start_drag(e) {
     for (let i = 0; i < this.playlist.length; i++) {
       if (this.playlist[i].q_move == (e.touches ? e.touches[0].target : e.target)) {
         this.playlist[i].dragging = true
         this.playlist[i].e.classList.toggle("playlist_dragging", true)
-        
+
         document.addEventListener("mouseup", e => this.queue_stop_drag(e))
         document.addEventListener("mousemove", e => this.queue_drag(e))
         document.addEventListener("touchend", e => this.queue_stop_drag(e))
@@ -85,7 +84,7 @@ class Playlist{
         this.playlist.forEach(playlist_item => {
           new_order.push(playlist_item.id)
         })
-        this.channel.push("q_order", {order: new_order})
+        this.channel.push("q_order", { order: new_order })
       }
     }
     document.removeEventListener("mouseup", e => this.queue_stop_drag(e))
@@ -104,22 +103,21 @@ class Playlist{
           this.playlist[0].e.getBoundingClientRect().y), this.playlist[this.playlist.length - 1].e.getBoundingClientRect().bottom)
         let y = rect.y
         let off = mouse_y - y - rect.height / 2
-  
+
         for (let j = i - 1; j <= i + 1; j++) { // only 1 before and after
           if (j < 0 || j == i || j >= this.playlist.length) continue
           const playlist_item2 = this.playlist[j]
-          if ((j < i && mouse_y <= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)) || 
-            (j > i && mouse_y >= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)))
-          {
+          if ((j < i && mouse_y <= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2)) ||
+            (j > i && mouse_y >= (playlist_item2.e.getBoundingClientRect().y + playlist_item2.e.getBoundingClientRect().height / 2))) {
             this.playlist.splice(i, 1)
             this.playlist.splice(j, 0, playlist_item)
-  
+
             if (j < i) {
               playlist_item.e.parentNode.insertBefore(playlist_item.e, playlist_item2.e)
             } else {
               playlist_item.e.parentNode.insertBefore(playlist_item2.e, playlist_item.e)
             }
-  
+
             rect = playlist_item.e.getBoundingClientRect()
             y = rect.y
             off = mouse_y - y - rect.height / 2
@@ -139,35 +137,35 @@ class Playlist{
       sub: add_sub.value,
       alts: "{}"
     })
-  
+
     add_url.value = ""
     add_sub.value = ""
   }
 
   connect(socket) {
     console.log("playlist: connecting to room " + socket.room)
-    this.channel = socket.channel("playlist:" + socket.room, {password: socket.password})
+    this.channel = socket.channel("playlist:" + socket.room, { password: socket.password })
 
     this.channel.on("playlist", data => this.on_playlist(data))
 
     this.channel.on("current", data => this.on_current(data))
-  
+
     this.channel.on("controls", _ => this.set_controls(true))
     this.channel.on("revoke_controls", _ => this.set_controls(false))
 
     return this.channel.join()
-    .receive("ok", resp => {
-      console.log("playlist: connected", resp) 
-    })
-    .receive("error", resp => {
-      console.log("playlist: failed to connect", resp)
-    })
+      .receive("ok", resp => {
+        console.log("playlist: connected", resp)
+      })
+      .receive("error", resp => {
+        console.log("playlist: failed to connect", resp)
+      })
   }
 
   set_controls(controls) {
     console.log("playlist: controls", controls)
     this.has_controls = controls
-  
+
     playlist_controls.classList.toggle("hidden", !controls)
 
     this.playlist.forEach(vid => {
@@ -201,7 +199,7 @@ class Playlist{
     console.log("playlist: playlist", data)
     this.playlist.length = 0
     while (playlist_container.firstChild) playlist_container.removeChild(playlist_container.firstChild)
-    
+
     if (data.playlist.length <= 0) {
       playlist_header_count.textContent = "0 / 0"
       playlist_header_time.textContent = ""
@@ -228,12 +226,12 @@ class Playlist{
         vid.q_del.textContent = "×"
 
         vid.title_e = create_element(e, "a", "playlist_item_title")
-        
+
         vid.title_e.textContent = vid.title
         if (vid.url.length > 0) {
           vid.title_e.href = vid.url
         }
-    
+
         if (vid.duration != "unset") {
           time += vid.duration
           vid.duration_e = create_element(e, "span", "playlist_item_duration")
@@ -251,11 +249,11 @@ class Playlist{
 
         vid.q_set.addEventListener("click", e => this.queue_set(e))
         vid.q_del.addEventListener("click", e => this.queue_remove(e))
-    
+
         vid.q_del.classList.toggle("hidden", !this.has_controls)
         vid.q_set.classList.toggle("hidden", !this.has_controls)
         vid.q_move.classList.toggle("hidden", !this.has_controls)
-    
+
         e.classList.toggle("isactive", vid.id == this.current_video)
 
         vid.e = e
@@ -267,77 +265,77 @@ class Playlist{
 }
 
 function yt_search(old_search, new_search, search_timer, channel) {
-  
+
   if (search_timer != null) clearTimeout(search_timer)
 
   return [setTimeout(() => {
     if (old_search == new_search) return
-    
+
     old_search = new_search
-    
+
     fetch(`/api/yt_search?query=${encodeURIComponent(new_search)}`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        while (yt_list.firstChild) yt_list.removeChild(yt_list.firstChild)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          while (yt_list.firstChild) yt_list.removeChild(yt_list.firstChild)
 
-        for (const video of data.items) {
-          const video_id = unescape_html(video.id)
-          const video_url = `https://youtube.com/watch?v=${video_id}`
+          for (const video of data.items) {
+            const video_id = unescape_html(video.id)
+            const video_url = `https://youtube.com/watch?v=${video_id}`
 
-          const video_e = create_element(yt_list, "div", "yt-video")
-          
-          let column = create_element(video_e, "div")
-          column.style.display = "flex"
-          column.style.alignItems = "center"
+            const video_e = create_element(yt_list, "div", "yt-video")
 
-          const video_e_thumbnail = create_element(column, "img")
-          video_e_thumbnail.style.height = "6em"
-          video_e_thumbnail.src = `https://img.youtube.com/vi/${video_id}/mqdefault.jpg`
+            let column = create_element(video_e, "div")
+            column.style.display = "flex"
+            column.style.alignItems = "center"
 
-          column = create_element(video_e, "div")
-          column.style.padding = "0.5em"
-          column.style.flex = "1"
-          column.style.minWidth = "0"
+            const video_e_thumbnail = create_element(column, "img")
+            video_e_thumbnail.style.height = "6em"
+            video_e_thumbnail.src = `https://img.youtube.com/vi/${video_id}/mqdefault.jpg`
 
-          let row = create_element(column, "div")
+            column = create_element(video_e, "div")
+            column.style.padding = "0.5em"
+            column.style.flex = "1"
+            column.style.minWidth = "0"
 
-          const video_e_title = create_element(row, "a")
-          video_e_title.textContent = unescape_html(video.title)
-          video_e_title.style.color = "rgba(255, 255, 255, 0.9)"
-          video_e_title.href = video_url
-          
-          row = create_element(column, "div")
+            let row = create_element(column, "div")
 
-          const video_e_author = create_element(row, "a")
-          video_e_author.textContent = unescape_html(video.channel_title)
-          video_e_author.style.fontSize = "0.9em"
-          video_e_author.href = `https://youtube.com/channel/${video.channel_id}`
+            const video_e_title = create_element(row, "a")
+            video_e_title.textContent = unescape_html(video.title)
+            video_e_title.style.color = "rgba(255, 255, 255, 0.9)"
+            video_e_title.href = video_url
 
-          row = create_element(column, "div")
-          
-          const video_add = create_element(video_e, "button")
-          video_add.textContent = "add"
-          video_add.style.flex = "0"
+            row = create_element(column, "div")
 
-          video_add.addEventListener("click", () => {
-            channel.push("q_add", {
-              title: "",
-              url: video_url,
-              sub: "",
-              alts: "{}"
+            const video_e_author = create_element(row, "a")
+            video_e_author.textContent = unescape_html(video.channel_title)
+            video_e_author.style.fontSize = "0.9em"
+            video_e_author.href = `https://youtube.com/channel/${video.channel_id}`
+
+            row = create_element(column, "div")
+
+            const video_add = create_element(video_e, "button")
+            video_add.textContent = "add"
+            video_add.style.flex = "0"
+
+            video_add.addEventListener("click", () => {
+              channel.push("q_add", {
+                title: "",
+                url: video_url,
+                sub: "",
+                alts: "{}"
+              })
             })
-          })
+          }
+
+          if (yt_list.lastChild) yt_list.lastChild.style.borderBottom = "none"
         }
 
-        if (yt_list.lastChild) yt_list.lastChild.style.borderBottom = "none"
-      }
-
-      search_timer = null
-    })
-    .catch(err => {
-      console.log("yt_search: error fetching", err)
-    })
+        search_timer = null
+      })
+      .catch(err => {
+        console.log("yt_search: error fetching", err)
+      })
   }, 500), old_search]
 }
 

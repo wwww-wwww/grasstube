@@ -1,13 +1,13 @@
 import css from "../css/chat.css"
 import "phoenix_html"
 
-import {Presence} from "phoenix"
+import { Presence } from "phoenix"
 
 import Modal from "./modals"
 
 import reload_emotes from "./emotes"
-import {pad, enter, create_element} from "./util"
-import {get_cookie, set_cookie} from "./cookies"
+import { pad, enter, create_element } from "./util"
+import { get_cookie, set_cookie } from "./cookies"
 
 let freezeframe_loaded = false
 const gifs = []
@@ -19,18 +19,18 @@ class Chat {
     this.users = []
     this.last_chat_user = ""
     this.unread_messages = 0
-    
+
     if (!freezeframe_loaded) {
       const freezeframe_script = create_element(document.head, "script")
       freezeframe_script.src = "https://unpkg.com/freezeframe/dist/freezeframe.min.js"
       freezeframe_script.addEventListener("load", () => {
         console.log("freezeframe: loaded")
         freezeframe_loaded = true
-    
+
         for (const e of document.getElementsByClassName("message_content"))
           freeze_gifs(e)
       })
-      
+
       window.addEventListener("focus", () => {
         messages.classList.toggle("freeze", false)
         this.unread_messages = 0
@@ -45,7 +45,7 @@ class Chat {
 
       messages.classList.toggle("freeze", !document.hasFocus() && (get_cookie("freezeframe") || 0))
     }
-    
+
     chat_input.addEventListener("keyup", event => { enter(event, () => this.send_msg()) })
     btn_userlist_toggle.addEventListener("click", e => {
       userlist.classList.toggle("hidden")
@@ -61,51 +61,51 @@ class Chat {
     const settings_modal = this.make_settings()
     btn_chat_settings.addEventListener("click", () => settings_modal.show())
 
-    const emotes_modal = new Modal({title: "emotes"})
-    
+    const emotes_modal = new Modal({ title: "emotes" })
+
     btn_show_emotes.addEventListener("click", () => {
       reload_emotes(this.socket.room, emotes_modal, chat_input)
       emotes_modal.show()
     })
-    
+
   }
 
   connect(socket) {
     this.socket = socket
-    
+
     console.log("chat: connecting to room " + this.socket.room)
-    this.channel = this.socket.channel("chat:" + this.socket.room, {password: this.socket.password})
-  
+    this.channel = this.socket.channel("chat:" + this.socket.room, { password: this.socket.password })
+
     this.presence = new Presence(this.channel)
-  
+
     this.presence.onSync(() => this.repaint_userlist())
-  
+
     this.channel.on("chat", data => this.on_chat(data))
 
     this.channel.on("clear", _ => this.on_clear())
-  
+
     this.channel.on("history", data => this.on_history(data))
-  
+
     return this.channel.join()
-    .receive("ok", resp => {
-      const nickname = get_cookie("nickname")
-      if (nickname || false) this.set_name(nickname)
-      console.log("chat: connected", resp)
-    })
-    .receive("error", resp => {
-      console.log("chat: failed to connect", resp)
-    })
+      .receive("ok", resp => {
+        const nickname = get_cookie("nickname")
+        if (nickname || false) this.set_name(nickname)
+        console.log("chat: connected", resp)
+      })
+      .receive("error", resp => {
+        console.log("chat: failed to connect", resp)
+      })
   }
 
   send_msg() {
     let text = chat_input.value.trim()
     chat_input.value = ""
-  
+
     if (text.length <= 0) return
-  
-    this.channel.push("chat", {msg: text})
+
+    this.channel.push("chat", { msg: text })
   }
-  
+
   repaint_userlist() {
     console.log("chat: new presence", this.presence.list())
     this.users = []
@@ -114,7 +114,7 @@ class Chat {
       this.users.push(user)
 
       const nickname = user.member ? user.nickname : user.metas[0].nickname
-      
+
       const e = create_element(userlist, "div", "user")
 
       const user_name = create_element(e, "span", "user_name")
@@ -140,7 +140,7 @@ class Chat {
 
     const separator = create_element(null, "span")
     separator.textContent = ": "
-  
+
     if (data.sender == "sys") {
       msg.style.fontStyle = "italic"
       msg.appendChild(username)
@@ -152,11 +152,11 @@ class Chat {
         document.title = `${this.unread_messages} • ${this.socket.room}`
       }
     }
-  
+
     if (data.name != this.last_chat_user) {
       if (this.last_chat_user.length != 0)
         msg.style.marginTop = "0.5em"
-      
+
       if (data.sender != "sys") {
         const d = new Date()
         const timestamp = create_element(msg, "span")
@@ -165,23 +165,23 @@ class Chat {
           + pad(d.getHours(), 2) + ":"
           + pad(d.getMinutes(), 2) + ":"
           + pad(d.getSeconds(), 2) + "] "
-  
+
         msg.appendChild(username)
         msg.appendChild(separator)
       }
       this.last_chat_user = data.name
     }
-  
+
     const message_content = create_element(msg, "span", "message_content")
-    
+
     if (data.content.indexOf("&gt;") == 0) {
       message_content.style.color = "#789922"
     }
-  
+
     message_content.innerHTML = data.content
-  
+
     freeze_gifs(message_content)
-  
+
     messages_outer.scrollTop = messages_outer.scrollHeight
   }
 
@@ -190,17 +190,17 @@ class Chat {
       if (name != "anon") {
         set_cookie("nickname", name)
       }
-      
-      this.channel.push("setname", {name: name})
+
+      this.channel.push("setname", { name: name })
       return true
     } else {
       return false
     }
   }
-  
+
   on_history(data) {
     console.log("chat: history", data)
-    
+
     data.list.reverse().forEach(message => {
       const msg = create_element(messages, "div")
       const username = create_element(null, "span", "message_user")
@@ -210,7 +210,7 @@ class Chat {
       if (this.last_chat_user != message.name) {
         if (this.last_chat_user.length != 0)
           msg.style.marginTop = "0.5em"
-        
+
         username.textContent = message.name
 
         msg.appendChild(username)
@@ -220,7 +220,7 @@ class Chat {
       this.last_chat_user = message.name
 
       const message_content = create_element(msg, "span", "message_content")
-      
+
       if (message.msg.indexOf("&gt;") == 0) {
         message_content.style.color = "#789922"
       }
@@ -236,9 +236,9 @@ class Chat {
   }
 
   make_settings() {
-    const modal = new Modal({title: "chat settings", root: chat_div})
+    const modal = new Modal({ title: "chat settings", root: chat_div })
     const modal_body = modal.get_body()
-    
+
     let row = create_element(modal_body, "div")
     row.style.display = "block"
     row.style.marginBottom = "0.5em"
@@ -277,7 +277,7 @@ class Chat {
   }
 
   make_change_nickname() {
-    const modal = new Modal({title: "change your nickname", root: chat_div})
+    const modal = new Modal({ title: "change your nickname", root: chat_div })
 
     const modal_body = modal.get_body()
     modal_body.style.textAlign = "right"
@@ -301,7 +301,7 @@ class Chat {
         modal.textfield.select()
       }
     })
-    
+
     modal.textfield.addEventListener("keyup", event => {
       event.preventDefault()
       if (event.keyCode !== 13) return
@@ -325,7 +325,7 @@ function freeze_gifs(message) {
       trigger: false,
       responsive: false
     })
-    
+
     const observer = new MutationObserver(() => {
       message_gif.start()
       observer.disconnect()
@@ -336,7 +336,7 @@ function freeze_gifs(message) {
       configurable: false,
       writable: false,
       value: function () {
-        for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {      
+        for (var i = 0, n = this.length, l = arguments.length; i < l; i++, n++) {
           this[n] = arguments[i]
 
           const observer = new MutationObserver(() => {
@@ -345,16 +345,16 @@ function freeze_gifs(message) {
           })
 
           observer.observe(arguments[i].$container, {
-            attributes: true, 
+            attributes: true,
             attributeFilter: ['class'],
-            childList: false, 
+            childList: false,
             characterData: false
           })
         }
-        
+
         if (!(message_gif in gifs))
           gifs.push(message_gif)
-        
+
         return n
       }
     })

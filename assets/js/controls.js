@@ -1,7 +1,7 @@
 import css from "../css/room.css"
 import socket, { auth } from "./socket"
 
-import {seconds_to_hms} from "./util"
+import { seconds_to_hms } from "./util"
 
 import Playlist from "./playlist"
 
@@ -12,9 +12,9 @@ const playlist = new Playlist()
 
 const video = {}
 video.channel = null
-video.connect = function(socket) {
+video.connect = function (socket) {
   console.log("video: connecting to room " + socket.room)
-  this.channel = socket.channel("video:" + socket.room, {password: socket.password})
+  this.channel = socket.channel("video:" + socket.room, { password: socket.password })
 
   this.channel.on("setvid", data => {
     console.log("video: setvid", data)
@@ -26,7 +26,7 @@ video.connect = function(socket) {
     console.log("video: playing", data)
     button_play.textContent = data.playing ? "❚❚" : "▶"
   })
-  
+
   this.channel.on("seek", data => {
     console.log("video: seek", data)
     seekbar.value = data.t
@@ -38,12 +38,12 @@ video.connect = function(socket) {
   })
 
   return this.channel.join()
-  .receive("ok", resp => {
-    console.log("video: connected", resp)
-  })
-  .receive("error", resp => {
-    console.log("video: failed to connect", resp)
-  })
+    .receive("ok", resp => {
+      console.log("video: connected", resp)
+    })
+    .receive("error", resp => {
+      console.log("video: failed to connect", resp)
+    })
 }
 
 button_play.addEventListener("click", () => {
@@ -59,7 +59,7 @@ seekbar.addEventListener("input", () => {
 })
 
 seekbar.addEventListener("change", () => {
-  video.channel.push("seek", {t: Math.round(seekbar.value)})
+  video.channel.push("seek", { t: Math.round(seekbar.value) })
 })
 
 auth(socket, [playlist, video])

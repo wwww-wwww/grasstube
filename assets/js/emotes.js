@@ -25,30 +25,30 @@ function reload_emotes(room, modal, chatbox, refresh = true, new_data = false) {
   }
 
   if (refresh) {
-    fetch(`/api/emotes/r/${room}`, { headers: { "Content-Type": "application/json; charset=utf-8" }})
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        
-        const new_data = JSON.stringify(data)
-        if (emotes_data != new_data){
-          while (modal_body.firstChild) modal_body.removeChild(modal_body.firstChild)
-          for (const emote in emotes) delete emotes[emote]
-          data.emotes.forEach(emote => {
-            emotes[emote["emote"]] = emote["url"]
-          })
-          reload_emotes(room, modal, chatbox, false, true)
+    fetch(`/api/emotes/r/${room}`, { headers: { "Content-Type": "application/json; charset=utf-8" } })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+
+          const new_data = JSON.stringify(data)
+          if (emotes_data != new_data) {
+            while (modal_body.firstChild) modal_body.removeChild(modal_body.firstChild)
+            for (const emote in emotes) delete emotes[emote]
+            data.emotes.forEach(emote => {
+              emotes[emote["emote"]] = emote["url"]
+            })
+            reload_emotes(room, modal, chatbox, false, true)
+          }
+          emotes_data = new_data
+
+          console.log("emotes: fetched")
+        } else {
+          console.log("emotes: bad room")
         }
-        emotes_data = new_data
-        
-        console.log("emotes: fetched")
-      } else {
-        console.log("emotes: bad room")
-      }
-    })
-    .catch(err => {
-      console.log("emotes: error fetching", err)
-    })
+      })
+      .catch(err => {
+        console.log("emotes: error fetching", err)
+      })
   }
 }
 

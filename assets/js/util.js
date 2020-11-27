@@ -10,23 +10,24 @@ function enter(event, cb) {
   cb()
 }
 
-function create_element(root, type, classes="") {
+function create_element(root, type, classes = "") {
   const e = document.createElement(type)
+
   if (classes.length > 0) {
     for (const class_name of classes.split(" "))
-    e.classList.toggle(class_name, true)
+      e.classList.toggle(class_name, true)
   }
-  if (root)
-    root.appendChild(e)
+
+  if (root) root.appendChild(e)
   return e
-  }
+}
 
 function seconds_to_hms(seconds, hide_hours = false) {
   seconds = Math.ceil(seconds)
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor(seconds / 60) % 60
   seconds = seconds % 60
-  if (hide_hours && hours <= 0) 
+  if (hide_hours && hours <= 0)
     return `${pad(minutes, 2)}:${pad(seconds, 2)}`
   return `${pad(hours, 2)}:${pad(minutes, 2)}:${pad(seconds, 2)}`
 }
@@ -43,7 +44,7 @@ function unescape_html(unsafe) {
 
 function get_meta(meta_name) {
   const metas = [...document.getElementsByTagName('meta')]
-  
+
   for (const meta of metas) {
     if (meta.getAttribute("name") == meta_name) {
       return meta.getAttribute("content")
@@ -53,4 +54,4 @@ function get_meta(meta_name) {
   return ""
 }
 
-export {pad, enter, seconds_to_hms, unescape_html, get_meta, create_element}
+export { pad, enter, seconds_to_hms, unescape_html, get_meta, create_element }

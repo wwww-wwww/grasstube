@@ -1,7 +1,7 @@
 import css from "../css/modals.css"
 
 class Modal {
-  constructor({root=null, can_close=true, title=null}={}) {
+  constructor({ root = null, can_close = true, title = null } = {}) {
     this.root = root || main || body
     this.tabs = []
     this.selected_tab = null
@@ -24,7 +24,7 @@ class Modal {
     this.header = document.createElement("div")
     this.header.className = "modal-header"
     top.appendChild(this.header)
-    
+
     if (can_close) {
       this.back.addEventListener("click", _ => this.close())
 
@@ -100,7 +100,7 @@ class Modal {
       this.e.body.className = "modal-content"
       body_outer.appendChild(this.e.body)
     }
-  
+
     return this.e.body
   }
 

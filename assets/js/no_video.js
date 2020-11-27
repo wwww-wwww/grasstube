@@ -5,7 +5,7 @@ import Chat from "./grasschat"
 import Playlist from "./playlist"
 import Polls from "./polls"
 
-import {hide_scrollbar} from "./drag"
+import { hide_scrollbar } from "./drag"
 import init_settings from "./settings"
 
 console.log("room: init")
