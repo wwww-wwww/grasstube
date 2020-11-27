@@ -1,28 +1,32 @@
 import css from "../css/player.css"
-import {seconds_to_hms, create_element} from "./util"
-import {get_cookie, set_cookie} from "./cookies"
-import Modal from "./modals"
+import { get_cookie, set_cookie } from "./cookies"
+import { create_element, seconds_to_hms } from "./util"
 
 class GrassPlayer {
+  constructor(root, fonts, controls = true) {
+    this.root = root
+    this.availableFonts = fonts
 
-  constructor(root, fonts=[], controls=true) {
-    this.fonts = fonts
-
-    /*const test_autoplay = document.createElement("video").play()
+    const test_autoplay = document.createElement("video").play()
     if (test_autoplay != undefined) {
       test_autoplay.catch(_ => {
-        new Modal({title: "this is for autoplay", root: attach}).show()
+        this.video.muted = true
+        this.create_mute_overlay()
+      }).finally(_ => {
+        this.video.play()
       })
     } else {
-      new Modal({title: "this is for autoplay", root: attach}).show()
-    }*/
+      this.video.muted = true
+      this.create_mute_overlay()
+      this.video.play()
+    }
 
     const yt = create_element(document.head, "script")
     yt.src = "https://www.youtube.com/iframe_api"
     window.onYouTubeIframeAPIReady = () => {
       this.yt_loaded = YT.loaded
       if (YT.loaded == 1) {
-        if (typeof(this.current_video.yt) == "string") {
+        if (typeof (this.current_video.yt) == "string") {
           this.set_youtube(this.current_video.yt)
         }
       }
@@ -34,7 +38,7 @@ class GrassPlayer {
     this.current_video.yt = null
 
     this.playing = false
-    
+
     this.settings = {}
     this.settings.default_quality = get_cookie("video_quality") || "big"
     this.settings.volume = (Math.pow(10, (get_cookie("video_volume") || 20) / 100) - 1) / 9
@@ -47,13 +51,8 @@ class GrassPlayer {
     this.video2.id = "video2"
 
     this.overlay = create_element(root, "div", "player_overlay player_overlay_hidden")
-    
-    this.octopusInstance = new SubtitlesOctopus({
-      video: this.video,
-      subUrl: "/empty.ass",
-      fonts: fonts,
-      workerUrl: "/includes/subtitles-octopus-worker.js"
-    })
+
+    this.octopusInstance = null
 
     const bottom_shade = create_element(this.overlay, "div")
     bottom_shade.style.position = "absolute"
@@ -79,7 +78,7 @@ class GrassPlayer {
         this.set_playing(playing)
       }
     })
-    
+
     this.btn_next = create_element(bottom_shade, "button", "player_btn")
     this.btn_next.style.fontSize = "1em"
     this.btn_next.textContent = "▶❙"
@@ -119,30 +118,7 @@ class GrassPlayer {
 
     this.btn_cc.textContent = "CC"
 
-    this.btn_cc.addEventListener("click", () => {
-      this.btn_cc.checked = !this.btn_cc.checked
-      this.btn_cc.classList.toggle("player_btn_toggle_on", this.btn_cc.checked)
-      set_cookie("video_cc", this.btn_cc.checked)
-      if (this.current_video.yt) {
-        const options = this.current_video.yt.getOptions()
-
-        options.forEach(option => {
-          if (option == "captions" || option == "cc")
-            if (this.btn_cc.checked)
-              this.current_video.yt.loadModule(option)
-            else
-              this.current_video.yt.unloadModule(option)
-        })
-        this.octopusInstance.freeTrack()
-      } else {
-        if (this.btn_cc.checked) {
-          if (this.current_video.subs.length > 0)
-            this.octopusInstance.setTrackByUrl(this.current_video.subs)
-        } else {
-          this.octopusInstance.freeTrack()
-        }
-      }
-    })
+    this.btn_cc.addEventListener("click", this.on_toggle_cc)
 
     this.select_quality = create_element(right_side, "select", "player_select_quality")
     this.select_quality.style.display = "none"
@@ -154,7 +130,7 @@ class GrassPlayer {
 
     this.btn_fullscreen = create_element(right_side, "button", "player_btn")
     this.btn_fullscreen.textContent = "⛶"
-    
+
     this.btn_fullscreen.addEventListener("click", () => {
       if (document.fullscreenElement) document.exitFullscreen()
       else root.requestFullscreen()
@@ -192,10 +168,10 @@ class GrassPlayer {
       if (this.overlay_hide) clearTimeout(this.overlay_hide)
       this.overlay_hide = setTimeout(() => {
         if (!this.seeking)
-        this.overlay.classList.toggle("player_overlay_hidden", true)
+          this.overlay.classList.toggle("player_overlay_hidden", true)
       }, 2000)
     })
-    
+
     this.overlay.addEventListener("mouseleave", () => {
       if (this.overlay_hide) clearTimeout(this.overlay_hide)
       if (!this.seeking)
@@ -205,25 +181,44 @@ class GrassPlayer {
     this.allow_controls(controls)
   }
 
-  set_fonts(fonts) {
-    this.octopusInstance.dispose()
-    this.octopusInstance = new SubtitlesOctopus({
-      video: this.video,
-      subUrl: this.current_video.subs.length > 0 ? this.current_video.subs : "/empty.ass",
-      fonts: fonts,
-      workerUrl: "/includes/subtitles-octopus-worker.js"
-    })
+  on_toggle_cc() {
+    this.btn_cc.checked = !this.btn_cc.checked
+    this.btn_cc.classList.toggle("player_btn_toggle_on", this.btn_cc.checked)
+
+    set_cookie("video_cc", this.btn_cc.checked)
+
+    if (this.current_video.yt) {
+      const options = this.current_video.yt.getOptions()
+
+      options.forEach(option => {
+        if (option == "captions" || option == "cc")
+          if (this.btn_cc.checked)
+            this.current_video.yt.loadModule(option)
+          else
+            this.current_video.yt.unloadModule(option)
+      })
+      if (this.octopusInstance) this.octopusInstance.freeTrack()
+    } else {
+      if (this.btn_cc.checked) {
+        if (this.current_video.subs.length > 0) {
+          this.set_subtitles(this.current_video.subs)
+        }
+      } else {
+        if (this.octopusInstance) this.octopusInstance.freeTrack()
+      }
+    }
   }
 
   set_video(type, videos, subs = "") {
     this.current_video.videos = videos
     this.current_video.subs = subs
-    
+
     this.btn_cc.classList.toggle("hidden", subs.length == 0)
 
     if (this.current_video.yt) {
       this.current_video.yt.destroy()
     }
+
     this.current_video.yt = null
     this.video.src = ""
 
@@ -231,15 +226,20 @@ class GrassPlayer {
       const buffer = this.seekbar.buffers.pop()
       this.seekbar.graphic.removeChild(buffer)
     }
+
     this.seekbar.dial.style.left = "0%"
     this.seekbar.current.style.width = "0%"
     this.lbl_time.textContent = "00:00 / 00:00"
 
-    this.octopusInstance.freeTrack()
+    if (this.octopusInstance) {
+      this.octopusInstance.freeTrack()
+      this.octopusInstance.dispose()
+      this.octopusInstance = null
+    }
 
     while (this.select_quality.firstChild)
       this.select_quality.removeChild(this.select_quality.firstChild)
-    
+
     this.select_quality.style.display = "none"
 
     if (Object.keys(videos).length == 0) {
@@ -275,15 +275,36 @@ class GrassPlayer {
             }
           }
         }
-        if (this.btn_cc.checked && subs.length > 0)
-          this.octopusInstance.setTrackByUrl(subs)
+        if (this.btn_cc.checked && subs.length > 0) {
+          this.set_subtitles(subs)
+        }
         break
     }
   }
 
+  set_fonts(fonts) {
+    this.availableFonts = fonts
+    this.set_subtitles(this.current_video.subs)
+  }
+
   set_subtitles(subs) {
     this.current_video.subs = subs
-    this.octopusInstance.setTrackByUrl(subs)
+
+    if (this.octopusInstance) {
+      this.octopusInstance.freeTrack()
+      this.octopusInstance.dispose()
+      this.octopusInstance = null
+    }
+
+    if (subs == null || subs.length == 0) return
+
+    this.octopusInstance = new SubtitlesOctopus({
+      video: this.video,
+      subUrl: subs,
+      availableFonts: this.availableFonts,
+      workerUrl: "/includes/subtitles-octopus-worker.js",
+      lossyRender: true
+    })
   }
 
   set_playing(playing) {
@@ -314,7 +335,7 @@ class GrassPlayer {
 
   seek(t) {
     if (this.seeking) return
-    
+
     if (this.current_video.yt) {
       if (!this.current_video.yt.playVideo) return
       this.current_video.yt.seekTo(t)
@@ -340,7 +361,7 @@ class GrassPlayer {
     this.current_video.yt = new YT.Player(this.video2, {
       height: "100%",
       width: "100%",
-      playerVars: {"controls": 0},
+      playerVars: { "controls": 0 },
       videoId: video_id,
       events: {
         "onStateChange": e => {
@@ -354,7 +375,7 @@ class GrassPlayer {
               else
                 e.target.unloadModule(option)
           })
-          
+
           this.btn_cc.classList.toggle("hidden", !(options.includes("captions") || options.includes("cc")))
 
           this.update_youtube_time()
@@ -362,10 +383,10 @@ class GrassPlayer {
       }
     })
   }
-  
+
   set_gdrive(video_id, subs) {
     const url = `https://docs.google.com/get_video_info?docid=${video_id}&sle=true&hl=en`
-    
+
     httpRequest({
       method: "GET",
       url: url,
@@ -397,7 +418,7 @@ class GrassPlayer {
 
         const videos = {}
         for (const q in data.links) {
-          if (q in ITAG_QMAP) 
+          if (q in ITAG_QMAP)
             videos[ITAG_QMAP[q]] = data.links[q]
         }
         this.set_video("default", videos, subs)
@@ -423,6 +444,29 @@ class GrassPlayer {
 
   duration() {
     return (this.current_video.yt && this.current_video.yt.getDuration) ? this.current_video.yt.getDuration() : this.video.duration
+  }
+
+  create_mute_overlay() {
+    const e = create_element(this.root, "div")
+    e.style.position = "absolute"
+    e.style.width = "100%"
+    e.style.height = "100%"
+    e.style.display = "flex"
+    e.style.alignItems = "center"
+    e.style.backgroundColor = "rgba(0, 0, 0, 0.2)"
+    e.style.cursor = "pointer"
+    e.addEventListener("click", () => {
+      this.video.muted = false
+      this.root.removeChild(e)
+    })
+
+    let text = create_element(e, "span")
+    text.style.textAlign = "center"
+    text.style.flex = "1"
+    text.style.color = "white"
+    text.style.textShadow = "0.1em 0.1em 0.2em black"
+    text.style.pointerEvents = "none"
+    text.textContent = "Click to unmute"
   }
 }
 
@@ -450,9 +494,9 @@ function create_seekbar(player, controls) {
     player.seeking = false
     if (Object.keys(player.current_video.videos).length == 0) return
     body.removeEventListener("mousemove", player.seekbar._seek)
-    body.removeEventListener("mouseup", player.seekbar._mouseup)
+    window.removeEventListener("mouseup", player.seekbar._mouseup)
 
-    if (player.playing) 
+    if (player.playing)
       if (player.current_video.yt) player.current_video.yt.playVideo()
       else player.video.play()
 
@@ -473,15 +517,15 @@ function create_seekbar(player, controls) {
     e.preventDefault()
     if (Object.keys(player.current_video.videos).length == 0) return
     body.addEventListener("mousemove", player.seekbar._seek)
-    body.addEventListener("mouseup", player.seekbar._mouseup)
+    window.addEventListener("mouseup", player.seekbar._mouseup)
 
     if (player.current_video.yt)
       player.playing = player.current_video.yt.getPlayerState() != 1
     else
-      player.playing = player.video.paused
+      player.playing = !player.video.paused
 
     player.seeking = true
-    
+
     if (player.current_video.yt)
       player.current_video.yt.pauseVideo()
     else
