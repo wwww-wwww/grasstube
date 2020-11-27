@@ -59,7 +59,6 @@ button, input, select, textarea, .button {
     border: 1px solid rgba(255, 255, 255, 0.4);
     background: none;
     color: rgba(255, 255, 255, 0.7);
-    transition: color 0.05s, background-color 0.05s;
     vertical-align: middle;
     line-height: 1.25em;
 }
