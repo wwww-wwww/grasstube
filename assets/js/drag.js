@@ -1,4 +1,4 @@
-import {get_cookie, set_cookie} from "./cookies"
+import { get_cookie, set_cookie } from "./cookies"
 
 let dragging_h = false
 let dragging_v = false
@@ -45,7 +45,7 @@ function init() {
     if (dragging_h || dragging_v) {
       document.removeEventListener("mousemove", drag_h)
       document.removeEventListener("mousemove", drag_v)
-      
+
       dragging_h = false
       dragging_v = false
       dragbar_h.style.opacity = 0
@@ -70,7 +70,7 @@ function hide_scrollbar() {
       dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().left + 1}px, 0)`
     else
       dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().right - 2}px, 0)`
-      
+
     dragbar_v.style.transform = `translate(0, ${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px)`
   })
   window.dispatchEvent(new Event("resize"))
@@ -91,12 +91,12 @@ function drag_h(e) {
   let left = e.pageX / window.innerWidth
 
   r_width = (maincontent.style.flexDirection == "row-reverse") ? left : left + 1 / window.innerWidth
-  
+
   dragbar_h.style.transform = `translate(${left * window.innerWidth - 1}px, 0)`
 }
 
 function drag_v(e) {
-  const top = e.pageY - maincontent.getBoundingClientRect().top 
+  const top = e.pageY - maincontent.getBoundingClientRect().top
 
   r_height = top
 
@@ -104,4 +104,4 @@ function drag_v(e) {
 }
 
 export default init
-export {change_layout, hide_scrollbar}
+export { change_layout, hide_scrollbar }

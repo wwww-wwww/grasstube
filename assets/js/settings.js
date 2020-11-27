@@ -1,6 +1,6 @@
 import Modal from "./modals"
-import {get_cookie, set_cookie} from "./cookies"
-import {change_layout} from "./drag"
+import { get_cookie, set_cookie } from "./cookies"
+import { change_layout } from "./drag"
 
 function init() {
   const settings_modal = make_settings()
@@ -10,9 +10,9 @@ function init() {
 }
 
 function make_settings() {
-  const modal = new Modal({title: "settings"})
+  const modal = new Modal({ title: "settings" })
   const modal_body = modal.get_body()
-  
+
   let row = document.createElement("div")
   row.style.display = "block"
   row.style.marginBottom = "0.5em"
@@ -23,15 +23,36 @@ function make_settings() {
   lbl.style.marginRight = "0.5em"
   row.appendChild(lbl)
 
-  let btn = document.createElement("button")
-  btn.textContent = "80%"
-  btn.addEventListener("click", () => { set_height("80") })
-  btn.style.marginRight = "0.5em"
-  row.appendChild(btn)
+  let slider = document.createElement("input")
+  slider.type = "range"
+  slider.min = 80
+  slider.max = 100
+  slider.value = get_cookie("drag_height").match(/\d+/)[0]
+  row.appendChild(slider)
 
-  btn = document.createElement("button")
-  btn.textContent = "100%"
-  btn.addEventListener("click", () => { set_height("100") })
+  let slider_n = document.createElement("input")
+  slider_n.type = "number"
+  slider_n.style.width = "5em"
+  slider_n.value = get_cookie("drag_height").match(/\d+/)[0]
+  row.appendChild(slider_n)
+
+  slider.addEventListener("input", () => {
+    slider_n.value = slider.value
+    set_height(`${slider.value}%`)
+  })
+  slider_n.addEventListener("input", () => {
+    slider.value = slider_n.value
+    set_height(`${slider_n.value}%`)
+  })
+
+  row = document.createElement("div")
+  row.style.display = "block"
+  row.style.marginBottom = "0.5em"
+  modal_body.appendChild(row)
+
+  let btn = document.createElement("button")
+  btn.textContent = "fit width (16:9)"
+  btn.addEventListener("click", () => { fit_width() })
   row.appendChild(btn)
 
   row = document.createElement("div")
@@ -56,10 +77,10 @@ function make_settings() {
 
   select_layout.selectedIndex = get_cookie("view_layout") || 0
 
-  select_layout.addEventListener("change", () => { set_layout( select_layout.selectedIndex) })
+  select_layout.addEventListener("change", () => { set_layout(select_layout.selectedIndex) })
 
   row.appendChild(select_layout)
-  
+
   row = document.createElement("div")
   row.style.display = "block"
   modal_body.appendChild(row)
@@ -88,11 +109,20 @@ function set_layout(n) {
 }
 
 function set_height(size) {
-  set_cookie("drag_height", size == "80" ? "80%" : "100%")
-  maincontent.style.height = size == "80" ? "80%" : "100%"
+  set_cookie("drag_height", size)
+  maincontent.style.height = size
 
   window.dispatchEvent(new Event("resize"))
 }
 
-export {make_settings}
+function fit_width() {
+  const r_width = maincontent.getBoundingClientRect().height / 9 * 16 / window.innerWidth
+  const w = (maincontent.style.flexDirection == "row-reverse") ? r_width : (1 - r_width)
+  set_cookie("drag_width", w)
+  console.log(w)
+  container_chat.style.width = Math.round(w * window.innerWidth) + "px"
+  window.dispatchEvent(new Event("resize"))
+}
+
+export { make_settings }
 export default init
