@@ -12,13 +12,10 @@ class GrassPlayer {
       test_autoplay.catch(_ => {
         this.video.muted = true
         this.create_mute_overlay()
-      }).finally(_ => {
-        this.video.play()
       })
     } else {
       this.video.muted = true
       this.create_mute_overlay()
-      this.video.play()
     }
 
     const yt = create_element(document.head, "script")
@@ -54,12 +51,7 @@ class GrassPlayer {
 
     this.octopusInstance = null
 
-    const bottom_shade = create_element(this.overlay, "div")
-    bottom_shade.style.position = "absolute"
-    bottom_shade.style.width = "100%"
-    bottom_shade.style.height = "3em"
-    bottom_shade.style.bottom = "0"
-    bottom_shade.style.background = "rgba(0, 0, 0, 0.5)"
+    const bottom_shade = create_element(this.overlay, "div", "player_shade")
 
     this.btn_play = create_element(bottom_shade, "button", "player_btn")
     this.btn_play.textContent = "▶"
@@ -84,9 +76,7 @@ class GrassPlayer {
     this.btn_next.textContent = "▶❙"
 
     this.on_next = void 0
-    this.btn_next.addEventListener("click", () => {
-      this.on_next()
-    })
+    this.btn_next.addEventListener("click", () => { this.on_next() })
 
     this.slider_volume = create_element(bottom_shade, "input", "player_volume")
     this.slider_volume.type = "range"
@@ -98,7 +88,9 @@ class GrassPlayer {
     this.slider_volume.addEventListener("input", () => {
       set_cookie("video_volume", this.slider_volume.value)
       this.settings.volume = (Math.pow(10, this.slider_volume.value / 100) - 1) / 9
-      if (this.current_video.yt) this.current_video.yt.setVolume(this.settings.volume * 100)
+      if (this.current_video.yt) {
+        this.current_video.yt.setVolume(this.settings.volume * 100)
+      }
       this.video.volume = this.settings.volume
     })
 
@@ -111,11 +103,13 @@ class GrassPlayer {
     this.btn_cc = create_element(right_side, "button", "player_btn player_btn_cc")
 
     const _cc = get_cookie("video_cc")
-    if (_cc == null) this.btn_cc.checked = true
-    else this.btn_cc.checked = _cc
+    if (_cc == null) {
+      this.btn_cc.checked = true
+    } else {
+      this.btn_cc.checked = _cc
+    }
 
     this.btn_cc.classList.toggle("player_btn_toggle_on", this.btn_cc.checked)
-
     this.btn_cc.textContent = "CC"
 
     this.btn_cc.addEventListener("click", this.on_toggle_cc)
@@ -132,13 +126,16 @@ class GrassPlayer {
     this.btn_fullscreen.textContent = "⛶"
 
     this.btn_fullscreen.addEventListener("click", () => {
-      if (document.fullscreenElement) document.exitFullscreen()
-      else root.requestFullscreen()
+      if (document.fullscreenElement) {
+        document.exitFullscreen()
+      } else {
+        root.requestFullscreen()
+      }
     })
 
     this.on_toggle_playing = null
     this.on_seek = () => void 0
-    create_seekbar(this, true)
+    this.create_seekbar(true)
 
     this.video.addEventListener("progress", () => {
       this.seekbar.set_buffers((this.video.buffered), this.video.duration)
@@ -147,10 +144,11 @@ class GrassPlayer {
     this.video.addEventListener("timeupdate", () => {
       this.seekbar.set_time((this.video.currentTime || 0) / this.video.duration)
       this.seekbar.set_buffers((this.video.buffered), this.video.duration)
-      if (this.video.duration > 0)
+      if (this.video.duration > 0) {
         this.lbl_time.textContent = `${seconds_to_hms(this.video.currentTime, true)} / ${seconds_to_hms(this.video.duration, true)}`
-      else
+      } else {
         this.lbl_time.textContent = "00:00 / 00:00"
+      }
     })
 
     this.video.addEventListener("play", () => {
@@ -165,17 +163,19 @@ class GrassPlayer {
 
     this.overlay.addEventListener("mousemove", () => {
       this.overlay.classList.toggle("player_overlay_hidden", false)
-      if (this.overlay_hide) clearTimeout(this.overlay_hide)
+      if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
       this.overlay_hide = setTimeout(() => {
-        if (!this.seeking)
+        if (!this.seeking) {
           this.overlay.classList.toggle("player_overlay_hidden", true)
+        }
       }, 2000)
     })
 
     this.overlay.addEventListener("mouseleave", () => {
-      if (this.overlay_hide) clearTimeout(this.overlay_hide)
-      if (!this.seeking)
+      if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
+      if (!this.seeking) {
         this.overlay.classList.toggle("player_overlay_hidden", true)
+      }
     })
 
     this.allow_controls(controls)
@@ -215,9 +215,7 @@ class GrassPlayer {
 
     this.btn_cc.classList.toggle("hidden", subs.length == 0)
 
-    if (this.current_video.yt) {
-      this.current_video.yt.destroy()
-    }
+    if (this.current_video.yt) { this.current_video.yt.destroy() }
 
     this.current_video.yt = null
     this.video.src = ""
@@ -237,8 +235,9 @@ class GrassPlayer {
       this.octopusInstance = null
     }
 
-    while (this.select_quality.firstChild)
+    while (this.select_quality.firstChild) {
       this.select_quality.removeChild(this.select_quality.firstChild)
+    }
 
     this.select_quality.style.display = "none"
 
@@ -307,6 +306,24 @@ class GrassPlayer {
     })
   }
 
+  play() {
+    this.btn_play.textContent = "❚❚"
+    if (this.current_video.yt) {
+      this.current_video.yt.playVideo()
+    } else if (this.video.paused) {
+      this.video.play()
+    }
+  }
+
+  pause() {
+    this.btn_play.textContent = "▶"
+    if (this.current_video.yt) {
+      this.current_video.yt.pauseVideo()
+    } else if (!this.video.paused) {
+      this.video.pause()
+    }
+  }
+
   set_playing(playing) {
     this.playing = playing
     if (this.seeking) return
@@ -316,21 +333,18 @@ class GrassPlayer {
         this.current_video.yt.pauseVideo()
         return
       }
-      if (playing) this.current_video.yt.playVideo()
-      else this.current_video.yt.pauseVideo()
     } else {
       if (this.video.currentTime >= this.video.duration) {
         this.video.pause()
         return
       }
-      if (playing && this.video.paused) this.video.play()
-      else if (!playing && !this.video.paused) this.video.pause()
     }
 
-    if (playing)
-      this.btn_play.textContent = "❚❚"
-    else
-      this.btn_play.textContent = "▶"
+    if (playing) {
+      this.play()
+    } else {
+      this.pause()
+    }
   }
 
   seek(t) {
@@ -345,7 +359,7 @@ class GrassPlayer {
       }
     } else {
       this.video.currentTime = t
-      if (this.video.currentTime >= this.video.duration) this.video.pause()
+      if (this.video.currentTime >= this.video.duration) { this.video.pause() }
     }
   }
 
@@ -439,11 +453,19 @@ class GrassPlayer {
   }
 
   current_time() {
-    return (this.current_video.yt && this.current_video.yt.getCurrentTime) ? this.current_video.yt.getCurrentTime() : this.video.currentTime
+    if (this.current_video.yt && this.current_video.yt.getCurrentTime) {
+      return this.current_video.yt.getCurrentTime()
+    } else {
+      return this.video.currentTime
+    }
   }
 
   duration() {
-    return (this.current_video.yt && this.current_video.yt.getDuration) ? this.current_video.yt.getDuration() : this.video.duration
+    if (this.current_video.yt && this.current_video.yt.getDuration) {
+      return this.current_video.yt.getDuration()
+    } else {
+      return this.video.duration
+    }
   }
 
   create_mute_overlay() {
@@ -468,119 +490,136 @@ class GrassPlayer {
     text.style.pointerEvents = "none"
     text.textContent = "Click to unmute"
   }
-}
 
-function create_seekbar(player, controls) {
-  player.seekbar = create_element(player.overlay, "div", "player_seekbar")
-  player.seekbar.classList.toggle("seekbar_controls", controls)
+  create_seekbar(controls) {
+    const seekbar = create_element(this.overlay, "div", "player_seekbar")
+    seekbar.classList.toggle("seekbar_controls", controls)
+    this.seekbar = seekbar
 
-  player.seekbar.graphic = create_element(player.seekbar, "div", "player_seekbar_bar")
+    const mtime = create_element(seekbar, "div", "player_seekbar_time")
 
-  player.seekbar.buffers = []
+    seekbar.graphic = create_element(seekbar, "div", "player_seekbar_bar")
 
-  player.seekbar.current = create_element(player.seekbar.graphic, "div")
-  player.seekbar.current.style.position = "absolute"
-  player.seekbar.current.style.width = "0%"
-  player.seekbar.current.style.height = "100%"
-  player.seekbar.current.style.background = "rgba(0, 70, 255, 0.6)"
-  player.seekbar.current.style.pointerEvents = "none"
-  player.seekbar.current.style.zIndex = "1"
+    seekbar.buffers = []
 
-  player.seekbar.dial = create_element(player.seekbar, "div", "player_seekbar_dial")
+    seekbar.current = create_element(seekbar.graphic, "div")
+    seekbar.current.style.position = "absolute"
+    seekbar.current.style.width = "0%"
+    seekbar.current.style.height = "100%"
+    seekbar.current.style.background = "rgba(0, 70, 255, 0.6)"
+    seekbar.current.style.pointerEvents = "none"
+    seekbar.current.style.zIndex = "1"
 
-  player.seekbar._seek = e => { return seekbar_mouse_move(e, player) }
-  player.seekbar._mouseup = e => {
+    seekbar.dial = create_element(seekbar, "div", "player_seekbar_dial")
+
+    seekbar._seek = e => { return this.seekbar_on_mouse_move(e) }
+    seekbar._mouseup = e => { this.seekbar_on_mouse_up(e) }
+    seekbar.addEventListener("mousedown", e => { this.seekbar_on_mouse_down(e) })
+    seekbar.addEventListener("mousemove", e => {
+      if (!this.current_video.yt && Object.keys(this.current_video.videos).length == 0) {
+        mtime.textContent = ""
+        return
+      }
+      const rect = this.seekbar.getBoundingClientRect()
+      const pct = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1)
+      let t = pct
+      if (this.current_video.yt) {
+        t = t * this.current_video.yt.getDuration()
+      } else {
+        t = t * this.video.duration
+      }
+      mtime.textContent = seconds_to_hms(t, true)
+      mtime.style.left = `${pct * 100}%`
+    })
+
+    seekbar.set_buffers = (buffers, duration) => {
+      while (seekbar.buffers.length < buffers.length) {
+        const buffer = create_element(seekbar.graphic, "div")
+        buffer.style.position = "absolute"
+        buffer.style.width = "0%"
+        buffer.style.height = "100%"
+        buffer.style.background = "rgba(255, 255, 255, 0.3)"
+        buffer.style.pointerEvents = "none"
+        buffer.style.zIndex = "0"
+        seekbar.buffers.push(buffer)
+      }
+      while (seekbar.buffers.length > buffers.length) {
+        const buffer = seekbar.buffers.pop()
+        seekbar.graphic.removeChild(buffer)
+      }
+      for (let i = 0; i < buffers.length; i++) {
+        const start = buffers.start(i) / duration
+        let end = buffers.end(i) / duration
+        if (end > 0.999) end = 1
+        seekbar.buffers[i].style.left = start * 100 + "%"
+        seekbar.buffers[i].style.width = (end - start) * 100 + "%"
+      }
+    }
+
+    seekbar.set_time = t => {
+      seekbar.current.style.width = t * 100 + "%"
+      seekbar.dial.style.left = t * 100 + "%"
+    }
+  }
+
+  seekbar_on_mouse_move(e) {
     e.preventDefault()
-    player.seeking = false
-    if (Object.keys(player.current_video.videos).length == 0) return
-    body.removeEventListener("mousemove", player.seekbar._seek)
-    window.removeEventListener("mouseup", player.seekbar._mouseup)
+    const rect = this.seekbar.getBoundingClientRect()
+    const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1)
 
-    if (player.playing)
-      if (player.current_video.yt) player.current_video.yt.playVideo()
-      else player.video.play()
+    if (this.current_video.yt) {
+      this.current_video.yt.seekTo(t * this.current_video.yt.getDuration())
+    } else {
+      this.video.currentTime = t * this.video.duration
+    }
 
-    const t = player.seekbar._seek(e)
+    this.seekbar.dial.style.left = t * 100 + "%"
+    this.seekbar.current.style.width = t * 100 + "%"
+    return t * this.duration()
+  }
 
-    player.on_seek(t)
+  seekbar_on_mouse_down(e) {
+    e.preventDefault()
+    if (Object.keys(this.current_video.videos).length == 0) return
+    body.addEventListener("mousemove", this.seekbar._seek)
+    window.addEventListener("mouseup", this.seekbar._mouseup)
 
-    player.seekbar.graphic.classList.toggle("seeking", false)
-    player.seekbar.dial.classList.toggle("seeking", false)
-    if (player.overlay_hide) clearTimeout(player.overlay_hide)
-    player.overlay.classList.toggle("player_overlay_hidden", false)
-    player.overlay_hide = setTimeout(() => {
-      player.overlay.classList.toggle("player_overlay_hidden", true)
+    if (this.current_video.yt) {
+      this.playing = this.current_video.yt.getPlayerState() != 1
+    } else {
+      this.playing = !this.video.paused
+    }
+
+    this.seeking = true
+
+    this.pause()
+
+    this.seekbar._seek(e)
+    this.seekbar.graphic.classList.toggle("seeking", true)
+    this.seekbar.dial.classList.toggle("seeking", true)
+  }
+
+  seekbar_on_mouse_up(e) {
+    e.preventDefault()
+    this.seeking = false
+
+    if (Object.keys(this.current_video.videos).length == 0) return
+
+    body.removeEventListener("mousemove", this.seekbar._seek)
+    window.removeEventListener("mouseup", this.seekbar._mouseup)
+
+    if (this.playing) { this.play() }
+
+    this.on_seek(this.seekbar._seek(e))
+
+    this.seekbar.graphic.classList.toggle("seeking", false)
+    this.seekbar.dial.classList.toggle("seeking", false)
+    if (this.overlay_hide) clearTimeout(this.overlay_hide)
+    this.overlay.classList.toggle("player_overlay_hidden", false)
+    this.overlay_hide = setTimeout(() => {
+      this.overlay.classList.toggle("player_overlay_hidden", true)
     }, 2000)
   }
-
-  player.seekbar.addEventListener("mousedown", e => {
-    e.preventDefault()
-    if (Object.keys(player.current_video.videos).length == 0) return
-    body.addEventListener("mousemove", player.seekbar._seek)
-    window.addEventListener("mouseup", player.seekbar._mouseup)
-
-    if (player.current_video.yt)
-      player.playing = player.current_video.yt.getPlayerState() != 1
-    else
-      player.playing = !player.video.paused
-
-    player.seeking = true
-
-    if (player.current_video.yt)
-      player.current_video.yt.pauseVideo()
-    else
-      player.video.pause()
-
-    player.seekbar._seek(e)
-    player.seekbar.graphic.classList.toggle("seeking", true)
-    player.seekbar.dial.classList.toggle("seeking", true)
-  })
-
-  player.seekbar.set_buffers = (buffers, duration) => {
-    while (player.seekbar.buffers.length < buffers.length) {
-      const buffer = create_element(player.seekbar.graphic, "div")
-      buffer.style.position = "absolute"
-      buffer.style.width = "0%"
-      buffer.style.height = "100%"
-      buffer.style.background = "rgba(255, 255, 255, 0.3)"
-      buffer.style.pointerEvents = "none"
-      buffer.style.zIndex = "0"
-      player.seekbar.buffers.push(buffer)
-    }
-    while (player.seekbar.buffers.length > buffers.length) {
-      const buffer = player.seekbar.buffers.pop()
-      player.seekbar.graphic.removeChild(buffer)
-    }
-    for (let i = 0; i < buffers.length; i++) {
-      const start = buffers.start(i) / duration
-      let end = buffers.end(i) / duration
-      if (end > 0.999) end = 1
-      player.seekbar.buffers[i].style.left = start * 100 + "%"
-      player.seekbar.buffers[i].style.width = (end - start) * 100 + "%"
-    }
-  }
-
-  player.seekbar.set_time = t => {
-    player.seekbar.current.style.width = t * 100 + "%"
-    player.seekbar.dial.style.left = t * 100 + "%"
-  }
-}
-
-function seek_local(player, t) {
-  if (player.current_video.yt)
-    player.current_video.yt.seekTo(t * player.current_video.yt.getDuration())
-  else
-    player.video.currentTime = t * player.video.duration
-
-  player.seekbar.dial.style.left = t * 100 + "%"
-  player.seekbar.current.style.width = t * 100 + "%"
-}
-
-function seekbar_mouse_move(e, player) {
-  e.preventDefault()
-  const t = Math.min(Math.max(((e.clientX - player.seekbar.getBoundingClientRect().left) / (player.seekbar.getBoundingClientRect().width)), 0), 1)
-  seek_local(player, t)
-  return t * player.duration()
 }
 
 function httpRequest(opts) {
