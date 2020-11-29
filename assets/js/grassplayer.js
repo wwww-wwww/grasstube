@@ -36,6 +36,11 @@ class GrassPlayer {
 
     this.playing = false
 
+    this.on_toggle_playing = null
+    this.on_seek = () => void 0
+
+    this.octopusInstance = null
+
     this.settings = {}
     this.settings.default_quality = get_cookie("video_quality") || "big"
     this.settings.volume = (Math.pow(10, (get_cookie("video_volume") || 20) / 100) - 1) / 9
@@ -48,94 +53,10 @@ class GrassPlayer {
     this.video2.id = "video2"
 
     this.overlay = create_element(root, "div", "player_overlay player_overlay_hidden")
+    this.overlay.addEventListener("dblclick", () => { this.toggle_fullscreen() })
 
-    this.octopusInstance = null
-
-    const bottom_shade = create_element(this.overlay, "div", "player_shade")
-
-    this.btn_play = create_element(bottom_shade, "button", "player_btn")
-    this.btn_play.textContent = "▶"
-    this.btn_play.disabled = true
-
-    this.btn_play.addEventListener("click", () => {
-      const playing = this.btn_play.textContent == "▶"
-      if (playing) {
-        this.btn_play.textContent = "❚❚"
-      } else {
-        this.btn_play.textContent = "▶"
-      }
-      if (this.on_toggle_playing != null) {
-        this.on_toggle_playing(playing)
-      } else {
-        this.set_playing(playing)
-      }
-    })
-
-    this.btn_next = create_element(bottom_shade, "button", "player_btn")
-    this.btn_next.style.fontSize = "1em"
-    this.btn_next.textContent = "▶❙"
-
-    this.on_next = void 0
-    this.btn_next.addEventListener("click", () => { this.on_next() })
-
-    this.slider_volume = create_element(bottom_shade, "input", "player_volume")
-    this.slider_volume.type = "range"
-    this.slider_volume.min = 0
-    this.slider_volume.max = 100
-    this.slider_volume.step = 1
-    this.slider_volume.value = (get_cookie("video_volume") || 20)
-
-    this.slider_volume.addEventListener("input", () => {
-      set_cookie("video_volume", this.slider_volume.value)
-      this.settings.volume = (Math.pow(10, this.slider_volume.value / 100) - 1) / 9
-      if (this.current_video.yt) {
-        this.current_video.yt.setVolume(this.settings.volume * 100)
-      }
-      this.video.volume = this.settings.volume
-    })
-
-    this.lbl_time = create_element(bottom_shade, "span", "player_time")
-    this.lbl_time.textContent = "00:00 / 00:00"
-
-    const right_side = create_element(bottom_shade, "div")
-    right_side.style.float = "right"
-
-    this.btn_cc = create_element(right_side, "button", "player_btn player_btn_cc")
-
-    const _cc = get_cookie("video_cc")
-    if (_cc == null) {
-      this.btn_cc.checked = true
-    } else {
-      this.btn_cc.checked = _cc
-    }
-
-    this.btn_cc.classList.toggle("player_btn_toggle_on", this.btn_cc.checked)
-    this.btn_cc.textContent = "CC"
-
-    this.btn_cc.addEventListener("click", this.on_toggle_cc)
-
-    this.select_quality = create_element(right_side, "select", "player_select_quality")
-    this.select_quality.style.display = "none"
-
-    this.select_quality.addEventListener("change", () => {
-      this.video.src = this.current_video.videos[this.select_quality.value]
-      set_cookie("video_quality", this.select_quality.value)
-    })
-
-    this.btn_fullscreen = create_element(right_side, "button", "player_btn")
-    this.btn_fullscreen.textContent = "⛶"
-
-    this.btn_fullscreen.addEventListener("click", () => {
-      if (document.fullscreenElement) {
-        document.exitFullscreen()
-      } else {
-        root.requestFullscreen()
-      }
-    })
-
-    this.on_toggle_playing = null
-    this.on_seek = () => void 0
-    this.create_seekbar(true)
+    this.create_controls()
+    this.create_seekbar(controls)
 
     this.video.addEventListener("progress", () => {
       this.seekbar.set_buffers((this.video.buffered), this.video.duration)
@@ -440,6 +361,14 @@ class GrassPlayer {
     })
   }
 
+  toggle_fullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      this.root.requestFullscreen()
+    }
+  }
+
   update_youtube_time() {
     if (this.current_video.yt) {
       const current = this.current_video.yt.getCurrentTime()
@@ -491,9 +420,85 @@ class GrassPlayer {
     text.textContent = "Click to unmute"
   }
 
-  create_seekbar(controls) {
+  create_controls() {
+    const bottom_shade = create_element(this.overlay, "div", "player_shade")
+
+    this.btn_play = create_element(bottom_shade, "button", "player_btn")
+    this.btn_play.textContent = "▶"
+    this.btn_play.disabled = true
+
+    this.btn_play.addEventListener("click", () => {
+      const playing = this.btn_play.textContent == "▶"
+      if (playing) {
+        this.btn_play.textContent = "❚❚"
+      } else {
+        this.btn_play.textContent = "▶"
+      }
+      if (this.on_toggle_playing != null) {
+        this.on_toggle_playing(playing)
+      } else {
+        this.set_playing(playing)
+      }
+    })
+
+    this.btn_next = create_element(bottom_shade, "button", "player_btn")
+    this.btn_next.style.fontSize = "1em"
+    this.btn_next.textContent = "▶❙"
+
+    this.on_next = void 0
+    this.btn_next.addEventListener("click", () => { this.on_next() })
+
+    const slider_volume = create_element(bottom_shade, "input", "player_volume")
+    slider_volume.type = "range"
+    slider_volume.min = 0
+    slider_volume.max = 100
+    slider_volume.step = 1
+    slider_volume.value = (get_cookie("video_volume") || 20)
+
+    slider_volume.addEventListener("input", () => {
+      set_cookie("video_volume", slider_volume.value)
+      this.settings.volume = (Math.pow(10, slider_volume.value / 100) - 1) / 9
+      if (this.current_video.yt) {
+        this.current_video.yt.setVolume(this.settings.volume * 100)
+      }
+      this.video.volume = this.settings.volume
+    })
+
+    this.lbl_time = create_element(bottom_shade, "span", "player_time")
+    this.lbl_time.textContent = "00:00 / 00:00"
+
+    const right_side = create_element(bottom_shade, "div")
+    right_side.style.float = "right"
+
+    this.btn_cc = create_element(right_side, "button", "player_btn player_btn_cc")
+
+    const _cc = get_cookie("video_cc")
+    if (_cc == null) {
+      this.btn_cc.checked = true
+    } else {
+      this.btn_cc.checked = _cc
+    }
+
+    this.btn_cc.classList.toggle("player_btn_toggle_on", this.btn_cc.checked)
+    this.btn_cc.textContent = "CC"
+
+    this.btn_cc.addEventListener("click", this.on_toggle_cc)
+
+    this.select_quality = create_element(right_side, "select", "player_select_quality")
+    this.select_quality.style.display = "none"
+
+    this.select_quality.addEventListener("change", () => {
+      this.video.src = this.current_video.videos[this.select_quality.value]
+      set_cookie("video_quality", this.select_quality.value)
+    })
+
+    const btn_fullscreen = create_element(right_side, "button", "player_btn")
+    btn_fullscreen.textContent = "⛶"
+    btn_fullscreen.addEventListener("click", () => { this.toggle_fullscreen() })
+  }
+
+  create_seekbar() {
     const seekbar = create_element(this.overlay, "div", "player_seekbar")
-    seekbar.classList.toggle("seekbar_controls", controls)
     this.seekbar = seekbar
 
     const mtime = create_element(seekbar, "div", "player_seekbar_time")
@@ -568,7 +573,9 @@ class GrassPlayer {
     const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1)
 
     if (this.current_video.yt) {
-      this.current_video.yt.seekTo(t * this.current_video.yt.getDuration())
+      if (this.current_video.getDuration) {
+        this.current_video.yt.seekTo(t * this.current_video.yt.getDuration())
+      }
     } else {
       this.video.currentTime = t * this.video.duration
     }
@@ -579,7 +586,9 @@ class GrassPlayer {
   }
 
   seekbar_on_mouse_down(e) {
+    if (e.buttons != 1) return
     e.preventDefault()
+
     if (Object.keys(this.current_video.videos).length == 0) return
     body.addEventListener("mousemove", this.seekbar._seek)
     window.addEventListener("mouseup", this.seekbar._mouseup)
