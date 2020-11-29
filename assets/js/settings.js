@@ -27,14 +27,17 @@ function make_settings() {
   slider.type = "range"
   slider.min = 80
   slider.max = 100
-  slider.value = get_cookie("drag_height").match(/\d+/)[0]
   row.appendChild(slider)
 
   let slider_n = document.createElement("input")
   slider_n.type = "number"
   slider_n.style.width = "5em"
-  slider_n.value = get_cookie("drag_height").match(/\d+/)[0]
   row.appendChild(slider_n)
+  const h = get_cookie("drag_height")
+  if (h) {
+    slider.value = h.match(/\d+/)[0]
+    slider_n.value = h.match(/\d+/)[0]
+  }
 
   slider.addEventListener("input", () => {
     slider_n.value = slider.value
