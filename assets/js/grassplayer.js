@@ -49,14 +49,31 @@ class GrassPlayer {
     this.video.id = "video"
     this.video.volume = this.settings.volume
 
+    this.video.addEventListener("loadedmetadata", () => {
+      this.stats.video.textContent = this.video.src
+    })
+
+    this.video.addEventListener("abort", () => {
+      this.stats.video.textContent = "not loaded"
+    })
+
     this.video2 = create_element(root, "div", "player_video")
     this.video2.id = "video2"
 
-    this.overlay = create_element(root, "div", "player_overlay player_overlay_hidden")
-    this.overlay.addEventListener("dblclick", () => { this.toggle_fullscreen() })
+    this.overlay = create_element(root, "div", "player_overlay")
+    this.overlay.tmp = create_element(this.overlay, "div", "player_overlay_tmp player_overlay_hidden")
+    this.overlay.addEventListener("dblclick", e => {
+      if (e.target != this.overlay) return
+      this.toggle_fullscreen()
+    })
 
+    this.create_ctxmenu()
+    this.create_info_panel()
     this.create_controls()
     this.create_seekbar(controls)
+
+    const non_norm = Math.round(100 * Math.log10(this.video.volume * 9 + 1))
+    this.stats.volume.textContent = `${Math.round((this.video.volume * 100))}% / ${non_norm}%`
 
     this.video.addEventListener("progress", () => {
       this.seekbar.set_buffers((this.video.buffered), this.video.duration)
@@ -83,11 +100,11 @@ class GrassPlayer {
     this.overlay_hide = null
 
     this.overlay.addEventListener("mousemove", () => {
-      this.overlay.classList.toggle("player_overlay_hidden", false)
+      this.overlay.tmp.classList.toggle("player_overlay_hidden", false)
       if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
       this.overlay_hide = setTimeout(() => {
         if (!this.seeking) {
-          this.overlay.classList.toggle("player_overlay_hidden", true)
+          this.overlay.tmp.classList.toggle("player_overlay_hidden", true)
         }
       }, 2000)
     })
@@ -95,7 +112,7 @@ class GrassPlayer {
     this.overlay.addEventListener("mouseleave", () => {
       if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
       if (!this.seeking) {
-        this.overlay.classList.toggle("player_overlay_hidden", true)
+        this.overlay.tmp.classList.toggle("player_overlay_hidden", true)
       }
     })
 
@@ -112,11 +129,13 @@ class GrassPlayer {
       const options = this.current_video.yt.getOptions()
 
       options.forEach(option => {
-        if (option == "captions" || option == "cc")
-          if (this.btn_cc.checked)
+        if (option == "captions" || option == "cc") {
+          if (this.btn_cc.checked) {
             this.current_video.yt.loadModule(option)
-          else
+          } else {
             this.current_video.yt.unloadModule(option)
+          }
+        }
       })
       if (this.octopusInstance) this.octopusInstance.freeTrack()
     } else {
@@ -154,6 +173,9 @@ class GrassPlayer {
       this.octopusInstance.freeTrack()
       this.octopusInstance.dispose()
       this.octopusInstance = null
+      this.stats.subs.textContent = "not loaded"
+
+      while (this.stats.styles.firstChild) this.stats.styles.removeChild(this.stats.styles.firstChild)
     }
 
     while (this.select_quality.firstChild) {
@@ -164,6 +186,7 @@ class GrassPlayer {
 
     if (Object.keys(videos).length == 0) {
       this.btn_play.disabled = true
+      this.stats.videos.textContent = "not loaded"
       return
     }
 
@@ -171,12 +194,15 @@ class GrassPlayer {
 
     switch (type) {
       case "yt":
+        this.stats.videos.textContent = "youtube"
+        this.stats.video.textContent = videos
         this.set_youtube(videos)
         break
       case "gdrive":
         this.set_gdrive(videos, subs)
         break
       default:
+        this.stats.videos.textContent = Object.values(videos).join(" ")
         if (this.settings.default_quality in videos) {
           this.video.src = videos[this.settings.default_quality]
         } else {
@@ -214,9 +240,14 @@ class GrassPlayer {
       this.octopusInstance.freeTrack()
       this.octopusInstance.dispose()
       this.octopusInstance = null
+      this.stats.subs.textContent = "not loaded"
+
+      while (this.stats.styles.firstChild) this.stats.styles.removeChild(this.stats.styles.firstChild)
     }
 
     if (subs == null || subs.length == 0) return
+
+    this.stats.subs.textContent = subs
 
     this.octopusInstance = new SubtitlesOctopus({
       video: this.video,
@@ -225,6 +256,18 @@ class GrassPlayer {
       workerUrl: "/includes/subtitles-octopus-worker.js",
       lossyRender: true
     })
+
+    this.octopusInstance.worker.addEventListener("message", e => {
+      if (e.data.target == "get-styles") {
+        while (this.stats.styles.firstChild) this.stats.styles.removeChild(this.stats.styles.firstChild)
+        for (const style of e.data.styles) {
+          const e = create_element(this.stats.styles, "div")
+          e.textContent = `${style.Name}: ${style.FontName}`
+        }
+      }
+    })
+
+    this.octopusInstance.getStyles()
   }
 
   play() {
@@ -420,8 +463,71 @@ class GrassPlayer {
     text.textContent = "Click to unmute"
   }
 
+  create_info_panel() {
+    const info_panel = create_element(null, "div", "player_info")
+    const btn_info = create_element(this.ctxmenu, "button")
+    btn_info.textContent = "stats"
+    btn_info.addEventListener("click", () => {
+      this.overlay.appendChild(info_panel)
+    })
+
+    this.stats = {}
+
+    let row = create_element(info_panel, "div")
+    const lbl_videos = create_element(row, "span")
+    lbl_videos.textContent = "videos:"
+    this.stats.videos = create_element(row, "span")
+    this.stats.videos.textContent = "not loaded"
+
+    row = create_element(info_panel, "div")
+    const lbl_video = create_element(row, "span")
+    lbl_video.textContent = "video:"
+    this.stats.video = create_element(row, "span")
+    this.stats.video.textContent = "not loaded"
+
+    row = create_element(info_panel, "div")
+    const lbl_subs = create_element(row, "span")
+    lbl_subs.textContent = "subtitles:"
+    this.stats.subs = create_element(row, "span")
+    this.stats.subs.textContent = "not loaded"
+
+    row = create_element(info_panel, "div")
+    const lbl_volume = create_element(row, "span")
+    lbl_volume.textContent = "volume:"
+    this.stats.volume = create_element(row, "span")
+
+    row = create_element(info_panel, "div")
+    const lbl_styles = create_element(row, "span")
+    lbl_styles.textContent = "loaded styles:"
+    this.stats.styles = create_element(row, "span")
+
+    const btn_close = create_element(info_panel, "button")
+    btn_close.textContent = "close"
+    btn_close.addEventListener("click", () => {
+      if (info_panel.parentElement) (info_panel.parentElement.removeChild(info_panel))
+    })
+  }
+
+  create_ctxmenu() {
+    this.ctxmenu = create_element(null, "div", "player_ctxmenu")
+    document.addEventListener("click", e => {
+      if (e.target == this.ctxmenu) return
+      if (this.ctxmenu.parentElement) {
+        this.ctxmenu.parentElement.removeChild(this.ctxmenu)
+      }
+    })
+  }
+
   create_controls() {
-    const bottom_shade = create_element(this.overlay, "div", "player_shade")
+    const bottom_shade = create_element(this.overlay.tmp, "div", "player_shade")
+    bottom_shade.addEventListener("contextmenu", e => {
+      e.preventDefault()
+      this.overlay.appendChild(this.ctxmenu)
+      const overlay_bbox = this.overlay.getBoundingClientRect()
+      const bbox = this.ctxmenu.getBoundingClientRect()
+      this.ctxmenu.style.left = `${e.clientX - overlay_bbox.x}px`
+      this.ctxmenu.style.top = `${e.clientY - overlay_bbox.y - bbox.height}px`
+    })
 
     this.btn_play = create_element(bottom_shade, "button", "player_btn")
     this.btn_play.textContent = "▶"
@@ -462,6 +568,8 @@ class GrassPlayer {
         this.current_video.yt.setVolume(this.settings.volume * 100)
       }
       this.video.volume = this.settings.volume
+
+      this.stats.volume.textContent = `${Math.round((this.video.volume * 100))}% / ${Math.round(slider_volume.value)}%`
     })
 
     this.lbl_time = create_element(bottom_shade, "span", "player_time")
@@ -498,7 +606,7 @@ class GrassPlayer {
   }
 
   create_seekbar() {
-    const seekbar = create_element(this.overlay, "div", "player_seekbar")
+    const seekbar = create_element(this.overlay.tmp, "div", "player_seekbar")
     this.seekbar = seekbar
 
     const mtime = create_element(seekbar, "div", "player_seekbar_time")
@@ -624,9 +732,9 @@ class GrassPlayer {
     this.seekbar.graphic.classList.toggle("seeking", false)
     this.seekbar.dial.classList.toggle("seeking", false)
     if (this.overlay_hide) clearTimeout(this.overlay_hide)
-    this.overlay.classList.toggle("player_overlay_hidden", false)
+    this.overlay.tmpclassList.toggle("player_overlay_hidden", false)
     this.overlay_hide = setTimeout(() => {
-      this.overlay.classList.toggle("player_overlay_hidden", true)
+      this.overlay.tmp.classList.toggle("player_overlay_hidden", true)
     }, 2000)
   }
 }
