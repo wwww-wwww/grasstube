@@ -60,8 +60,8 @@ class GrassPlayer {
     this.video2 = create_element(root, "div", "player_video")
     this.video2.id = "video2"
 
-    this.overlay = create_element(root, "div", "player_overlay")
-    this.overlay.tmp = create_element(this.overlay, "div", "player_overlay_tmp player_overlay_hidden")
+    this.overlay = create_element(root, "div", "player_overlay player_overlay_hidden")
+    this.overlay.tmp = create_element(this.overlay, "div", "player_overlay_tmp")
     this.overlay.addEventListener("dblclick", e => {
       if (e.target != this.overlay) return
       this.toggle_fullscreen()
@@ -100,11 +100,11 @@ class GrassPlayer {
     this.overlay_hide = null
 
     this.overlay.addEventListener("mousemove", () => {
-      this.overlay.tmp.classList.toggle("player_overlay_hidden", false)
+      this.overlay.classList.toggle("player_overlay_hidden", false)
       if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
       this.overlay_hide = setTimeout(() => {
         if (!this.seeking) {
-          this.overlay.tmp.classList.toggle("player_overlay_hidden", true)
+          this.overlay.classList.toggle("player_overlay_hidden", true)
         }
       }, 2000)
     })
@@ -112,7 +112,7 @@ class GrassPlayer {
     this.overlay.addEventListener("mouseleave", () => {
       if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
       if (!this.seeking) {
-        this.overlay.tmp.classList.toggle("player_overlay_hidden", true)
+        this.overlay.classList.toggle("player_overlay_hidden", true)
       }
     })
 
@@ -732,9 +732,9 @@ class GrassPlayer {
     this.seekbar.graphic.classList.toggle("seeking", false)
     this.seekbar.dial.classList.toggle("seeking", false)
     if (this.overlay_hide) clearTimeout(this.overlay_hide)
-    this.overlay.tmpclassList.toggle("player_overlay_hidden", false)
+    this.overlay.classList.toggle("player_overlay_hidden", false)
     this.overlay_hide = setTimeout(() => {
-      this.overlay.tmp.classList.toggle("player_overlay_hidden", true)
+      this.overlay.classList.toggle("player_overlay_hidden", true)
     }, 2000)
   }
 }

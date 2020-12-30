@@ -16,9 +16,12 @@
   transition: opacity 0.2s;
 }
 
-.player_overlay_hidden.player_overlay_tmp {
-  opacity: 0;
+.player_overlay_hidden {
   cursor: none;
+}
+
+.player_overlay_hidden>.player_overlay_tmp {
+  opacity: 0;
   pointer-events: none;
 }
 
