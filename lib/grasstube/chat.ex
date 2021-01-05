@@ -331,7 +331,7 @@ defmodule GrasstubeWeb.ChatAgent do
   end
 
   defp split_emote(msg) do
-    Regex.split(~r{(?<t>:[^:]+:)}, msg, include_captures: true, on: [:t], parts: 2)
+    Regex.split(~r{(:[^:]+:)}, msg, include_captures: true, parts: 2)
   end
 
   defp process_emote(input, emotes) do
