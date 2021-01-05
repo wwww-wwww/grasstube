@@ -33,10 +33,14 @@ function make_settings() {
   slider_n.type = "number"
   slider_n.style.width = "5em"
   row.appendChild(slider_n)
+
   const h = get_cookie("drag_height")
   if (h) {
-    slider.value = h.match(/\d+/)[0]
-    slider_n.value = h.match(/\d+/)[0]
+    const r = h.match(/\d+/)
+    if (r) {
+      slider.value = r[0]
+      slider_n.value = r[0]
+    }
   }
 
   slider.addEventListener("input", () => {
