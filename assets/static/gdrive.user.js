@@ -16,3 +16,8 @@ document.xmlHttpRequest = function(opts) {
         GM_xmlhttpRequest(opts);
     }
 };
+
+var e = document.getElementById("userscript_google_drive");
+if (e) {
+  e.parentElement.removeChild(e);
+}
