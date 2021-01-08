@@ -1,6 +1,6 @@
 function pad(n, width, z) {
-  z = z || '0'
-  n = n + ''
+  z = z || "0"
+  n = n + ""
   return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n
 }
 
@@ -23,7 +23,7 @@ function create_element(root, type, classes = "") {
 }
 
 function seconds_to_hms(seconds, hide_hours = false) {
-  seconds = Math.ceil(seconds)
+  seconds = Math.round(seconds)
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor(seconds / 60) % 60
   seconds = seconds % 60

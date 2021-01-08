@@ -16,10 +16,10 @@ function get_cookies() {
   return {}
 }
 
-function get_cookie(cookie_name) {
+function get_cookie(cookie_name, def=null) {
   const cookie = get_cookies()
   if (cookie_name in cookie) return cookie[cookie_name]
-  else return null
+  else return def
 }
 
 function set_cookie(cookie_name, value) {

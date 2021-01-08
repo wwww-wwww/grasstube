@@ -1,3 +1,5 @@
+import { seconds_to_hms } from "./util"
+
 class Video {
   constructor(player) {
     this.channel = null
@@ -58,25 +60,33 @@ class Video {
 
     this.channel.on("playing", data => {
       console.log("video: playing", data)
+      if (this.player.playing != data.playing)
+        this.player.show_osd(data.playing ? "Play" : "Pause")
       this.player.set_playing(data.playing)
+    })
+
+    this.channel.on("time", data => {
+      console.log("video: time", data)
+      if (Math.abs(data.t - this.player.current_time()) > 5 && (data.t <= this.player.duration()))
+        this.player.seek(data.t)
     })
 
     this.channel.on("seek", data => {
       console.log("video: seek", data)
-      if (Math.abs(data.t - this.player.current_time()) > 5 && (data.t <= this.player.duration()))
-        this.player.seek(data.t)
+      this.player.show_osd(`${seconds_to_hms(data.t, true)}`)
+      this.player.seek(data.t)
     })
 
     this.channel.on("controls", data => {
       console.log("video: controls", data)
 
-      this.player.allow_controls(true)
+      this.player.set_controls(true)
     })
 
     this.channel.on("revoke_controls", data => {
       console.log("video: revoke_controls", data)
 
-      this.player.allow_controls(false)
+      this.player.set_controls(false)
     })
 
     return this.channel.join()
