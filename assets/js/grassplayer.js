@@ -75,7 +75,7 @@ class GrassPlayer {
     this.playing = false
 
     this.on_toggle_playing = null
-    this.on_seek = (t) => { this.seek(t) }
+    this.on_seek = t => { this.seek(t) }
 
     this.octopusInstance = null
 
@@ -118,7 +118,7 @@ class GrassPlayer {
 
     this.overlay.osd = create_element(this.overlay, "div", "overlay_osd hidden")
     this.overlay.osd.hide = null
-    this.show_osd = (message) => {
+    this.show_osd = message => {
       this.overlay.osd.textContent = message
       this.overlay.osd.classList.toggle("hidden", false)
       if (this.overlay.osd.hide) { clearTimeout(this.overlay.osd.hide) }
@@ -725,7 +725,7 @@ class GrassPlayer {
       this.stats.volume.textContent = `${Math.round(this.video.volume * 100)}% / ${this.settings.video_volume}%`
     }
 
-    this.add_volume = (n) => {
+    this.add_volume = n => {
       this.volume_slider.value = Number(this.volume_slider.value) + n
       this.show_osd(`Volume: ${this.volume_slider.value}%`)
       this.update_volume()
