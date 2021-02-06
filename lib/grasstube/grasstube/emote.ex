@@ -6,8 +6,11 @@ defmodule Grasstube.Emote do
     field :emote, :string
     field :url, :string
 
-    belongs_to :user, Grasstube.User, references: :username, foreign_key: :user_username, type: :string
-    
+    belongs_to :user, Grasstube.User,
+      references: :username,
+      foreign_key: :user_username,
+      type: :string
+
     timestamps()
   end
 

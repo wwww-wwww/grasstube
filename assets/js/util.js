@@ -5,17 +5,19 @@ function pad(n, width, z) {
 }
 
 function enter(event, cb) {
-  event.preventDefault()
-  if (event.keyCode !== 13) return
-  cb()
+  if (event.key == "Enter") {
+    event.preventDefault()
+    cb()
+  }
 }
 
 function create_element(root, type, classes = "") {
   const e = document.createElement(type)
 
   if (classes.length > 0) {
-    for (const class_name of classes.split(" "))
+    for (const class_name of classes.split(" ")) {
       e.classList.toggle(class_name, true)
+    }
   }
 
   if (root) root.appendChild(e)

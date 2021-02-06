@@ -7,28 +7,33 @@ let r_width = undefined
 let r_height = undefined
 
 function init() {
-  const drag_height = get_cookie("drag_height")
-  if (drag_height) maincontent.style.height = drag_height
+  if (document.getElementById("dragbar_h")) {
+    if (document.getElementById("container_chat")) {
+      const drag_width = get_cookie("drag_width")
+      if (drag_width) container_chat.style.width = Math.round(drag_width * window.innerWidth) + "px"
+    }
+    dragbar_h.addEventListener("mousedown", e => {
+      e.preventDefault()
+      dragging_h = true
+      document.addEventListener("mousemove", drag_h)
+      dragbar_h.style.opacity = 1
+    })
+    change_layout()
+  }
 
-  const drag_width = get_cookie("drag_width")
-  if (drag_width) container_chat.style.width = Math.round(drag_width * window.innerWidth) + "px"
+  if (document.getElementById("dragbar_v")) {
+    const drag_height = get_cookie("drag_height")
+    if (drag_height) maincontent.style.height = drag_height
 
-  change_layout()
+    dragbar_v.addEventListener("mousedown", e => {
+      e.preventDefault()
+      dragging_v = true
+      document.addEventListener("mousemove", drag_v)
+      dragbar_v.style.opacity = 1
+    })
+  }
+
   hide_scrollbar()
-
-  dragbar_h.addEventListener("mousedown", e => {
-    e.preventDefault()
-    dragging_h = true
-    document.addEventListener("mousemove", drag_h)
-    dragbar_h.style.opacity = 1
-  })
-
-  dragbar_v.addEventListener("mousedown", e => {
-    e.preventDefault()
-    dragging_v = true
-    document.addEventListener("mousemove", drag_v)
-    dragbar_v.style.opacity = 1
-  })
 
   document.addEventListener("mouseup", e => {
     if (dragging_v) {
@@ -36,7 +41,7 @@ function init() {
       maincontent.style.height = r_height + "px"
     }
 
-    if (dragging_h) {
+    if (document.getElementById("container_chat") && dragging_h) {
       const w = (maincontent.style.flexDirection == "row-reverse") ? (1 - r_width) : r_width
       set_cookie("drag_width", w)
       container_chat.style.width = Math.round(w * window.innerWidth) + "px"
@@ -48,12 +53,20 @@ function init() {
 
       dragging_h = false
       dragging_v = false
-      dragbar_h.style.opacity = 0
-      dragbar_v.style.opacity = 0
+
+      if (document.getElementById("dragbar_h")) {
+        dragbar_h.style.opacity = 0
+      }
+
+      if (document.getElementById("dragbar_v")) {
+        dragbar_v.style.opacity = 0
+      }
 
       window.dispatchEvent(new Event("resize"))
     }
   })
+
+  window.dispatchEvent(new Event("resize"))
 }
 
 function hide_scrollbar() {
@@ -64,15 +77,19 @@ function hide_scrollbar() {
     maincontent.style.width = "calc(100% + " + scrollbar + "px)"
     bottom.style.width = "calc(100% + " + scrollbar + "px)"
 
-    if (document.getElementById("dragbar_h") == null) return
+    if (document.getElementById("dragbar_h") && document.getElementById("container_chat")) {
+      if (maincontent.style.flexDirection == "row-reverse") {
+        dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().left + 1}px, 0)`
+      } else {
+        dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().right - 2}px, 0)`
+      }
+    }
 
-    if (maincontent.style.flexDirection == "row-reverse")
-      dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().left + 1}px, 0)`
-    else
-      dragbar_h.style.transform = `translate(${container_chat.getBoundingClientRect().right - 2}px, 0)`
-
-    dragbar_v.style.transform = `translate(0, ${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px)`
+    if (document.getElementById("dragbar_v")) {
+      dragbar_v.style.transform = `translate(0, ${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px)`
+    }
   })
+
   window.dispatchEvent(new Event("resize"))
 }
 
@@ -83,8 +100,6 @@ function change_layout() {
   } else if (layout == 1) {
     maincontent.style.flexDirection = "row-reverse"
   }
-
-  window.dispatchEvent(new Event("resize"))
 }
 
 function drag_h(e) {

@@ -16,7 +16,7 @@ defmodule GrasstubeWeb.PollsAgent do
 
   def add_poll(pid, title, choices) do
     Agent.update(pid, fn val ->
-      new_polls = 
+      new_polls =
         Map.put(val.polls, Integer.to_string(val.current_id), %{
           id: Integer.to_string(val.current_id),
           title: title,
@@ -24,6 +24,7 @@ defmodule GrasstubeWeb.PollsAgent do
           votes: %{},
           votes_guest: %{}
         })
+
       %{val | polls: new_polls, current_id: val.current_id + 1}
     end)
   end
@@ -39,34 +40,51 @@ defmodule GrasstubeWeb.PollsAgent do
     Agent.get(pid, fn val ->
       val.polls
       |> Enum.map(fn {id, poll} ->
-          choices = poll.choices |> Enum.map(fn choice ->
-            users = poll.votes |> Enum.filter(fn {_, vote} -> vote == choice end) |> Map.new |> Map.keys
-            guests = poll.votes_guest |> Enum.filter(fn {_, vote} -> vote == choice end) |> Map.new |> Map.keys
+        choices =
+          poll.choices
+          |> Enum.map(fn choice ->
+            users =
+              poll.votes
+              |> Enum.filter(fn {_, vote} -> vote == choice end)
+              |> Map.new()
+              |> Map.keys()
+
+            guests =
+              poll.votes_guest
+              |> Enum.filter(fn {_, vote} -> vote == choice end)
+              |> Map.new()
+              |> Map.keys()
+
             %{name: choice, users: users, guests: guests}
           end)
-          
-          {id, %{title: poll.title, choices: choices}}
-        end)
-      |> Map.new
+
+        {id, %{title: poll.title, choices: choices}}
+      end)
+      |> Map.new()
     end)
   end
 
   def set_vote(pid, poll_id, user, guest, choice) do
     Agent.update(pid, fn val ->
-      new_polls = if guest do
-        put_in(val.polls, [poll_id, :votes_guest, user], choice)
-      else
-        put_in(val.polls, [poll_id, :votes, user], choice)
-      end
+      new_polls =
+        if guest do
+          put_in(val.polls, [poll_id, :votes_guest, user], choice)
+        else
+          put_in(val.polls, [poll_id, :votes, user], choice)
+        end
+
       %{val | polls: new_polls}
     end)
   end
 
   def remove_vote(pid, guest_id) do
     Agent.update(pid, fn val ->
-      new_polls = val.polls |> Map.new(fn {k, poll} ->
-        {k, %{poll | votes_guest: Map.drop(poll.votes_guest, [guest_id])}}
-      end)
+      new_polls =
+        val.polls
+        |> Map.new(fn {k, poll} ->
+          {k, %{poll | votes_guest: Map.drop(poll.votes_guest, [guest_id])}}
+        end)
+
       %{val | polls: new_polls}
     end)
   end

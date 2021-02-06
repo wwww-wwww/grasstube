@@ -1,6 +1,6 @@
 defmodule Grasstube.RoomSupervisor do
   use Supervisor, restart: :transient
-  
+
   def start_link(opts) do
     room_name = opts |> Keyword.get(:room_name)
     admin = opts |> Keyword.get(:admin)
@@ -20,7 +20,7 @@ defmodule Grasstube.RoomSupervisor do
 
     Supervisor.init(children, strategy: :one_for_one)
   end
-  
+
   def via_tuple(room_name, admin) do
     Grasstube.ProcessRegistry.via_tuple({room_name, :supervisor}, admin)
   end
@@ -55,22 +55,24 @@ defmodule GrasstubeWeb.UserSocket do
     case Guardian.Phoenix.Socket.authenticate(socket, Grasstube.Guardian, token) do
       {:ok, authed_socket} ->
         socket_id = new_id()
+
         {:ok,
-          authed_socket
-          |> assign(:socket_id, socket_id)
-          |> assign(:user_id, Guardian.Phoenix.Socket.current_resource(authed_socket).username)
-        }
-      _ -> :error
+         authed_socket
+         |> assign(:socket_id, socket_id)
+         |> assign(:user_id, Guardian.Phoenix.Socket.current_resource(authed_socket).username)}
+
+      _ ->
+        :error
     end
   end
 
   def connect(_, socket, _) do
     socket_id = new_id()
+
     {:ok,
-      socket
-      |> assign(:socket_id, socket_id)
-      |> assign(:user_id, "$" <> socket_id)
-    }
+     socket
+     |> assign(:socket_id, socket_id)
+     |> assign(:user_id, "$" <> socket_id)}
   end
 
   def id(socket) do

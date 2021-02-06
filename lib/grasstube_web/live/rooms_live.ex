@@ -1,6 +1,6 @@
 defmodule GrasstubeWeb.RoomsLive do
   use Phoenix.LiveView
-  
+
   @topic "rooms_updates"
 
   def render(assigns) do
@@ -9,12 +9,20 @@ defmodule GrasstubeWeb.RoomsLive do
 
   def get_rooms() do
     room_names = Grasstube.ProcessRegistry.list_rooms()
-    room_names |> Enum.reduce([], fn name, acc ->
+
+    room_names
+    |> Enum.reduce([], fn name, acc ->
       chat = Grasstube.ProcessRegistry.lookup(name, :chat)
-      [{name, Grasstube.Presence.list("chat:#{name}") |> Enum.count(), GrasstubeWeb.ChatAgent.password?(chat)} | acc]
-    end) |> Enum.sort_by(&{-elem(&1, 1), elem(&1, 0)})
+
+      [
+        {name, Grasstube.Presence.list("chat:#{name}") |> Enum.count(),
+         GrasstubeWeb.ChatAgent.password?(chat)}
+        | acc
+      ]
+    end)
+    |> Enum.sort_by(&{-elem(&1, 1), elem(&1, 0)})
   end
-  
+
   def mount(_, _, socket) do
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(@topic)
     {:ok, assign(socket, rooms: get_rooms())}

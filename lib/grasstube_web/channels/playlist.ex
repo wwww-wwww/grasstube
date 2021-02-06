@@ -5,20 +5,22 @@ defmodule GrasstubeWeb.PlaylistChannel do
   alias GrasstubeWeb.PlaylistAgent
   alias GrasstubeWeb.ChatAgent
   alias GrasstubeWeb.VideoAgent
-  
+
   def join("playlist:" <> room_name, %{"password" => password}, socket) do
     case Grasstube.ProcessRegistry.lookup(room_name, :playlist) do
       :not_found ->
         {:error, "no room"}
-      
+
       _ ->
         case ChatAgent.auth(socket, room_name, password) do
           {:ok, socket} ->
             if not String.starts_with?(socket.assigns.user_id, "$") do
               :ok = GrasstubeWeb.Endpoint.subscribe("user:#{room_name}:#{socket.assigns.user_id}")
             end
+
             send(self(), {:after_join, nil})
             {:ok, socket}
+
           resp ->
             resp
         end
@@ -47,31 +49,41 @@ defmodule GrasstubeWeb.PlaylistChannel do
     {:noreply, socket}
   end
 
-  def handle_info(%Phoenix.Socket.Broadcast{topic: "user:" <> _, event: ev, payload: payload}, socket) do
+  def handle_info(
+        %Phoenix.Socket.Broadcast{topic: "user:" <> _, event: ev, payload: payload},
+        socket
+      ) do
     push(socket, ev, payload)
     {:noreply, socket}
   end
-  
+
   def handle_info({:DOWN, _, :process, _pid, _reason}, socket) do
     {:noreply, socket}
   end
-  
+
   def handle_info({_ref, _}, socket) do
     {:noreply, socket}
   end
-  
-  def handle_in("q_add", %{"title" => title, "url" => user_url, "sub" => sub, "alts" => alts}, socket) do
+
+  def handle_in(
+        "q_add",
+        %{"title" => title, "url" => user_url, "sub" => sub, "alts" => alts},
+        socket
+      ) do
     "playlist:" <> room_name = socket.topic
 
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
     if ChatAgent.controls?(chat, socket) do
-      alts = case Jason.decode(alts) do
-        {:ok, alts} ->
-          alts
-        {:error, _} ->
-          %{}
-      end
+      alts =
+        case Jason.decode(alts) do
+          {:ok, alts} ->
+            alts
+
+          {:error, _} ->
+            %{}
+        end
+
       Grasstube.ProcessRegistry.lookup(room_name, :playlist)
       |> PlaylistAgent.add_queue(title, user_url, sub, alts)
     end
@@ -94,7 +106,7 @@ defmodule GrasstubeWeb.PlaylistChannel do
 
   def handle_in("q_order", %{"order" => order}, socket) do
     "playlist:" <> room_name = socket.topic
-    
+
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
     if ChatAgent.controls?(chat, socket) do
@@ -120,7 +132,7 @@ defmodule GrasstubeWeb.PlaylistChannel do
         vid ->
           Grasstube.ProcessRegistry.lookup(room_name, :video)
           |> VideoAgent.set_current_video(vid)
-          
+
           Endpoint.broadcast("playlist:" <> room_name, "current", %{id: vid.id})
 
           Endpoint.broadcast("video:" <> room_name, "setvid", %{
@@ -138,5 +150,4 @@ defmodule GrasstubeWeb.PlaylistChannel do
 
     {:noreply, socket}
   end
-
 end

@@ -4,17 +4,17 @@ defmodule GrasstubeWeb.Endpoint do
   socket "/tube", GrasstubeWeb.UserSocket,
     websocket: true,
     longpoll: false
-  
+
   @session_options [
     store: :cookie,
     key: "_grasstube_key",
     signing_salt: "gvBU6+ko",
-    max_age: 604800
+    max_age: 604_800
   ]
 
   socket "/live",
-    Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options]]
+         Phoenix.LiveView.Socket,
+         websocket: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #

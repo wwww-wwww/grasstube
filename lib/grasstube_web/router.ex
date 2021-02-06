@@ -27,16 +27,17 @@ defmodule GrasstubeWeb.Router do
 
   scope "/", GrasstubeWeb do
     pipe_through [:browser, :auth]
-    
+
     get "/", PageController, :index
     get "/gdrive", PageController, :gdrive
-    
+
     scope "/r" do
       get "/:room/controls", PageController, :controls
       get "/:room/chat", PageController, :chat
       get "/:room/no_video", PageController, :no_video
       get "/:room/video", PageController, :video
       get "/:room", PageController, :room
+      get "/:room/2", PageController, :room2
     end
 
     scope "/" do

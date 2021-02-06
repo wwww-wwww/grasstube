@@ -27,7 +27,9 @@ defmodule Grasstube.User do
   defp validate_changeset(struct) do
     struct
     |> validate_length(:username, min: 1, max: 32)
-    |> validate_format(:username, ~r/^[A-z0-9_-]+$/, [message: "Must consist only of letters, numbers, and - or _"])
+    |> validate_format(:username, ~r/^[A-z0-9_-]+$/,
+      message: "Must consist only of letters, numbers, and - or _"
+    )
     |> unique_constraint(:username, name: :users_pkey, message: "already exists")
     |> validate_length(:password, min: 6)
   end
@@ -39,6 +41,7 @@ defmodule Grasstube.User do
         |> put_change(:nickname, username)
         |> put_change(:name, username)
         |> put_change(:username, username |> String.downcase())
+
       _ ->
         changeset
     end
@@ -48,6 +51,7 @@ defmodule Grasstube.User do
     case changeset do
       %Ecto.Changeset{valid?: true, changes: %{password: password}} ->
         put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
+
       _ ->
         changeset
     end

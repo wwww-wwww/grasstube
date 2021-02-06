@@ -31,35 +31,44 @@ class GrassPlayer {
     }
 
     this.root.setAttribute("tabindex", "0")
+
     this.root.addEventListener("keydown", e => {
-      switch (e.keyCode) {
-        case 37: // left
+      if (e.target.tagName == "INPUT") return
+      switch (e.key) {
+        case "ArrowLeft":
           if (!this.settings.video_seek_arrow) return
           if (!this.has_controls) return
           this.on_seek(Math.max(this.get_time() - 5, 0))
           break
-        case 39: // right
+        case "ArrowRight":
           if (!this.settings.video_seek_arrow) return
           if (!this.has_controls) return
           this.on_seek(Math.min(this.get_time() + 5, this.duration()))
           break
-        case 38: // up
+        case "ArrowUp":
           if (!this.settings.video_volume_arrow) return
           this.add_volume(5)
           break
-        case 40: // down
+        case "ArrowDown":
           if (!this.settings.video_volume_arrow) return
           this.add_volume(-5)
           break
-        case 32: // space
+        case " ":
           if (!this.settings.video_play_space) return
+          if (e.target == this.btn_play) return
           if (!this.btn_play.disabled) this.btn_play.click()
+          break
+        case "f":
+          if (!this.settings.video_fullscreen_f) return
+          this.toggle_fullscreen()
           break
         default:
           return
       }
       e.preventDefault()
+      return false
     })
+
     this.root.addEventListener("wheel", e => {
       if (!this.settings.video_volume_scroll) return
       if (e.target != this.overlay && e.target != this.volume_slider) return
@@ -135,7 +144,7 @@ class GrassPlayer {
     this.create_controls()
     this.create_seekbar(controls)
 
-    this.stats.volume.textContent = `${this.get_volume()}% / ${this.settings.video_volume}%`
+    this.stats.volume.textContent = `${Math.round(this.get_volume() * 100)}% / ${this.settings.video_volume}%`
 
     this.video.addEventListener("progress", () => {
       this.seekbar.set_buffers((this.video.buffered), this.video.duration)
@@ -189,10 +198,11 @@ class GrassPlayer {
     this.settings.video_quality = get_cookie("video_quality", "big")
     this.settings.video_volume = get_cookie("video_volume", 20)
     this.settings.cc = get_cookie("video_cc", true)
-    this.settings.video_volume_scroll = get_cookie("video_volume_scroll", true)
+    this.settings.video_volume_scroll = get_cookie("video_volume_scroll", false)
     this.settings.video_volume_arrow = get_cookie("video_volume_arrow", true)
     this.settings.video_play_space = get_cookie("video_play_space", true)
     this.settings.video_seek_arrow = get_cookie("video_seek_arrow", true)
+    this.settings.video_fullscreen_f = get_cookie("video_fullscreen_f", true)
   }
 
   get_volume() {
@@ -674,6 +684,18 @@ class GrassPlayer {
     lbl_seek_arrow.textContent = "Seek using arrow keys"
     lbl_seek_arrow.htmlFor = "grassplayer_input_seek_arrow"
 
+    row = create_element(settings, "div")
+    const input_fullscreen_f = create_element(row, "input")
+    input_fullscreen_f.id = "grassplayer_input_fullscreen_f"
+    input_fullscreen_f.type = "checkbox"
+    input_fullscreen_f.checked = this.settings.video_fullscreen_f
+    input_fullscreen_f.addEventListener("change", () => {
+      this.settings.set("video_fullscreen_f", input_fullscreen_f.checked)
+    })
+    const lbl_fullscreen_f = create_element(row, "label")
+    lbl_fullscreen_f.textContent = "Toggle fullscreen by pressing F"
+    lbl_fullscreen_f.htmlFor = "grassplayer_input_fullscreen_f"
+
     const btn_close = create_element(settings, "button")
     btn_close.textContent = "close"
     btn_close.addEventListener("click", () => {
@@ -685,6 +707,11 @@ class GrassPlayer {
     this.bottom_shade = create_element(this.overlay.tmp, "div", "shade")
 
     this.btn_play = create_element(this.bottom_shade, "button")
+    this.btn_play.addEventListener("keydown", e => {
+      if (e.key == "Enter") {
+        e.preventDefault()
+      }
+    })
     this.btn_play.textContent = "▶"
     this.btn_play.disabled = true
 
@@ -859,12 +886,6 @@ class GrassPlayer {
     if (Object.keys(this.current_video.videos).length == 0) return
     body.addEventListener("mousemove", this.seekbar._seek)
     window.addEventListener("mouseup", this.seekbar._mouseup)
-
-    if (this.current_video.yt) {
-      this.playing = this.current_video.yt.getPlayerState() != 1
-    } else {
-      this.playing = !this.video.paused
-    }
 
     this.seeking = true
 

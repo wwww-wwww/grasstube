@@ -52,15 +52,19 @@ function make_settings() {
     set_height(`${slider_n.value}%`)
   })
 
-  row = document.createElement("div")
-  row.style.display = "block"
-  row.style.marginBottom = "0.5em"
-  modal_body.appendChild(row)
+  let btn = null
 
-  let btn = document.createElement("button")
-  btn.textContent = "fit width (16:9)"
-  btn.addEventListener("click", () => { fit_width() })
-  row.appendChild(btn)
+  if (document.getElementById("container_chat")) {
+    row = document.createElement("div")
+    row.style.display = "block"
+    row.style.marginBottom = "0.5em"
+    modal_body.appendChild(row)
+
+    btn = document.createElement("button")
+    btn.textContent = "fit width (16:9)"
+    btn.addEventListener("click", () => { fit_width() })
+    row.appendChild(btn)
+  }
 
   row = document.createElement("div")
   row.style.display = "block"

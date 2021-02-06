@@ -53,6 +53,7 @@ main {
 }
 
 button, input, select, textarea, .button {
+    border-radius: 1em;
     text-decoration: none;
     font-size: 1em;
     padding: 0.25em 0.5em;
@@ -60,7 +61,7 @@ button, input, select, textarea, .button {
     background: none;
     color: rgba(255, 255, 255, 0.7);
     vertical-align: middle;
-    line-height: 1.25em;
+    /*line-height: 1.25em;*/
 }
 
 textarea {
