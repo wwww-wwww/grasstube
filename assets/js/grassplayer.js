@@ -33,8 +33,9 @@ class GrassPlayer {
     this.root.setAttribute("tabindex", "0")
 
     this.root.addEventListener("keydown", e => {
-      if (e.target.tagName == "INPUT") return
       switch (e.key) {
+        case "Enter":
+          break
         case "ArrowLeft":
           if (!this.settings.video_seek_arrow) return
           if (!this.has_controls) return
@@ -55,7 +56,6 @@ class GrassPlayer {
           break
         case " ":
           if (!this.settings.video_play_space) return
-          if (e.target == this.btn_play) return
           if (!this.btn_play.disabled) this.btn_play.click()
           break
         case "f":
@@ -66,7 +66,6 @@ class GrassPlayer {
           return
       }
       e.preventDefault()
-      return false
     })
 
     this.root.addEventListener("wheel", e => {
@@ -276,7 +275,9 @@ class GrassPlayer {
       this.octopusInstance = null
       this.stats.subs.textContent = "not loaded"
 
-      while (this.stats.styles.firstChild) this.stats.styles.removeChild(this.stats.styles.firstChild)
+      while (this.stats.styles.firstChild) {
+        this.stats.styles.removeChild(this.stats.styles.firstChild)
+      }
     }
 
     while (this.select_quality.firstChild) {
@@ -343,7 +344,9 @@ class GrassPlayer {
       this.octopusInstance = null
       this.stats.subs.textContent = "not loaded"
 
-      while (this.stats.styles.firstChild) this.stats.styles.removeChild(this.stats.styles.firstChild)
+      while (this.stats.styles.firstChild) {
+        this.stats.styles.removeChild(this.stats.styles.firstChild)
+      }
     }
 
     if (subs == null || subs.length == 0) return
@@ -360,7 +363,9 @@ class GrassPlayer {
 
     this.octopusInstance.worker.addEventListener("message", e => {
       if (e.data.target == "get-styles") {
-        while (this.stats.styles.firstChild) this.stats.styles.removeChild(this.stats.styles.firstChild)
+        while (this.stats.styles.firstChild) {
+          this.stats.styles.removeChild(this.stats.styles.firstChild)
+        }
         for (const style of e.data.styles) {
           const e = create_element(this.stats.styles, "div")
           e.textContent = `${style.Name}: ${style.FontName}`
@@ -452,11 +457,13 @@ class GrassPlayer {
           const options = e.target.getOptions()
 
           options.forEach(option => {
-            if (option == "captions" || option == "cc")
-              if (this.btn_cc.checked)
+            if (option == "captions" || option == "cc") {
+              if (this.btn_cc.checked) {
                 e.target.loadModule(option)
-              else
+              } else {
                 e.target.unloadModule(option)
+              }
+            }
           })
 
           this.btn_cc.classList.toggle("hidden", !(options.includes("captions") || options.includes("cc")))
@@ -624,7 +631,9 @@ class GrassPlayer {
     const btn_close = create_element(stats_panel, "button")
     btn_close.textContent = "close"
     btn_close.addEventListener("click", () => {
-      if (stats_panel.parentElement) (stats_panel.parentElement.removeChild(stats_panel))
+      if (stats_panel.parentElement) {
+        stats_panel.parentElement.removeChild(stats_panel)
+      }
     })
   }
 
@@ -707,11 +716,7 @@ class GrassPlayer {
     this.bottom_shade = create_element(this.overlay.tmp, "div", "shade")
 
     this.btn_play = create_element(this.bottom_shade, "button")
-    this.btn_play.addEventListener("keydown", e => {
-      if (e.key == "Enter") {
-        e.preventDefault()
-      }
-    })
+    disable_space(this.btn_play)
     this.btn_play.textContent = "▶"
     this.btn_play.disabled = true
 
@@ -730,6 +735,7 @@ class GrassPlayer {
     })
 
     this.btn_next = create_element(this.bottom_shade, "button")
+    disable_space(this.btn_next)
     this.btn_next.style.fontSize = "1em"
     this.btn_next.textContent = "▶❙"
 
@@ -767,6 +773,7 @@ class GrassPlayer {
     right_side.style.float = "right"
 
     this.btn_cc = create_element(right_side, "button", "cc")
+    disable_space(this.btn_cc)
 
     const _cc = this.settings.cc
     if (_cc == null) {
@@ -780,6 +787,7 @@ class GrassPlayer {
     this.btn_cc.addEventListener("click", () => { this.on_toggle_cc() })
 
     this.select_quality = create_element(right_side, "select", "player_select_quality")
+    disable_space(this.select_quality)
     this.select_quality.style.display = "none"
 
     this.select_quality.addEventListener("change", () => {
@@ -788,6 +796,7 @@ class GrassPlayer {
     })
 
     const btn_fullscreen = create_element(right_side, "button")
+    disable_space(btn_fullscreen)
     btn_fullscreen.textContent = "⛶"
     btn_fullscreen.addEventListener("click", () => { this.toggle_fullscreen() })
   }
@@ -917,6 +926,14 @@ class GrassPlayer {
       this.overlay.classList.toggle("overlay_hidden", true)
     }, 2000)
   }
+}
+
+function disable_space(el) {
+  el.addEventListener("keyup", e => {
+    if (e.key == " ") {
+      e.preventDefault()
+    }
+  })
 }
 
 function httpRequest(opts) {
