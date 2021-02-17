@@ -33,6 +33,7 @@ class GrassPlayer {
     this.root.setAttribute("tabindex", "0")
 
     this.root.addEventListener("keydown", e => {
+      if (e.target.tagName == "INPUT" && !(e in this)) return
       switch (e.key) {
         case "Enter":
           break
@@ -795,10 +796,10 @@ class GrassPlayer {
       this.settings.set("video_quality", this.select_quality.value)
     })
 
-    const btn_fullscreen = create_element(right_side, "button")
-    disable_space(btn_fullscreen)
-    btn_fullscreen.textContent = "⛶"
-    btn_fullscreen.addEventListener("click", () => { this.toggle_fullscreen() })
+    this.btn_fullscreen = create_element(right_side, "button")
+    disable_space(this.btn_fullscreen)
+    this.btn_fullscreen.textContent = "⛶"
+    this.btn_fullscreen.addEventListener("click", () => { this.toggle_fullscreen() })
   }
 
   create_seekbar() {
