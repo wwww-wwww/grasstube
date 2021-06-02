@@ -94,8 +94,7 @@ class GrassPlayer {
       clearTimeout(window.resize_finished)
       window.resize_finished = setTimeout(() => {
         if (this.octopusInstance) {
-          this.octopusInstance.setCurrentTime(0)
-          this.octopusInstance.setCurrentTime(this.get_time())
+          this.octopusInstance.resetRenderAheadCache()
         }
       }, 200)
     })
@@ -260,7 +259,7 @@ class GrassPlayer {
     }
 
     if (this.octopusInstance) {
-      this.octopusInstance.setCurrentTime(this.get_time())
+      this.octopusInstance.resetRenderAheadCache()
     }
   }
 
@@ -374,7 +373,8 @@ class GrassPlayer {
       subUrl: subs,
       availableFonts: this.availableFonts,
       workerUrl: "/includes/subtitles-octopus-worker.js",
-      lossyRender: true
+      renderMode: "fast",
+      renderAhead: 1
     })
 
     this.octopusInstance.worker.addEventListener("message", e => {

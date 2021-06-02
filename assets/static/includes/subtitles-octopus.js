@@ -1,20 +1,9 @@
 var SubtitlesOctopus = function (options) {
-    var supportsWebAssembly = false;
-    try {
-        if (typeof WebAssembly === "object"
-            && typeof WebAssembly.instantiate === "function") {
-            const module = new WebAssembly.Module(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
-            if (module instanceof WebAssembly.Module)
-                supportsWebAssembly = (new WebAssembly.Instance(module) instanceof WebAssembly.Instance);
-        }
-    } catch (e) {
-    }
-    console.log("WebAssembly support detected: " + (supportsWebAssembly ? "yes" : "no"));
-
     var self = this;
     self.canvas = options.canvas; // HTML canvas element (optional if video specified)
     self.renderMode = options.renderMode || (options.lossyRender ? 'fast' : (options.blendRender ? 'blend' : 'normal'));
-    if(self.renderMode == "fast" && typeof createImageBitmap === 'undefined'){
+    if(self.renderMode === "fast" && typeof createImageBitmap === 'undefined'){
+        //Fallback for browsers not supporting fast renderMode (Safari)
         self.renderMode = "normal";
     }
 
@@ -32,14 +21,12 @@ var SubtitlesOctopus = function (options) {
     self.isOurCanvas = false; // (internal) we created canvas and manage it
     self.video = options.video; // HTML video element (optional if canvas specified)
     self.canvasParent = null; // (internal) HTML canvas parent element
+    self.fallbackFont = options.fallbackFont || null; // Override fallback font, for example, with a CJK one. Default fallback font is Liberation Sans
+    self.lazyFontLoading = options.lazyFontLoading || false; // Load fonts in a lazy way. Requires Access-Control-Expose-Headers for Accept-Ranges, Content-Length, and Content-Encoding. If Content-Encoding is compressed, file will be fully fetched instead of just a HEAD request.
     self.fonts = options.fonts || []; // Array with links to fonts used in sub (optional)
     self.availableFonts = options.availableFonts || []; // Object with all available fonts (optional). Key is font name in lower case, value is link: {"arial": "/font1.ttf"}
     self.onReadyEvent = options.onReady; // Function called when SubtitlesOctopus is ready (optional)
-    if (supportsWebAssembly) {
-        self.workerUrl = options.workerUrl || 'subtitles-octopus-worker.js'; // Link to WebAssembly worker
-    } else {
-        self.workerUrl = options.legacyWorkerUrl || 'subtitles-octopus-worker-legacy.js'; // Link to legacy worker
-    }
+    self.workerUrl = options.workerUrl || 'subtitles-octopus-worker.js'; // Link to WebAssembly worker
     self.subUrl = options.subUrl; // Link to sub file (optional if subContent specified)
     self.subContent = options.subContent || null; // Sub content (optional if subUrl specified)
     self.onErrorEvent = options.onError; // Function called in case of critical error meaning sub wouldn't be shown and you should use alternative method (for instance it occurs if browser doesn't support web workers).
@@ -129,6 +116,8 @@ var SubtitlesOctopus = function (options) {
             renderMode: self.renderMode,
             subUrl: self.subUrl,
             subContent: self.subContent,
+            fallbackFont: self.fallbackFont,
+            lazyFontLoading: self.lazyFontLoading,
             fonts: self.fonts,
             availableFonts: self.availableFonts,
             debug: self.debug,
@@ -236,8 +225,8 @@ var SubtitlesOctopus = function (options) {
                 self.resize();
             }
             else {
-                self.video.addEventListener("loadedmetadata", function (e) {
-                    e.target.removeEventListener(e.type, arguments.callee);
+                self.video.addEventListener("loadedmetadata", function listener(e) {
+                    e.target.removeEventListener(e.type, listener);
                     self.resize();
                 }, false);
             }
@@ -691,6 +680,9 @@ var SubtitlesOctopus = function (options) {
                 console.log(data.styles);
                 break;
             }
+            case 'ready': {
+                break;
+            }
             default:
                 throw 'what? ' + data.target;
         }
@@ -924,7 +916,9 @@ if (typeof SubtitlesOctopusOnLoad == 'function') {
 }
 
 if (typeof exports !== 'undefined') {
-    if (typeof module !== 'undefined' && module.exports) {
-        exports = module.exports = SubtitlesOctopus
-    }
+    exports = SubtitlesOctopus;
+}
+
+if (typeof module !== 'undefined') {
+    module.exports = SubtitlesOctopus
 }
