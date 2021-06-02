@@ -90,6 +90,16 @@ class GrassPlayer {
 
     this.load_settings()
 
+    window.addEventListener("resize", () => {
+      clearTimeout(window.resize_finished)
+      window.resize_finished = setTimeout(() => {
+        if (this.octopusInstance) {
+          this.octopusInstance.setCurrentTime(0)
+          this.octopusInstance.setCurrentTime(this.get_time())
+        }
+      }, 200)
+    })
+
     this.video = create_element(root, "video")
     this.video.id = "video"
     this.video.volume = this.get_volume()
@@ -161,11 +171,11 @@ class GrassPlayer {
     })
 
     this.video.addEventListener("play", () => {
-      this.btn_play.textContent = "❚❚"
+      this.btn_play.textContent = "pause"
     })
 
     this.video.addEventListener("pause", () => {
-      this.btn_play.textContent = "▶"
+      this.btn_play.textContent = "play_arrow"
     })
 
     this.overlay_hide = null
@@ -223,7 +233,7 @@ class GrassPlayer {
 
   on_toggle_cc() {
     this.btn_cc.checked = !this.btn_cc.checked
-    this.btn_cc.classList.toggle("btn_toggle_on", this.btn_cc.checked)
+    this.btn_cc.textContent = this.btn_cc.checked ? "subtitles" : "subtitles_off"
     this.settings.set("video_cc", this.btn_cc.checked)
 
     if (this.current_video.yt) {
@@ -248,13 +258,15 @@ class GrassPlayer {
         if (this.octopusInstance) this.octopusInstance.freeTrack()
       }
     }
+
+    if (this.octopusInstance) {
+      this.octopusInstance.setCurrentTime(this.get_time())
+    }
   }
 
   set_video(type, videos, subs = "") {
     this.current_video.videos = videos
     this.current_video.subs = subs
-
-    this.btn_cc.classList.toggle("hidden", subs.length == 0)
 
     if (this.current_video.yt) { this.current_video.yt.destroy() }
 
@@ -337,6 +349,9 @@ class GrassPlayer {
   }
 
   set_subtitles(subs) {
+    const playing = this.playing
+    if (playing) this.pause()
+    this.btn_cc.classList.toggle("hidden", subs.length == 0)
     this.current_video.subs = subs
 
     if (this.octopusInstance) {
@@ -375,10 +390,12 @@ class GrassPlayer {
     })
 
     this.octopusInstance.getStyles()
+
+    if (playing) this.play()
   }
 
   play() {
-    this.btn_play.textContent = "❚❚"
+    this.btn_play.textContent = "pause"
     if (this.current_video.yt) {
       this.current_video.yt.playVideo()
     } else if (this.video.paused) {
@@ -387,7 +404,7 @@ class GrassPlayer {
   }
 
   pause() {
-    this.btn_play.textContent = "▶"
+    this.btn_play.textContent = "play_arrow"
     if (this.current_video.yt) {
       this.current_video.yt.pauseVideo()
     } else if (!this.video.paused) {
@@ -718,15 +735,15 @@ class GrassPlayer {
 
     this.btn_play = create_element(this.bottom_shade, "button")
     disable_space(this.btn_play)
-    this.btn_play.textContent = "▶"
+    this.btn_play.textContent = "play_arrow"
     this.btn_play.disabled = true
 
     this.btn_play.addEventListener("click", () => {
-      const playing = this.btn_play.textContent == "▶"
+      const playing = this.btn_play.textContent == "play_arrow"
       if (playing) {
-        this.btn_play.textContent = "❚❚"
+        this.btn_play.textContent = "pause"
       } else {
-        this.btn_play.textContent = "▶"
+        this.btn_play.textContent = "play_arrow"
       }
       if (this.on_toggle_playing != null) {
         this.on_toggle_playing(playing)
@@ -737,8 +754,7 @@ class GrassPlayer {
 
     this.btn_next = create_element(this.bottom_shade, "button")
     disable_space(this.btn_next)
-    this.btn_next.style.fontSize = "1em"
-    this.btn_next.textContent = "▶❙"
+    this.btn_next.textContent = "skip_next"
 
     this.on_next = void 0
     this.btn_next.addEventListener("click", () => { this.on_next() })
@@ -770,8 +786,7 @@ class GrassPlayer {
     this.lbl_time = create_element(this.bottom_shade, "span", "player_time")
     this.lbl_time.textContent = "00:00 / 00:00"
 
-    const right_side = create_element(this.bottom_shade, "div")
-    right_side.style.float = "right"
+    const right_side = create_element(this.bottom_shade, "div", "right-side")
 
     this.btn_cc = create_element(right_side, "button", "cc")
     disable_space(this.btn_cc)
@@ -783,8 +798,7 @@ class GrassPlayer {
       this.btn_cc.checked = _cc
     }
 
-    this.btn_cc.classList.toggle("btn_toggle_on", this.btn_cc.checked)
-    this.btn_cc.textContent = "CC"
+    this.btn_cc.textContent = this.btn_cc.checked ? "subtitles" : "subtitles_off"
     this.btn_cc.addEventListener("click", () => { this.on_toggle_cc() })
 
     this.select_quality = create_element(right_side, "select", "player_select_quality")
@@ -798,8 +812,16 @@ class GrassPlayer {
 
     this.btn_fullscreen = create_element(right_side, "button")
     disable_space(this.btn_fullscreen)
-    this.btn_fullscreen.textContent = "⛶"
+    this.btn_fullscreen.textContent = "fullscreen"
     this.btn_fullscreen.addEventListener("click", () => { this.toggle_fullscreen() })
+
+    document.addEventListener("fullscreenchange", () => {
+      if (document.fullscreenElement) {
+        this.btn_fullscreen.textContent = "fullscreen_exit"
+      } else {
+        this.btn_fullscreen.textContent = "fullscreen"
+      }
+    })
   }
 
   create_seekbar() {
@@ -831,9 +853,12 @@ class GrassPlayer {
         return
       }
       const rect = this.seekbar.getBoundingClientRect()
-      const pct = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1)
-      let t = pct * this.duration()
+      let pct = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1)
+      const t = pct * this.duration()
       mtime.textContent = seconds_to_hms(t, true)
+      const rect2 = mtime.getBoundingClientRect()
+      const width = rect2.width / rect.width / 2
+      pct = Math.min(Math.max(pct, width), 1 - width)
       mtime.style.left = `${pct * 100}%`
     })
 

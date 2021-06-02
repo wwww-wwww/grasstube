@@ -7,7 +7,7 @@ class Video {
     this.fonts_complete = false
     this.set_video_on_ready = null
 
-    fetch("https://res.cloudinary.com/okea/raw/upload/v1606474226/fonts.json")
+    fetch("https://res.cloudinary.com/okea/raw/upload/v1613303042/fonts.json")
       .then(res => res.json())
       .then(fonts => {
         this.player.set_fonts(fonts)
@@ -60,8 +60,9 @@ class Video {
 
     this.channel.on("playing", data => {
       console.log("video: playing", data)
-      if (this.player.playing != data.playing)
+      if (this.player.playing != data.playing) {
         this.player.show_osd(data.playing ? "Play" : "Pause")
+      }
       this.player.set_playing(data.playing)
     })
 

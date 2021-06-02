@@ -1,4 +1,3 @@
-import css from "../css/room.css"
 import socket, { auth } from "./socket"
 
 import { seconds_to_hms } from "./util"
@@ -25,6 +24,12 @@ video.connect = function (socket) {
   this.channel.on("playing", data => {
     console.log("video: playing", data)
     button_play.textContent = data.playing ? "❚❚" : "▶"
+  })
+
+  this.channel.on("time", data => {
+    console.log("video: time", data)
+    seekbar.value = data.t
+    video_time.textContent = seconds_to_hms(data.t, true)
   })
 
   this.channel.on("seek", data => {

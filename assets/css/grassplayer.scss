@@ -1,5 +1,19 @@
 @import url('https://fonts.googleapis.com/css?family=Roboto+Mono|Roboto:300,400,400i,500');
 
+.grassplayer .shade button {
+  font-family: "Material Icons";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 1em;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+
 .grassplayer {
   width: 100%;
   height: 100%;
@@ -52,17 +66,17 @@
     .overlay_osd.hidden {
       display: none;
     }
-  }
 
-  .overlay_tmp {
-    opacity: 1;
-    transition: opacity 0.2s;
+    .overlay_tmp {
+      opacity: 1;
+      transition: opacity 0.2s;
+    }
   }
 
   .overlay_hidden {
     cursor: none;
 
-    >.overlay_tmp {
+    .overlay_tmp {
       opacity: 0;
       pointer-events: none;
     }
@@ -75,104 +89,36 @@
     height: 100%;
   }
 
-  .volume_slider {
-    margin: 0 1em;
-    width: 5em;
-    border: none;
-    background: none;
-    vertical-align: middle;
-    border-radius: 0;
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
-  }
-
-  .volume_slider::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 2px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 0;
-    border: none;
-  }
-
-  .volume_slider::-moz-range-track {
-    width: 100%;
-    height: 2px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 0;
-    border: none;
-  }
-
-  .volume_slider::-ms-track {
-    width: 100%;
-    height: 2px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 0;
-    border: none;
-  }
-
-  .volume_slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    background: rgba(255, 255, 255, 0.8);
-    width: 4px;
-    height: 12px;
-    border-radius: 0;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    transform: translateY(-50%);
-  }
-
-  .volume_slider::-ms-thumb {
-    -webkit-appearance: none;
-    background: rgba(255, 255, 255, 0.8);
-    width: 4px;
-    height: 12px;
-    border-radius: 0;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    transform: none;
-  }
-
-  .volume_slider::-moz-range-thumb {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background: rgba(255, 255, 255, 0.8);
-    width: 4px;
-    height: 12px;
-    border-radius: 0;
-    border: none;
-    outline: none;
-    cursor: pointer;
-  }
-
-  .player_time {
-    font-size: 0.75em;
-    line-height: 4em;
-    vertical-align: middle;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-
   .shade {
+    display: flex;
+    align-items: center;
     position: absolute;
     width: 100%;
     height: 3em;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.3);
+    padding-bottom: 0;
+    background-image: linear-gradient(to top, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0));
     text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
+
+    .player_time {
+      font-size: 0.75em;
+      vertical-align: middle;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .right-side {
+      height: 100%;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: end;
+    }
 
     button {
       padding: 0;
-      width: 2em;
-      height: 2em;
-      line-height: 2em;
-      font-size: 1.5em;
+      width: 1.5em;
+      height: 100%;
+      font-size: 1.75em;
     }
 
     button:hover {
@@ -180,22 +126,8 @@
     }
 
     .cc {
-      font-size: 0.75em;
-      color: rgba(255, 255, 255, 0.3);
+      font-size: 1.4em;
       vertical-align: middle;
-    }
-
-    .cc:hover {
-      color: rgba(255, 255, 255, 0.5);
-    }
-
-    .btn_toggle_on {
-      text-decoration: underline;
-      color: rgba(255, 255, 255, 0.8);
-    }
-
-    .btn_toggle_on:hover {
-      color: rgba(255, 255, 255, 0.9);
     }
 
     .select_quality {
@@ -203,6 +135,82 @@
       margin-left: 1em;
       font-size: 0.75em;
       padding: 0 0.5em;
+    }
+
+    .volume_slider {
+      margin: 0 0.5em;
+      width: 5em;
+      border: none;
+      background: none;
+      vertical-align: middle;
+      border-radius: 0;
+      outline: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+    }
+
+    .volume_slider::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 2px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 0;
+      border: none;
+    }
+
+    .volume_slider::-moz-range-track {
+      width: 100%;
+      height: 2px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 0;
+      border: none;
+    }
+
+    .volume_slider::-ms-track {
+      width: 100%;
+      height: 2px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 0;
+      border: none;
+    }
+
+    .volume_slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.8);
+      width: 4px;
+      height: 12px;
+      border-radius: 0;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      transform: translateY(-50%);
+    }
+
+    .volume_slider::-ms-thumb {
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.8);
+      width: 4px;
+      height: 12px;
+      border-radius: 0;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      transform: none;
+    }
+
+    .volume_slider::-moz-range-thumb {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.8);
+      width: 4px;
+      height: 12px;
+      border-radius: 0;
+      border: none;
+      outline: none;
+      cursor: pointer;
     }
   }
 
@@ -223,54 +231,74 @@
     }
   }
 
-  .seekbar_time {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 0.25em;
-    padding: 0.25em;
-    position: absolute;
-    transform: translate(-50%, -100%);
-    color: rgba(255, 255, 255, 0.8);
-    text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  .seekbar:hover>.seekbar_time {
-    opacity: 1;
+  .seekbar.seekbar_controls {
+    pointer-events: all;
   }
 
   .seekbar {
     position: absolute;
     width: 100%;
     height: 8px;
-    bottom: calc(3em - 4px);
+    bottom: 3em;
     cursor: pointer;
     transition: height 0.1s, bottom 0.1s;
+    transform: translateY(50%);
     pointer-events: none;
+
+    .seekbar_time {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 0.25em;
+      padding: 0.25em;
+      position: absolute;
+      transform: translate(-50%, -100%);
+      color: rgba(255, 255, 255, 0.8);
+      text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .seekbar_dial {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      top: 50%;
+      left: 0%;
+      transform: translate(-50%, -50%);
+      border-radius: 12px;
+      background: white;
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 2;
+      transition: width 0.1s, height 0.1s, margin-top 0.1s, opacity 0.1s, left 0.1s linear;
+    }
+
+    .seekbar_bar {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.2);
+      transition: height 0.1s, margin-top 0.1s;
+    }
   }
 
   .seekbar:hover {
-    height: 32px;
-    bottom: calc(3em - 16px);
-  }
+    height: 16px;
 
-  .seekbar_controls {
-    pointer-events: all;
-  }
+    >.seekbar_time {
+      opacity: 1;
+    }
 
-  .seekbar_dial {
-    position: absolute;
-    width: 2px;
-    height: 2px;
-    left: 0%;
-    transform: translateX(-50%);
-    margin-top: 2px;
-    border-radius: 12px;
-    background: white;
-    opacity: 0.5;
-    pointer-events: none;
-    z-index: 2;
-    transition: width 0.1s, height 0.1s, margin-top 0.1s, opacity 0.1s, left 0.1s linear;
+    >.seekbar_bar {
+      height: 8px;
+    }
+
+    >.seekbar_dial {
+      width: 12px;
+      height: 12px;
+      opacity: 0.8;
+    }
   }
 
   .seeking>div,
@@ -278,26 +306,6 @@
     transition: width 0s, left 0s;
   }
 
-  .seekbar:hover>.seekbar_bar {
-    height: 8px;
-    margin-top: 12px;
-  }
-
-  .seekbar:hover>.seekbar_dial {
-    margin-top: 10px;
-    width: 12px;
-    height: 12px;
-    opacity: 0.8;
-  }
-
-  .seekbar_bar {
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    margin-top: 2px;
-    background: rgba(255, 255, 255, 0.2);
-    transition: height 0.1s, margin-top 0.1s;
-  }
 
   .ctxmenu {
     display: flex;
@@ -331,6 +339,7 @@
   .settings {
     display: flex;
     flex-direction: column;
+
     >div {
       display: flex;
       align-items: center;

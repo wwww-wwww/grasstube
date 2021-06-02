@@ -6,11 +6,11 @@
 					<p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
 					<p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
 				</div>
-				<%= text_input(f, :username, placeholder: "username") %>
-				<%= text_input(f, :password, placeholder: "password", type: "password") %>
-				<%= submit "sign in" %>
+				<%= text_input(f, :username, placeholder: "Username") %>
+				<%= text_input(f, :password, placeholder: "Password", type: "password") %>
+				<%= submit "Sign in" %>
 			</div>
-			<span class="sign_up">don't have an account?<br>sign up <%= link("here", to: Routes.user_path(@conn, :sign_up)) %></span>
+			<span class="sign_up">Don't have an account?<br>Sign up <%= link("here", to: Routes.user_path(@conn, :sign_up)) %></span>
 		<% end) %>
 	</div>
 </div>

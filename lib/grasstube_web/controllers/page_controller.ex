@@ -4,10 +4,6 @@ defmodule GrasstubeWeb.PageController do
   alias Grasstube.Guardian
   alias GrasstubeWeb.ChatAgent
 
-  def index(conn, _) do
-    render(conn, "index.html", can_make_room: can_make_room?(conn))
-  end
-
   def chat(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
@@ -54,16 +50,6 @@ defmodule GrasstubeWeb.PageController do
     end
   end
 
-  def room2(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :chat) do
-      :not_found ->
-        text(conn, "room not found")
-
-      chat ->
-        render(conn, "room2.html", room: room, room_has_password: password_required?(conn, chat))
-    end
-  end
-
   def controls(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
@@ -102,16 +88,6 @@ defmodule GrasstubeWeb.PageController do
 
   def gdrive(conn, _) do
     render(conn, "userscript.html")
-  end
-
-  def can_make_room?(conn) do
-    if Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil do
-      user = Guardian.Plug.current_resource(conn)
-      rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
-      length(rooms) == 0
-    else
-      false
-    end
   end
 
   def password_required?(conn, chat) do

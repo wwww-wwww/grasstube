@@ -3,7 +3,7 @@ defmodule GrasstubeWeb.ChatAgent do
 
   alias GrasstubeWeb.Endpoint
 
-  alias Grasstube.Repo
+  alias Grasstube.{ProcessRegistry, Repo}
 
   alias Phoenix.HTML
 
@@ -33,7 +33,25 @@ defmodule GrasstubeWeb.ChatAgent do
   end
 
   def via_tuple(room_name) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :chat})
+    ProcessRegistry.via_tuple({room_name, :chat})
+  end
+
+  def chat2(room, user_id, user, msg) do
+    escaped =
+      msg
+      |> HTML.html_escape()
+      |> HTML.safe_to_string()
+
+    channel = ProcessRegistry.lookup(room, :chat)
+
+    new_msg = do_emote(channel, AutoLinker.link(escaped))
+
+    id = if user, do: user.username, else: user_id
+    # Enum.at(user.metas, 0).nickname
+    nickname = if user, do: user.nickname, else: user_id
+
+    add_to_history(channel, nickname, new_msg)
+    Endpoint.broadcast("chat:" <> room, "chat", %{sender: id, name: nickname, content: new_msg})
   end
 
   def chat(channel, socket, msg) do
@@ -61,7 +79,6 @@ defmodule GrasstubeWeb.ChatAgent do
         nickname = if sender.member, do: sender.nickname, else: Enum.at(sender.metas, 0).nickname
 
         add_to_history(channel, nickname, new_msg)
-
         Endpoint.broadcast(socket.topic, "chat", %{sender: id, name: nickname, content: new_msg})
       end
     end
@@ -74,6 +91,16 @@ defmodule GrasstubeWeb.ChatAgent do
       "/" -> true
       _ -> false
     end
+  end
+
+  defp command(_channel, socket, "nick " <> nick) do
+    if Guardian.Phoenix.Socket.authenticated?(socket) do
+      Repo.get(Grasstube.User, socket.assigns.user_id)
+      |> Ecto.Changeset.change(nickname: nick)
+      |> Repo.update()
+    end
+
+    Grasstube.Presence.update(socket, socket.assigns.user_id, %{nickname: nick})
   end
 
   defp command(channel, socket, "op " <> username) do
@@ -363,6 +390,10 @@ defmodule GrasstubeWeb.ChatAgent do
     end)
   end
 
+  def controls_user?(pid, user) do
+    public_controls?(pid) or mod?(pid, user)
+  end
+
   def controls?(pid, socket) do
     cond do
       public_controls?(pid) ->
@@ -429,18 +460,20 @@ defmodule GrasstubeWeb.ChatAgent do
     get_mods(pid) |> Enum.any?(fn mod -> mod == user end)
   end
 
-  def mod?(pid, user) do
+  def mod?(pid, user) when user != nil do
     get_mods(pid) |> Enum.any?(fn mod -> mod == user.username end) ||
       get_admin(pid) == user.username
   end
 
+  def mod?(_, _) do
+    false
+  end
+
   def set_name(socket, name) do
     if Guardian.Phoenix.Socket.authenticated?(socket) do
-      changeset =
-        Repo.get(Grasstube.User, socket.assigns.user_id)
-        |> Ecto.Changeset.change(nickname: name)
-
-      Repo.update(changeset)
+      Repo.get(Grasstube.User, socket.assigns.user_id)
+      |> Ecto.Changeset.change(nickname: name)
+      |> Repo.update()
     else
       {:ok}
     end

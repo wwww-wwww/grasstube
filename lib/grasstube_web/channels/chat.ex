@@ -2,7 +2,6 @@ defmodule GrasstubeWeb.ChatChannel do
   use Phoenix.Channel
 
   alias Grasstube.Presence
-
   alias GrasstubeWeb.ChatAgent
 
   @max_name_length 24
@@ -33,8 +32,8 @@ defmodule GrasstubeWeb.ChatChannel do
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
     meta =
-      if Guardian.Phoenix.Socket.authenticated?(socket),
-        do: %{},
+      if socket.assigns.user,
+        do: %{nickname: socket.assigns.user.nickname, username: socket.assigns.user.username},
         else: %{nickname: "anon#{socket.id}"}
 
     presence = Presence.list(socket)

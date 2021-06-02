@@ -30,7 +30,7 @@ defmodule GrasstubeWeb.UserController do
         if Bcrypt.verify_pass(password |> to_string(), user.password) do
           conn
           |> Guardian.Plug.sign_in(user)
-          |> redirect(to: Routes.page_path(conn, :index))
+          |> redirect(to: Routes.live_path(conn, GrasstubeWeb.RoomsLive))
         else
           conn
           |> put_flash(:error, "Incorrect username or password")
@@ -67,7 +67,7 @@ defmodule GrasstubeWeb.UserController do
   def sign_out(conn, _params) do
     conn
     |> Guardian.Plug.sign_out()
-    |> redirect(to: Routes.page_path(conn, :index))
+    |> redirect(to: Routes.live_path(conn, GrasstubeWeb.RoomsLive))
   end
 
   def sign_up(conn, %{"user" => user}) do
@@ -77,7 +77,7 @@ defmodule GrasstubeWeb.UserController do
       {:ok, user} ->
         conn
         |> Guardian.Plug.sign_in(user)
-        |> redirect(to: Routes.page_path(conn, :index))
+        |> redirect(to: Routes.live_path(conn, GrasstubeWeb.RoomsLive))
 
       {:error, changeset} ->
         errors =

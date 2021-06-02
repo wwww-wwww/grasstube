@@ -1,37 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8"/>
-		<meta name="theme-color" content="#000000"/>
-		<link rel="icon" type="image/x-icon" href="/favicon.ico"/>
-		<title><%= @view_module.title(@view_template, assigns) %></title>
-		<link rel="stylesheet" type="text/css" href="/css/common.css">
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-		<meta name="user_token" content="<%= assigns[:user_token] %>">
-		<%= if Guardian.Plug.current_token(@conn) do %>
-			<meta name="guardian_token" content="<%= Guardian.Plug.current_token(@conn) %>">
-		<% end %>
-		<%= if assigns[:room] do %>
-			<meta name="room" content="<%= @room %>">
-		<% end%>
-		<%= if assigns[:room_has_password] do %>
-			<meta name="room_has_password" content="1">
-		<% end%>
-	</head>
-	<body id="body">
-		<header>
-			<section>
-				<nav role="navigation">
-					<span style="float: left"><%= link("grasstube", to: Routes.page_path(@conn, :index)) %></span>
-					<span style="float: right">
-						<%= link("google drive", to: Routes.page_path(@conn, :gdrive), id: "userscript_google_drive") %>
-						<%= get_user_links(@conn) %>
-					</span>
-				</nav>
-			</section>
-		</header>
-		<main id="main" role="main">
-      <%= @inner_content %>
-		</main>
-	</body>
-</html>
+<div page="<%= @view_template %>">
+	<header>
+		<section>
+			<nav role="navigation">
+				<span style="float: left"><%= live_redirect("grasstube", to: Routes.live_path(@conn, GrasstubeWeb.RoomsLive)) %></span>
+				<span style="float: right">
+					<%= link("google drive", to: Routes.page_path(@conn, :gdrive), id: "userscript_google_drive") %>
+					<%= get_user_links(@conn) %>
+				</span>
+			</nav>
+		</section>
+	</header>
+	<main id="main" role="main">
+		<%= @inner_content %>
+	</main>
+</div>

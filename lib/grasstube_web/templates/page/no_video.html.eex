@@ -2,15 +2,22 @@
 	<div id="container2">
 		<div id="dragbar_v" style="opacity: 0"></div>
 		<div id="maincontent">
-			<div id="container_chat">
-				<%= render @view_module, "chat.html", assigns %>
+			<div id="chat_container">
+				<div id="chat_userlist"></div>
+				<div class="right">
+					<div id="chat_messages"></div>
+					<div id="chat_input_container">
+						<input id="chat_input">
+						<button id="chat_emotes" class="square">🙂</button>
+					</div>
+				</div>
 			</div>
 		</div>
 		<div id="bottom">
 			<div class="col">
-				<button id="btn_user_settings">settings</button>
-				<%= link("full room", to: Routes.page_path(@conn, :room, @room), class: "button") %>
-				<button id="btn_create_poll" class="hidden">create poll</button>
+				<button id="btn_user_settings">Settings</button>
+				<%= link("Full room", to: Routes.page_path(@conn, :room, @room), class: "button") %>
+				<button id="btn_create_poll" class="hidden">Create poll</button>
 				<div id="polls_list"></div>
 			</div>
 			<div class="col" style="text-align: right">

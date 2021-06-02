@@ -1,6 +1,5 @@
-import Modal from "./modals"
+import { create_window } from "./window"
 import { get_cookie, set_cookie } from "./cookies"
-import { change_layout } from "./drag"
 
 function init() {
   const settings_modal = make_settings()
@@ -10,7 +9,7 @@ function init() {
 }
 
 function make_settings() {
-  const modal = new Modal({ title: "settings" })
+  const modal = create_window("Settings", {title: "Settings", modal: true, show: false})
   const modal_body = modal.get_body()
 
   let row = document.createElement("div")
@@ -19,7 +18,7 @@ function make_settings() {
   modal_body.appendChild(row)
 
   let lbl = document.createElement("span")
-  lbl.textContent = "height:"
+  lbl.textContent = "Height:"
   lbl.style.marginRight = "0.5em"
   row.appendChild(lbl)
 
@@ -27,6 +26,7 @@ function make_settings() {
   slider.type = "range"
   slider.min = 80
   slider.max = 100
+  slider.style.marginRight = "0.5em"
   row.appendChild(slider)
 
   let slider_n = document.createElement("input")
@@ -61,62 +61,31 @@ function make_settings() {
     modal_body.appendChild(row)
 
     btn = document.createElement("button")
-    btn.textContent = "fit width (16:9)"
+    btn.textContent = "Fit width (16:9)"
     btn.addEventListener("click", () => { fit_width() })
     row.appendChild(btn)
   }
 
   row = document.createElement("div")
   row.style.display = "block"
-  row.style.marginBottom = "0.5em"
   modal_body.appendChild(row)
 
   lbl = document.createElement("span")
-  lbl.textContent = "player:"
-  lbl.style.marginRight = "0.5em"
-  row.appendChild(lbl)
-
-  const select_layout = document.createElement("select")
-  let option = document.createElement("option")
-  option.textContent = "right"
-  option.value = 0
-  select_layout.appendChild(option)
-  option = document.createElement("option")
-  option.textContent = "left"
-  option.value = 1
-  select_layout.appendChild(option)
-
-  select_layout.selectedIndex = get_cookie("view_layout") || 0
-
-  select_layout.addEventListener("change", () => { set_layout(select_layout.selectedIndex) })
-
-  row.appendChild(select_layout)
-
-  row = document.createElement("div")
-  row.style.display = "block"
-  modal_body.appendChild(row)
-
-  lbl = document.createElement("span")
-  lbl.textContent = "header:"
+  lbl.textContent = "Header:"
   lbl.style.marginRight = "0.5em"
   row.appendChild(lbl)
 
   const toggle_header = document.createElement("button")
-  toggle_header.textContent = (get_cookie("room_hide_header") || 0) ? "off" : "on"
+  toggle_header.textContent = (get_cookie("room_hide_header") || 0) ? "Off" : "On"
   row.appendChild(toggle_header)
 
   toggle_header.addEventListener("click", () => {
     const header_hide = (get_cookie("room_hide_header") || 0)
     set_cookie("room_hide_header", !header_hide)
-    toggle_header.textContent = !header_hide ? "off" : "on"
+    toggle_header.textContent = !header_hide ? "Off" : "On"
     document.getElementsByTagName("header")[0].classList.toggle("hidden", !header_hide)
   })
   return modal
-}
-
-function set_layout(n) {
-  set_cookie("view_layout", n)
-  change_layout()
 }
 
 function set_height(size) {

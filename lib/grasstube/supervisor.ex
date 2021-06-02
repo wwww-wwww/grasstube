@@ -56,10 +56,13 @@ defmodule GrasstubeWeb.UserSocket do
       {:ok, authed_socket} ->
         socket_id = new_id()
 
+        user = Guardian.Phoenix.Socket.current_resource(authed_socket)
+
         {:ok,
          authed_socket
          |> assign(:socket_id, socket_id)
-         |> assign(:user_id, Guardian.Phoenix.Socket.current_resource(authed_socket).username)}
+         |> assign(:user_id, user.username)
+         |> assign(:user, user)}
 
       _ ->
         :error
@@ -72,7 +75,8 @@ defmodule GrasstubeWeb.UserSocket do
     {:ok,
      socket
      |> assign(:socket_id, socket_id)
-     |> assign(:user_id, "$" <> socket_id)}
+     |> assign(:user_id, "$" <> socket_id)
+     |> assign(:user, nil)}
   end
 
   def id(socket) do

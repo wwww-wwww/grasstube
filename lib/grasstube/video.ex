@@ -113,7 +113,6 @@ defmodule GrasstubeWeb.VideoAgent do
         duration: 0
       })
 
-      Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
       Endpoint.broadcast("playlist:" <> room_name, "current", %{id: -1})
       GrasstubeWeb.VideoScheduler.stop_timer(scheduler)
     else
@@ -131,15 +130,15 @@ defmodule GrasstubeWeb.VideoAgent do
     end
   end
 
-  def get_current_video(pid) do
+  def get_status(pid) do
     Agent.get(pid, fn val ->
-      val.current_video
+      {val.current_video, actual_get_time(val), val.playing}
     end)
   end
 
-  def get_current_video_and_time(pid) do
+  def get_current_video(pid) do
     Agent.get(pid, fn val ->
-      {val.current_video, actual_get_time(val)}
+      val.current_video
     end)
   end
 
@@ -214,44 +213,43 @@ defmodule GrasstubeWeb.VideoScheduler do
       Process.cancel_timer(state.sync_task)
     end
 
-    video = Grasstube.ProcessRegistry.lookup(state.room_name, :video)
-    {current, current_time} = VideoAgent.get_current_video_and_time(video)
-
     new_state =
-      if current != :nothing do
-        Endpoint.broadcast("video:" <> state.room_name, "time", %{t: current_time})
+      Grasstube.ProcessRegistry.lookup(state.room_name, :video)
+      |> VideoAgent.get_status()
+      |> case do
+        {:nothing, _, _} ->
+          state
 
-        Endpoint.broadcast("video:" <> state.room_name, "playing", %{
-          playing: VideoAgent.playing?(video)
-        })
+        {current, time, playing} ->
+          Endpoint.broadcast("video:" <> state.room_name, "time", %{t: time})
 
-        scheduler = Grasstube.ProcessRegistry.lookup(state.room_name, :video_scheduler)
+          Endpoint.broadcast("video:" <> state.room_name, "playing", %{
+            playing: playing
+          })
 
-        case current.duration do
-          :unset ->
+          if current.duration == :unset do
             %{state | sync_task: :nothing}
+          else
+            scheduler = Grasstube.ProcessRegistry.lookup(state.room_name, :video_scheduler)
 
-          duration ->
-            cond do
-              current_time - duration > 0 ->
-                playlist = Grasstube.ProcessRegistry.lookup(state.room_name, :playlist)
+            if time - current.duration > 0 do
+              Endpoint.broadcast("chat:" <> state.room_name, "chat", %{
+                sender: "sys",
+                name: "System",
+                content: "playing next video in #{@time_to_next + @time_to_start} seconds"
+              })
 
-                Endpoint.broadcast("chat:" <> state.room_name, "chat", %{
-                  sender: "sys",
-                  name: "System",
-                  content: "playing next video in #{@time_to_next + @time_to_start} seconds"
-                })
+              playlist = Grasstube.ProcessRegistry.lookup(state.room_name, :playlist)
 
-                %{
-                  state
-                  | set_task: Process.send_after(scheduler, {:delayed_set, playlist}, 5000),
-                    sync_task: :nothing
-                }
-
-              true ->
-                %{state | sync_task: start_timer(scheduler, 2000)}
+              %{
+                state
+                | set_task: Process.send_after(scheduler, {:delayed_set, playlist}, 5000),
+                  sync_task: :nothing
+              }
+            else
+              %{state | sync_task: start_timer(scheduler, 2000)}
             end
-        end
+          end
       end
 
     {:noreply, new_state}

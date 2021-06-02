@@ -4,7 +4,8 @@ defmodule GrasstubeWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :fetch_flash
+    plug :fetch_live_flash
+    plug :put_root_layout, {GrasstubeWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
@@ -28,7 +29,7 @@ defmodule GrasstubeWeb.Router do
   scope "/", GrasstubeWeb do
     pipe_through [:browser, :auth]
 
-    get "/", PageController, :index
+    live "/", RoomsLive
     get "/gdrive", PageController, :gdrive
 
     scope "/r" do
@@ -37,7 +38,6 @@ defmodule GrasstubeWeb.Router do
       get "/:room/no_video", PageController, :no_video
       get "/:room/video", PageController, :video
       get "/:room", PageController, :room
-      get "/:room/2", PageController, :room2
     end
 
     scope "/" do

@@ -2,10 +2,7 @@ defmodule GrasstubeWeb.PollsChannel do
   use Phoenix.Channel
 
   alias Grasstube.Presence
-
-  alias GrasstubeWeb.Endpoint
-  alias GrasstubeWeb.PollsAgent
-  alias GrasstubeWeb.ChatAgent
+  alias GrasstubeWeb.{Endpoint, PollsAgent, ChatAgent}
 
   def join("polls:" <> room_name, %{"password" => password}, socket) do
     case Grasstube.ProcessRegistry.lookup(room_name, :polls) do
@@ -79,9 +76,9 @@ defmodule GrasstubeWeb.PollsChannel do
   def handle_in("poll_add", %{"title" => title, "choices" => choices}, socket) do
     "polls:" <> room_name = socket.topic
 
-    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
-
-    if ChatAgent.controls?(chat, socket) do
+    Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    |> ChatAgent.controls?(socket)
+    |> if do
       polls = Grasstube.ProcessRegistry.lookup(room_name, :polls)
       PollsAgent.add_poll(polls, title, choices)
       Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
@@ -93,9 +90,9 @@ defmodule GrasstubeWeb.PollsChannel do
   def handle_in("poll_remove", %{"id" => poll_id}, socket) do
     "polls:" <> room_name = socket.topic
 
-    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
-
-    if ChatAgent.controls?(chat, socket) do
+    Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    |> ChatAgent.controls?(socket)
+    |> if do
       polls = Grasstube.ProcessRegistry.lookup(room_name, :polls)
       PollsAgent.remove_poll(polls, poll_id)
       Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))

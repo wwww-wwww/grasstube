@@ -1,21 +1,9 @@
-<div id="chat_div">
-	<div class="chat_header">
-		<button id="btn_userlist_toggle" class="square">👨‍👦</button>
-		<button id="btn_chat_settings" class="square">⚙</button>
-		<span id="user_count">disconnected</span>
+<div id="chat_container">
+	<div id="chat_input_container" class="hidden">
+		<input id="chat_input">
+		<button id="chat_emotes" class="square">🙂</button>
 	</div>
-	<div class="chat_main_area">
-		<div class="top">
-			<div id="userlist"></div>
-			<div id="messages_outer">
-				<div id="messages"></div>
-			</div>
-		</div>
-		<div class="bottom">
-			<div id="input_area">
-				<input id="chat_input" type="text"/>
-				<button id="btn_show_emotes" class="square">🙂</button>
-			</div>
-		</div>
-	</div>
+	<div id="chat_messages"></div>
+	<div id="chat_userlist" class="hidden"></div>
+	<div id="chat_danmaku"></div>
 </div>

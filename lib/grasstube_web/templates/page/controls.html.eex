@@ -4,18 +4,24 @@
 
 <style>
 	#seekbar {
-		width: 100%;
+		flex: 1;
 	}
 
 	#video_time, #video_length {
 		display: inline-block;
-
 	}
 
 	#container1 {
+		width: 100%;
+		height: 100%;
 		display: flex;
 		flex-direction: column-reverse;
 		overflow-y: hidden;
+	}
+
+	#maincontent {
+		display: flex;
+		align-items: center;
 	}
 
 	#maincontent > * {
@@ -67,7 +73,7 @@
 	<div id="maincontent" style="height: unset; border-bottom: none;">
 		<button id="button_play">▶</button>
 		<button id="button_next">▶❙</button>
-		<span style="flex-shrink: 0; display: flex; align-items: center;"><span id="video_time">00:00</span> / <span id="video_duration">00:00</span></span>
+		<span style="flex-shrink: 0; align-items: center;"><span id="video_time">00:00</span> / <span id="video_duration">00:00</span></span>
 		<input id="seekbar" type="range" min="0" max="0" value="0">
 	</div>
 	<div id="bottom">

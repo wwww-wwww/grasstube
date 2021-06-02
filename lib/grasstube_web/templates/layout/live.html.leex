@@ -1,0 +1,14 @@
+<header>
+	<section>
+		<nav role="navigation">
+			<span style="float: left"><%= live_redirect("grasstube", to: Routes.live_path(@socket, GrasstubeWeb.RoomsLive)) %></span>
+			<span style="float: right">
+				<%= link("google drive", to: Routes.page_path(@socket, :gdrive), id: "userscript_google_drive") %>
+				<%= get_user_links(@socket, assigns) %>
+			</span>
+		</nav>
+	</section>
+</header>
+<main id="main" role="main">
+	<%= @inner_content %>
+</main>

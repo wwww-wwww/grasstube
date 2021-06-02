@@ -1,4 +1,13 @@
-<%= render @view_module, "chat.html", assigns %>
+<div id="chat_container">
+  <div id="chat_userlist"></div>
+  <div class="right">
+    <div id="chat_messages"></div>
+    <div id="chat_input_container">
+      <input id="chat_input">
+      <button id="chat_emotes" class="square">🙂</button>
+    </div>
+  </div>
+</div>
 
 <link rel="stylesheet" type="text/css" href="/css/chat.css">
 <script src="/js/chat.js"></script>

@@ -1,4 +1,4 @@
-import Modal from "./modals"
+import Window from "./window"
 import "phoenix_html"
 
 class Polls {
@@ -19,8 +19,8 @@ class Polls {
     this.channel = socket.channel("polls:" + socket.room, { password: socket.password })
 
     this.channel.on("controls", _ => this.set_controls(true))
-
     this.channel.on("revoke_controls", _ => this.set_controls(false))
+    this.channel.on("polls", data => this.on_get_polls(data))
 
     this.channel.on("id", data => {
       console.log("polls: id", data)
@@ -31,8 +31,6 @@ class Polls {
       console.log("polls: username", data)
       this.username = data.username
     })
-
-    this.channel.on("polls", data => this.on_get_polls(data))
 
     return this.channel.join()
       .receive("ok", resp => {
@@ -127,7 +125,7 @@ function create_choice(choices, choices_list) {
   choice.e.style.display = "block"
 
   choice.name = document.createElement("input")
-  choice.name.placeholder = "name of choice"
+  choice.name.placeholder = "Name of choice"
   choice.name.style.marginRight = "0.5em"
   choice.e.appendChild(choice.name)
 
@@ -153,11 +151,11 @@ function create_choice(choices, choices_list) {
 }
 
 function create_poll_modal(channel) {
-  const modal = new Modal({ title: "create a poll" })
+  const modal = new Window({ title: "Create a poll" })
   const modal_body = modal.get_body()
 
   const poll_title = document.createElement("input")
-  poll_title.placeholder = "title"
+  poll_title.placeholder = "Title"
   modal_body.appendChild(poll_title)
 
   const choices_list = document.createElement("div")
@@ -168,7 +166,7 @@ function create_poll_modal(channel) {
   create_choice(choices, choices_list)
 
   const poll_add_choice = document.createElement("button")
-  poll_add_choice.textContent = "add another choice"
+  poll_add_choice.textContent = "Add another choice"
   poll_add_choice.style.marginTop = "0.5em"
   poll_add_choice.style.marginRight = "0.5em"
 
@@ -179,7 +177,7 @@ function create_poll_modal(channel) {
   modal_body.appendChild(poll_add_choice)
 
   const poll_create = document.createElement("button")
-  poll_create.textContent = "create"
+  poll_create.textContent = "Create"
   poll_create.style.float = "right"
   poll_create.style.marginTop = "0.5em"
 

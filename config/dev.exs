@@ -18,7 +18,7 @@ config :grasstube,
 
 config :grasstube, GrasstubeWeb.Endpoint,
   http: [port: 17001],
-  url: [host: "o2.okea.moe"],
+  url: [host: "tube.grass.moe"],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,

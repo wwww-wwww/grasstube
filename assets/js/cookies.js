@@ -16,7 +16,7 @@ function get_cookies() {
   return {}
 }
 
-function get_cookie(cookie_name, def=null) {
+function get_cookie(cookie_name, def = null) {
   const cookie = get_cookies()
   if (cookie_name in cookie) return cookie[cookie_name]
   else return def
@@ -29,7 +29,7 @@ function set_cookie(cookie_name, value) {
   const d = new Date()
   d.setTime(d.getTime() + (3600 * 24 * 365 * 1000))
 
-  document.cookie = "data=" + JSON.stringify(cookie) + ";path=/;expires=" + d.toUTCString()
+  document.cookie = `data=${JSON.stringify(cookie)};path=/;expires=${d.toUTCString()}`
 }
 
 export { get_cookie, set_cookie }

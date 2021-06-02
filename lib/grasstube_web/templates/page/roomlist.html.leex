@@ -1,3 +1,4 @@
+<div>
 <div class="outer">
 	<div style="margin: 0.5em 0">Rooms:</div>
 		<%= for {room_name, num_users, has_password} <- @rooms do %>
@@ -12,4 +13,11 @@
 			</div>
 		<% end %>
 	</div>
+</div>
+
+<%= if @can_make_room do live_redirect("create a room", to: Routes.user_path(@socket, :create_room_page)) end %>
+
+<div class="footer">
+	<%= link("GitHub", to: "https://github.com/wwww-wwww/grasstube") %>
+</div>
 </div>

@@ -24,11 +24,9 @@ module.exports = (env, options) => {
       'no_video': ['./js/no_video.js'].concat(glob.sync('./vendor/**/*.js')),
       'controls': ['./js/controls.js'].concat(glob.sync('./vendor/**/*.js')),
       'room': ['./js/room.js'].concat(glob.sync('./vendor/**/*.js')),
-      'room2': ['./js/room2.js'].concat(glob.sync('./vendor/**/*.js')),
       'sign_in': ['./js/sign_in.js'].concat(glob.sync('./vendor/**/*.js')),
-      'sign_up': ['./js/sign_up.js'].concat(glob.sync('./vendor/**/*.js')),
       'profile': ['./js/profile.js'].concat(glob.sync('./vendor/**/*.js'))
-  },
+    },
     output: {
       filename: '[name].js',
       path: path.resolve(__dirname, '../priv/static/js'),
@@ -58,6 +56,6 @@ module.exports = (env, options) => {
       new MiniCssExtractPlugin({ filename: '../css/[name].css' }),
       new CopyWebpackPlugin([{ from: 'static/', to: '../' }])
     ]
-    .concat(devMode ? [new HardSourceWebpackPlugin()] : [])
+      .concat(devMode ? [new HardSourceWebpackPlugin()] : [])
   }
 };

@@ -2,9 +2,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
   use Agent
   require Logger
 
-  alias GrasstubeWeb.Endpoint
-  alias GrasstubeWeb.VideoAgent
-  alias GrasstubeWeb.Video
+  alias GrasstubeWeb.{Endpoint, VideoAgent, Video}
 
   defstruct videos: %{},
             queue: [],
@@ -33,13 +31,18 @@ defmodule GrasstubeWeb.PlaylistAgent do
     Agent.get(pid, fn val -> val.room_name end)
   end
 
-  def get_video(pid, id) do
+  def get_video(pid, id) when is_integer(id) do
     Agent.get(pid, fn val ->
       case val.videos[id] do
         nil -> :nothing
         _ -> val.videos[id]
       end
     end)
+  end
+
+  def get_video(pid, id) do
+    {id, _} = Integer.parse(to_string(id))
+    get_video(pid, id)
   end
 
   def get_queue(pid) do
@@ -105,7 +108,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
     end)
   end
 
-  def remove_queue(pid, id) do
+  def remove_queue(pid, id) when is_integer(id) do
     Agent.update(pid, fn val ->
       new_videos = Map.drop(val.videos, [id])
       new_queue = Enum.filter(val.queue, fn q_v -> q_v != id end)
@@ -123,6 +126,11 @@ defmodule GrasstubeWeb.PlaylistAgent do
     end
 
     Endpoint.broadcast("playlist:" <> room_name, "playlist", %{playlist: get_playlist(pid)})
+  end
+
+  def remove_queue(pid, id) do
+    {id, _} = Integer.parse(to_string(id))
+    remove_queue(pid, id)
   end
 
   def get_yt_info(url) do

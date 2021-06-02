@@ -18,7 +18,6 @@ function init() {
       document.addEventListener("mousemove", drag_h)
       dragbar_h.style.opacity = 1
     })
-    change_layout()
   }
 
   if (document.getElementById("dragbar_v")) {
@@ -73,9 +72,9 @@ function hide_scrollbar() {
   window.addEventListener("resize", e => {
     const scrollbar = container2.offsetWidth - container2.clientWidth
     container2.style.paddingRight = scrollbar + "px"
-    container2.style.width = "calc(100% + " + scrollbar + "px)"
-    maincontent.style.width = "calc(100% + " + scrollbar + "px)"
-    bottom.style.width = "calc(100% + " + scrollbar + "px)"
+    container2.style.width = `calc(100% + ${scrollbar}px)`
+    maincontent.style.width = `calc(100% + ${scrollbar}px)`
+    bottom.style.width = `calc(100% + ${scrollbar}px)`
 
     if (document.getElementById("dragbar_h") && document.getElementById("container_chat")) {
       if (maincontent.style.flexDirection == "row-reverse") {
@@ -91,15 +90,6 @@ function hide_scrollbar() {
   })
 
   window.dispatchEvent(new Event("resize"))
-}
-
-function change_layout() {
-  const layout = get_cookie("view_layout")
-  if (layout == 0) {
-    maincontent.style.flexDirection = "row"
-  } else if (layout == 1) {
-    maincontent.style.flexDirection = "row-reverse"
-  }
 }
 
 function drag_h(e) {
@@ -119,4 +109,4 @@ function drag_v(e) {
 }
 
 export default init
-export { change_layout, hide_scrollbar }
+export { hide_scrollbar }

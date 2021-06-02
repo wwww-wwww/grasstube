@@ -1,6 +1,6 @@
 import css from "../css/playlist.css"
 import "phoenix_html"
-import Modal from "./modals"
+import { create_window } from "./window"
 import { seconds_to_hms, unescape_html, create_element } from "./util"
 
 class Playlist {
@@ -29,7 +29,7 @@ class Playlist {
 
     yt_input.addEventListener("keyup", () => [search_timer, old_search] = yt_search(old_search, yt_input.value.trim(), search_timer, this.channel))
 
-    const playlist_modal = new Modal()
+    const playlist_modal = create_window("playlist", { title: null, modal: true, show: false })
     const tab1 = playlist_modal.create_tab("hosted")
     const tab2 = playlist_modal.create_tab("youtube")
 
@@ -147,9 +147,7 @@ class Playlist {
     this.channel = socket.channel("playlist:" + socket.room, { password: socket.password })
 
     this.channel.on("playlist", data => this.on_playlist(data))
-
     this.channel.on("current", data => this.on_current(data))
-
     this.channel.on("controls", _ => this.set_controls(true))
     this.channel.on("revoke_controls", _ => this.set_controls(false))
 
