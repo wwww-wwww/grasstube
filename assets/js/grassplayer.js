@@ -94,7 +94,12 @@ class GrassPlayer {
       clearTimeout(window.resize_finished)
       window.resize_finished = setTimeout(() => {
         if (this.octopusInstance) {
-          this.octopusInstance.resetRenderAheadCache()
+          if (this.octopusInstance.renderAhead) {
+            this.octopusInstance.resetRenderAheadCache()
+          } else {
+            this.octopusInstance.setCurrentTime(0)
+            this.octopusInstance.setCurrentTime(this.current_time())
+          }
         }
       }, 200)
     })
@@ -259,7 +264,12 @@ class GrassPlayer {
     }
 
     if (this.octopusInstance) {
-      this.octopusInstance.resetRenderAheadCache()
+      if (this.octopusInstance.renderAhead) {
+        this.octopusInstance.resetRenderAheadCache()
+      } else {
+        this.octopusInstance.setCurrentTime(0)
+        this.octopusInstance.setCurrentTime(this.current_time())
+      }
     }
   }
 
@@ -373,8 +383,7 @@ class GrassPlayer {
       subUrl: subs,
       availableFonts: this.availableFonts,
       workerUrl: "/includes/subtitles-octopus-worker.js",
-      renderMode: "fast",
-      renderAhead: 1
+      renderMode: "fast"
     })
 
     this.octopusInstance.worker.addEventListener("message", e => {
@@ -548,8 +557,9 @@ class GrassPlayer {
       const duration = this.current_video.yt.getDuration()
       this.seekbar.set_time((current || 0) / duration)
       //this.seekbar.set_buffers((this.video.buffered), this.video.duration)
-      if (this.current_video.yt.getPlayerState() == 1)
+      if (this.current_video.yt.getPlayerState() == 1) {
         setTimeout(() => { this.update_youtube_time() }, 200)
+      }
       this.lbl_time.textContent = `${seconds_to_hms(current, true)} / ${seconds_to_hms(duration, true)}`
     }
   }
