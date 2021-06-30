@@ -10,7 +10,7 @@ import { create_window } from "./window"
 class Message {
   constructor(data) {
     this.data = data
-    this.e = create_element(null, "div")
+    this.e = create_element(null, "div", "message")
     this.expire = null
     this.hidden = true
 

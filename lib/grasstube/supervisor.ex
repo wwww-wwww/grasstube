@@ -11,11 +11,11 @@ defmodule Grasstube.RoomSupervisor do
     room_name = opts |> Keyword.get(:room_name)
 
     children = [
-      {GrasstubeWeb.ChatAgent, opts},
-      {GrasstubeWeb.VideoAgent, room_name},
-      {GrasstubeWeb.VideoScheduler, room_name},
-      {GrasstubeWeb.PlaylistAgent, room_name},
-      {GrasstubeWeb.PollsAgent, room_name}
+      {Grasstube.ChatAgent, opts},
+      {Grasstube.VideoAgent, room_name},
+      {Grasstube.VideoScheduler, room_name},
+      {Grasstube.PlaylistAgent, room_name},
+      {Grasstube.PollsAgent, room_name}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

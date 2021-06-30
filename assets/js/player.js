@@ -6,6 +6,7 @@ class Video {
     this.player = player
     this.fonts_complete = false
     this.set_video_on_ready = null
+    this.current_video = null
 
     fetch("https://res.cloudinary.com/okea/raw/upload/v1613303042/fonts.json")
       .then(res => res.json())
@@ -40,6 +41,8 @@ class Video {
 
     this.channel.on("setvid", data => {
       console.log("video: setvid", data)
+      if (this.current_video == data) return
+      this.current_video = data
       let videos = {}
       if (data.type == "default") {
         if (data.url.length > 0)

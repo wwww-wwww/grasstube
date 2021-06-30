@@ -2,7 +2,7 @@ defmodule GrasstubeWeb.PageController do
   use GrasstubeWeb, :controller
 
   alias Grasstube.Guardian
-  alias GrasstubeWeb.ChatAgent
+  alias Grasstube.ChatAgent
 
   def chat(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
@@ -69,7 +69,7 @@ defmodule GrasstubeWeb.PageController do
         json(conn, %{success: false, message: "room not found"})
 
       chat ->
-        emotes = GrasstubeWeb.ChatAgent.get_emotes(chat)
+        emotes = Grasstube.ChatAgent.get_emotes(chat)
         json(conn, %{success: true, emotes: emotes})
     end
   end
@@ -92,7 +92,7 @@ defmodule GrasstubeWeb.PageController do
 
   def password_required?(conn, chat) do
     not (Guardian.Plug.authenticated?(conn) and
-           GrasstubeWeb.ChatAgent.mod?(chat, Guardian.Plug.current_resource(conn))) and
+           Grasstube.ChatAgent.mod?(chat, Guardian.Plug.current_resource(conn))) and
       ChatAgent.password?(chat)
   end
 end

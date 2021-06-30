@@ -92,6 +92,7 @@ class Window {
 
   drag_start(e) {
     if (e.target == this.btn_close) return
+    e.preventDefault()
 
     this.top.style.cursor = "grabbing"
 

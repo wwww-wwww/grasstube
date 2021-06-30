@@ -1,8 +1,8 @@
 defmodule GrasstubeWeb.PlaylistChannel do
   use Phoenix.Channel
 
-  alias GrasstubeWeb.{Endpoint, PlaylistAgent, ChatAgent, VideoAgent}
-  alias Grasstube.ProcessRegistry
+  alias Grasstube.{ChatAgent, PlaylistAgent, VideoAgent, ProcessRegistry}
+  alias GrasstubeWeb.Endpoint
 
   def join("playlist:" <> room_name, %{"password" => password}, socket) do
     case ProcessRegistry.lookup(room_name, :playlist) do

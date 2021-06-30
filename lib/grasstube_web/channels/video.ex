@@ -1,10 +1,11 @@
 defmodule GrasstubeWeb.VideoChannel do
   use Phoenix.Channel
 
-  alias GrasstubeWeb.{Endpoint, VideoAgent, ChatAgent, PlaylistAgent}
+  alias Grasstube.{ChatAgent, PlaylistAgent, VideoAgent, ProcessRegistry}
+  alias GrasstubeWeb.Endpoint
 
   def join("video:" <> room_name, %{"password" => password}, socket) do
-    case Grasstube.ProcessRegistry.lookup(room_name, :video) do
+    case ProcessRegistry.lookup(room_name, :video) do
       :not_found ->
         {:error, "no room"}
 
@@ -12,7 +13,7 @@ defmodule GrasstubeWeb.VideoChannel do
         case ChatAgent.auth(socket, room_name, password) do
           {:ok, socket} ->
             if not String.starts_with?(socket.assigns.user_id, "$") do
-              :ok = GrasstubeWeb.Endpoint.subscribe("user:#{room_name}:#{socket.assigns.user_id}")
+              :ok = Endpoint.subscribe("user:#{room_name}:#{socket.assigns.user_id}")
             end
 
             send(self(), {:after_join, nil})
@@ -27,13 +28,13 @@ defmodule GrasstubeWeb.VideoChannel do
   def handle_info({:after_join, _}, socket) do
     "video:" <> room_name = socket.topic
 
-    Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    ProcessRegistry.lookup(room_name, :chat)
     |> ChatAgent.controls?(socket)
     |> if do
       push(socket, "controls", %{})
     end
 
-    Grasstube.ProcessRegistry.lookup(room_name, :video)
+    ProcessRegistry.lookup(room_name, :video)
     |> VideoAgent.get_status()
     |> case do
       {:nothing, _, _} ->
@@ -71,10 +72,10 @@ defmodule GrasstubeWeb.VideoChannel do
   def handle_in("play", _, socket) do
     "video:" <> room_name = socket.topic
 
-    Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    ProcessRegistry.lookup(room_name, :chat)
     |> ChatAgent.controls?(socket)
     |> if do
-      Grasstube.ProcessRegistry.lookup(room_name, :video)
+      ProcessRegistry.lookup(room_name, :video)
       |> VideoAgent.set_playing(true)
     end
 
@@ -84,10 +85,10 @@ defmodule GrasstubeWeb.VideoChannel do
   def handle_in("pause", _, socket) do
     "video:" <> room_name = socket.topic
 
-    Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    ProcessRegistry.lookup(room_name, :chat)
     |> ChatAgent.controls?(socket)
     |> if do
-      Grasstube.ProcessRegistry.lookup(room_name, :video)
+      ProcessRegistry.lookup(room_name, :video)
       |> VideoAgent.set_playing(false)
     end
 
@@ -97,10 +98,10 @@ defmodule GrasstubeWeb.VideoChannel do
   def handle_in("seek", %{"t" => t}, socket) do
     "video:" <> room_name = socket.topic
 
-    Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    ProcessRegistry.lookup(room_name, :chat)
     |> ChatAgent.controls?(socket)
     |> if do
-      Grasstube.ProcessRegistry.lookup(room_name, :video)
+      ProcessRegistry.lookup(room_name, :video)
       |> VideoAgent.set_seek(t)
 
       Endpoint.broadcast("video:" <> room_name, "seek", %{t: t})
@@ -112,10 +113,10 @@ defmodule GrasstubeWeb.VideoChannel do
   def handle_in("next", _, socket) do
     "video:" <> room_name = socket.topic
 
-    Grasstube.ProcessRegistry.lookup(room_name, :chat)
+    ProcessRegistry.lookup(room_name, :chat)
     |> ChatAgent.controls?(socket)
     |> if do
-      Grasstube.ProcessRegistry.lookup(room_name, :playlist)
+      ProcessRegistry.lookup(room_name, :playlist)
       |> PlaylistAgent.next_video()
     end
 

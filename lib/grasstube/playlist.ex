@@ -1,8 +1,9 @@
-defmodule GrasstubeWeb.PlaylistAgent do
+defmodule Grasstube.PlaylistAgent do
   use Agent
   require Logger
 
-  alias GrasstubeWeb.{Endpoint, VideoAgent, Video}
+  alias Grasstube.{VideoAgent, Video, ProcessRegistry}
+  alias GrasstubeWeb.Endpoint
 
   defstruct videos: %{},
             queue: [],
@@ -24,7 +25,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
   end
 
   def via_tuple(room_name) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :playlist})
+    ProcessRegistry.via_tuple({room_name, :playlist})
   end
 
   def get_room_name(pid) do
@@ -117,7 +118,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
 
     room_name = get_room_name(pid)
 
-    video = Grasstube.ProcessRegistry.lookup(room_name, :video)
+    video = ProcessRegistry.lookup(room_name, :video)
     current = VideoAgent.get_current_video(video)
 
     if current != :nothing and current.id == id do
@@ -261,15 +262,15 @@ defmodule GrasstubeWeb.PlaylistAgent do
       end
 
     if success do
-      video = Grasstube.ProcessRegistry.lookup(room_name, :video)
+      video = ProcessRegistry.lookup(room_name, :video)
       current_video = VideoAgent.get_current_video(video)
 
       if current_video != :nothing and current_video.id == queue_id do
         VideoAgent.set_current_video(video, get_video(pid, queue_id))
 
         if VideoAgent.play_on_ready?(video) do
-          Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
-          |> GrasstubeWeb.VideoScheduler.delayed_start(5000)
+          ProcessRegistry.lookup(room_name, :video_scheduler)
+          |> Grasstube.VideoScheduler.delayed_start(5000)
         end
       end
     end
@@ -282,7 +283,7 @@ defmodule GrasstubeWeb.PlaylistAgent do
 
     room_name = get_room_name(pid)
 
-    video = Grasstube.ProcessRegistry.lookup(room_name, :video)
+    video = ProcessRegistry.lookup(room_name, :video)
 
     next =
       case VideoAgent.get_current_video(video) do
@@ -304,8 +305,8 @@ defmodule GrasstubeWeb.PlaylistAgent do
         true ->
           VideoAgent.set_current_video(video, next)
 
-          Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
-          |> GrasstubeWeb.VideoScheduler.delayed_start(5000)
+          ProcessRegistry.lookup(room_name, :video_scheduler)
+          |> Grasstube.VideoScheduler.delayed_start(5000)
 
         false ->
           VideoAgent.set_play_on_ready(video, true)

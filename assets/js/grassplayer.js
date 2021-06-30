@@ -81,6 +81,8 @@ class GrassPlayer {
     this.current_video.subs = ""
     this.current_video.yt = null
 
+    this.previews = []
+
     this.playing = false
 
     this.on_toggle_playing = null
@@ -90,19 +92,9 @@ class GrassPlayer {
 
     this.load_settings()
 
-    window.addEventListener("resize", () => {
-      clearTimeout(window.resize_finished)
-      window.resize_finished = setTimeout(() => {
-        if (this.octopusInstance) {
-          if (this.octopusInstance.renderAhead) {
-            this.octopusInstance.resetRenderAheadCache()
-          } else {
-            this.octopusInstance.setCurrentTime(0)
-            this.octopusInstance.setCurrentTime(this.current_time())
-          }
-        }
-      }, 200)
-    })
+    this.resize = () => this._resize()
+    new ResizeObserver(this.resize).observe(root)
+    window.addEventListener("resize", this.resize)
 
     this.video = create_element(root, "video")
     this.video.id = "video"
@@ -219,6 +211,23 @@ class GrassPlayer {
     this.settings.video_fullscreen_f = get_cookie("video_fullscreen_f", true)
   }
 
+  _resize() {
+    clearTimeout(this.resize_finished)
+    if (this.octopusInstance) {
+      this.octopusInstance.setCurrentTime(0)
+    }
+
+    this.resize_finished = setTimeout(() => {
+      if (this.octopusInstance) {
+        if (this.octopusInstance.renderAhead) {
+          this.octopusInstance.resetRenderAheadCache()
+        } else {
+          this.octopusInstance.setCurrentTime(this.current_time())
+        }
+      }
+    }, 400)
+  }
+
   get_volume() {
     return (Math.pow(10, (this.settings.video_volume) / 100) - 1) / 9
   }
@@ -276,6 +285,8 @@ class GrassPlayer {
   set_video(type, videos, subs = "") {
     this.current_video.videos = videos
     this.current_video.subs = subs
+
+    this.load_previews()
 
     if (this.current_video.yt) { this.current_video.yt.destroy() }
 
@@ -463,11 +474,76 @@ class GrassPlayer {
     this.seek_to(t)
   }
 
+  load_previews() {
+    this.previews = []
+    this.seekbar.preview.classList.toggle("hidden", true)
+    this.stats.thumbs.textContent = "none"
+
+    if (!this.has_controls
+      || Object.keys(this.current_video.videos).length == 0) {
+      return
+    }
+
+    const subs = this.current_video.subs
+    const videos = this.current_video.videos
+    let _path = ""
+    let filename = ""
+
+    if (subs) {
+      filename = subs.split("/").pop()
+      _path = subs.substr(0, subs.lastIndexOf("/"))
+      _path = _path.replace("subs", "thumbs")
+    } else {
+      const video = videos[Object.keys(videos)[0]]
+      filename = video.split("/").pop()
+      _path = video.substr(0, video.lastIndexOf("/"))
+      _path = `${_path}/thumbs`
+    }
+
+    filename = filename.substr(0, filename.lastIndexOf("."))
+    _path = `${_path}/${filename}.thumb`
+
+    fetch(_path, { method: "GET", mode: "cors" })
+      .then(r => r.arrayBuffer())
+      .then(buffer => {
+        const n_frames = new Uint32Array(buffer.slice(0, 4))[0]
+        const last_frame = new Float32Array(buffer.slice(4, 8))[0]
+
+        const mime_type = Array.from(new Uint8Array(buffer.slice(8, 40)))
+          .map(x => String.fromCharCode(x))
+          .join("")
+
+        const interval = last_frame / (n_frames - 1)
+        this.previews = []
+        this.previews_interval = interval
+
+        let head = 40
+        for (let i = 0; i < n_frames; i++) {
+          const size = new Uint32Array(buffer.slice(head, head + 4))[0]
+          head += 4
+
+          const base64 = Array.from(new Uint8Array(buffer.slice(head, head + size)))
+            .map(x => String.fromCharCode(x))
+            .join("")
+
+          const img = new Image()
+          img.src = `data:${mime_type};base64,${btoa(base64)}`
+          this.previews.push(img)
+
+          head += size
+        }
+
+        this.stats.thumbs.textContent = `${n_frames} images; ${mime_type}`
+        this.seekbar.preview.classList.toggle("hidden", false)
+      })
+  }
+
   set_controls(controls) {
     this.has_controls = controls
     this.btn_play.style.display = controls ? "" : "none"
     this.btn_next.style.display = controls ? "" : "none"
     this.seekbar.classList.toggle("seekbar_controls", controls)
+    this.load_previews()
   }
 
   set_youtube(video_id) {
@@ -650,6 +726,11 @@ class GrassPlayer {
     const lbl_volume = create_element(row, "span")
     lbl_volume.textContent = "volume:"
     this.stats.volume = create_element(row, "span")
+
+    row = create_element(stats_panel, "div")
+    const lbl_thumbs = create_element(row, "span")
+    lbl_thumbs.textContent = "thumbs:"
+    this.stats.thumbs = create_element(row, "span")
 
     row = create_element(stats_panel, "div")
     const lbl_styles = create_element(row, "span")
@@ -840,6 +921,9 @@ class GrassPlayer {
 
     const mtime = create_element(seekbar, "div", "seekbar_time")
 
+    seekbar.preview = create_element(seekbar, "canvas", "seekbar_preview")
+    const preview_ctx = seekbar.preview.getContext("2d")
+
     seekbar.graphic = create_element(seekbar, "div", "seekbar_bar")
 
     seekbar.buffers = []
@@ -866,10 +950,38 @@ class GrassPlayer {
       let pct = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1)
       const t = pct * this.duration()
       mtime.textContent = seconds_to_hms(t, true)
-      const rect2 = mtime.getBoundingClientRect()
-      const width = rect2.width / rect.width / 2
-      pct = Math.min(Math.max(pct, width), 1 - width)
-      mtime.style.left = `${pct * 100}%`
+
+      const mtime_rect = mtime.getBoundingClientRect()
+      const mtime_width = mtime_rect.width / rect.width / 2
+      const mtime_pct = Math.min(Math.max(pct, mtime_width), 1 - mtime_width)
+      mtime.style.left = `${mtime_pct * 100}%`
+
+      if (this.previews.length == 0) return
+
+      const preview_rect = seekbar.preview.getBoundingClientRect()
+      const preview_width = preview_rect.width / rect.width / 2
+      const preview_pct = Math.min(Math.max(pct, preview_width), 1 - preview_width)
+      seekbar.preview.style.left = `${preview_pct * 100}%`
+
+      const max_width = parseInt(window.getComputedStyle(seekbar.preview).maxWidth)
+      const max_height = parseInt(window.getComputedStyle(seekbar.preview).maxHeight)
+
+      const url = this.previews[Math.floor(t / this.previews_interval)]
+      if (url == undefined) return
+
+      const img_w = url.naturalWidth
+      const img_h = url.naturalHeight
+      const img_r = img_w / img_h
+
+      if (img_r * max_height < max_width) {
+        seekbar.preview.width = img_r * max_height
+        seekbar.preview.height = max_height
+      } else {
+        seekbar.preview.width = max_width
+        seekbar.preview.height = (img_w / img_w) * max_width
+      }
+
+      preview_ctx.drawImage(url, 0, 0, seekbar.preview.width, seekbar.preview.height)
     })
 
     seekbar.set_buffers = (buffers, duration) => {

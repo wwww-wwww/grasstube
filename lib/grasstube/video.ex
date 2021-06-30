@@ -1,4 +1,4 @@
-defmodule GrasstubeWeb.Video do
+defmodule Grasstube.Video do
   defstruct id: 0,
             title: "",
             type: "default",
@@ -9,11 +9,11 @@ defmodule GrasstubeWeb.Video do
             ready: false
 end
 
-defmodule GrasstubeWeb.VideoAgent do
+defmodule Grasstube.VideoAgent do
   use Agent
   require Logger
 
-  alias GrasstubeWeb.PlaylistAgent
+  alias Grasstube.{PlaylistAgent, VideoScheduler}
   alias GrasstubeWeb.Endpoint
 
   defstruct current_video: :nothing,
@@ -48,8 +48,8 @@ defmodule GrasstubeWeb.VideoAgent do
 
       room_name = Agent.get(pid, fn val -> val.room_name end)
 
-      scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
-      GrasstubeWeb.VideoScheduler.cancel_play(scheduler)
+      Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+      |> VideoScheduler.cancel_play()
 
       Endpoint.broadcast("video:" <> room_name, "playing", %{playing: playing?(pid)})
       Endpoint.broadcast("video:" <> room_name, "time", %{t: get_time(pid)})
@@ -98,8 +98,8 @@ defmodule GrasstubeWeb.VideoAgent do
 
     scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
 
-    GrasstubeWeb.VideoScheduler.cancel_set(scheduler)
-    GrasstubeWeb.VideoScheduler.cancel_play(scheduler)
+    VideoScheduler.cancel_set(scheduler)
+    VideoScheduler.cancel_play(scheduler)
 
     Endpoint.broadcast("video:" <> room_name, "playing", %{playing: false})
 
@@ -114,7 +114,7 @@ defmodule GrasstubeWeb.VideoAgent do
       })
 
       Endpoint.broadcast("playlist:" <> room_name, "current", %{id: -1})
-      GrasstubeWeb.VideoScheduler.stop_timer(scheduler)
+      VideoScheduler.stop_timer(scheduler)
     else
       Endpoint.broadcast("video:" <> room_name, "setvid", %{
         id: next.id,
@@ -126,7 +126,7 @@ defmodule GrasstubeWeb.VideoAgent do
       })
 
       Endpoint.broadcast("playlist:" <> room_name, "current", %{id: next.id})
-      GrasstubeWeb.VideoScheduler.start_timer(scheduler, 0)
+      VideoScheduler.start_timer(scheduler, 0)
     end
   end
 
@@ -155,12 +155,11 @@ defmodule GrasstubeWeb.VideoAgent do
   end
 end
 
-defmodule GrasstubeWeb.VideoScheduler do
+defmodule Grasstube.VideoScheduler do
   use GenServer
   require Logger
 
-  alias GrasstubeWeb.VideoAgent
-  alias GrasstubeWeb.PlaylistAgent
+  alias Grasstube.{PlaylistAgent, VideoAgent, ProcessRegistry}
   alias GrasstubeWeb.Endpoint
 
   @time_to_next 5
@@ -181,7 +180,7 @@ defmodule GrasstubeWeb.VideoScheduler do
   end
 
   def via_tuple(room_name) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :video_scheduler})
+    ProcessRegistry.via_tuple({room_name, :video_scheduler})
   end
 
   def init(state) do
@@ -193,7 +192,7 @@ defmodule GrasstubeWeb.VideoScheduler do
       Process.cancel_timer(state.play_task)
     end
 
-    video = Grasstube.ProcessRegistry.lookup(state.room_name, :video)
+    video = ProcessRegistry.lookup(state.room_name, :video)
 
     VideoAgent.set_seek(video, VideoAgent.get_time(video))
     VideoAgent.set_playing(video, true)
@@ -214,7 +213,7 @@ defmodule GrasstubeWeb.VideoScheduler do
     end
 
     new_state =
-      Grasstube.ProcessRegistry.lookup(state.room_name, :video)
+      ProcessRegistry.lookup(state.room_name, :video)
       |> VideoAgent.get_status()
       |> case do
         {:nothing, _, _} ->
@@ -230,7 +229,7 @@ defmodule GrasstubeWeb.VideoScheduler do
           if current.duration == :unset do
             %{state | sync_task: :nothing}
           else
-            scheduler = Grasstube.ProcessRegistry.lookup(state.room_name, :video_scheduler)
+            scheduler = ProcessRegistry.lookup(state.room_name, :video_scheduler)
 
             if time - current.duration > 0 do
               Endpoint.broadcast("chat:" <> state.room_name, "chat", %{
@@ -239,7 +238,7 @@ defmodule GrasstubeWeb.VideoScheduler do
                 content: "playing next video in #{@time_to_next + @time_to_start} seconds"
               })
 
-              playlist = Grasstube.ProcessRegistry.lookup(state.room_name, :playlist)
+              playlist = ProcessRegistry.lookup(state.room_name, :playlist)
 
               %{
                 state

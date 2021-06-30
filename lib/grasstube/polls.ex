@@ -1,4 +1,4 @@
-defmodule GrasstubeWeb.PollsAgent do
+defmodule Grasstube.PollsAgent do
   use Agent
   require Logger
 

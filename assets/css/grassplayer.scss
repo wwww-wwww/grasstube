@@ -250,11 +250,25 @@
       border-radius: 0.25em;
       padding: 0.25em;
       position: absolute;
-      transform: translate(-50%, -100%);
+      transform: translate(-50%, -80%);
       color: rgba(255, 255, 255, 0.8);
       text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
       opacity: 0;
-      transition: opacity 0.2s;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .seekbar_preview {
+      padding: 0.1em;
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 0.25em;
+      position: absolute;
+      bottom: 2.5em;
+      transform: translate(-50%, 20%);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      max-height: 6em;
+      max-width: 11em;
+      pointer-events: none;
     }
 
     .seekbar_dial {
@@ -287,7 +301,13 @@
     height: 16px;
 
     >.seekbar_time {
+      transform: translate(-50%, -100%);
       opacity: 1;
+    }
+
+    >.seekbar_preview {
+      transform: translate(-50%, 0);
+      opacity: 0.9;
     }
 
     >.seekbar_bar {

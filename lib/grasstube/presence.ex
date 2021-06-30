@@ -22,7 +22,7 @@ defmodule Grasstube.Presence do
                  member: true,
                  username: user.username,
                  nickname: user.nickname,
-                 mod: GrasstubeWeb.ChatAgent.mod?(chat, user)
+                 mod: Grasstube.ChatAgent.mod?(chat, user)
                }}
 
             _ ->

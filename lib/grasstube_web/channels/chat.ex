@@ -1,8 +1,7 @@
 defmodule GrasstubeWeb.ChatChannel do
   use Phoenix.Channel
 
-  alias Grasstube.Presence
-  alias GrasstubeWeb.ChatAgent
+  alias Grasstube.{Presence, ChatAgent}
 
   @max_name_length 24
 
@@ -88,10 +87,10 @@ defmodule GrasstubeWeb.ChatChannel do
 
   def handle_in("chat", %{"msg" => msg}, socket) do
     "chat:" <> room_name = socket.topic
-    chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
 
     if String.length(msg) > 0 do
-      ChatAgent.chat(chat, socket, msg)
+      Grasstube.ProcessRegistry.lookup(room_name, :chat)
+      |> ChatAgent.chat(socket, msg)
     end
 
     {:noreply, socket}
