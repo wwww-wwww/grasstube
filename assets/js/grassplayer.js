@@ -77,6 +77,7 @@ class GrassPlayer {
     })
 
     this.current_video = {}
+    this.current_video.type = ""
     this.current_video.videos = {}
     this.current_video.subs = ""
     this.current_video.yt = null
@@ -283,6 +284,7 @@ class GrassPlayer {
   }
 
   set_video(type, videos, subs = "") {
+    this.current_video.type = type
     this.current_video.videos = videos
     this.current_video.subs = subs
 
@@ -475,6 +477,8 @@ class GrassPlayer {
   }
 
   load_previews() {
+    if (this.current_video.type == "yt") return
+
     this.previews = []
     this.seekbar.preview.classList.toggle("hidden", true)
     this.stats.thumbs.textContent = "none"
