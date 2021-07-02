@@ -76,7 +76,7 @@ defmodule Grasstube.ChatAgent do
 
       cond do
         command_name in @admin_commands ->
-          if get_admin(channel) == socket_username(socket.assigns.user) do
+          if get_admin(channel) == socket_username(socket) do
             command(channel, socket, command)
           else
             Phoenix.Channel.push(socket, "chat", %{
@@ -139,10 +139,10 @@ defmodule Grasstube.ChatAgent do
     commands =
       cond do
         get_admin(channel) == socket_username(socket) ->
-          @public_commands ++ @mod_commands
+          @public_commands ++ @mod_commands ++ @admin_commands
 
         mod?(channel, socket.assigns.user) ->
-          @public_commands ++ @mod_commands ++ @admin_commands
+          @public_commands ++ @mod_commands
 
         true ->
           @public_commands
