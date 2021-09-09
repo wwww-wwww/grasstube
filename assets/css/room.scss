@@ -35,7 +35,7 @@ body {
   width: 100%;
   position: relative;
 
-  >#player {
+  > #player {
     position: absolute;
   }
 
@@ -46,8 +46,7 @@ body {
     display: flex;
     flex-direction: column-reverse;
     pointer-events: none;
-    z-index: 1;
-
+    z-index: 2;
 
     #chat_danmaku {
       overflow-x: hidden;
@@ -91,10 +90,10 @@ body {
       scrollbar-color: rgba(255, 255, 255, 0.5) rgba(0, 0, 0, 0);
       opacity: 0.4;
 
-      >div {
+      > div {
         padding: 0 0.25em;
 
-        >* {
+        > * {
           background-color: rgba(0, 0, 0, 0.2);
           border-radius: 0.1em;
         }
@@ -222,7 +221,7 @@ body {
   word-wrap: break-word;
 }
 
-.poll_choice>span {
+.poll_choice > span {
   font-size: 1em;
   line-height: 1.5em;
   margin-left: 0.5em;
@@ -230,7 +229,7 @@ body {
   word-wrap: break-word;
 }
 
-.poll_choice>button {
+.poll_choice > button {
   float: left;
 }
 
@@ -265,7 +264,7 @@ body {
   opacity: 0.8;
   -webkit-text-stroke: 1px black;
 
-  >img {
+  > img {
     max-height: 4em;
   }
 }
@@ -341,14 +340,13 @@ body {
   vertical-align: middle;
   font-family: "Google Sans", sans-serif;
 
-  >div {
+  > div {
     display: none;
   }
-
 }
 
 .collapsed_btns:hover {
-  >div {
+  > div {
     display: inline;
   }
 }

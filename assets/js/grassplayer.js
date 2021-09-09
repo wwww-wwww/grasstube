@@ -394,6 +394,7 @@ class GrassPlayer {
     this.octopusInstance = new SubtitlesOctopus({
       video: this.video,
       subUrl: subs,
+      fallbackFont: "https://res.cloudinary.com/okea/raw/upload/v1612694597/fonts/arialbd.ttf",
       availableFonts: this.availableFonts,
       workerUrl: "/includes/subtitles-octopus-worker.js",
       renderMode: "fast"
@@ -673,6 +674,7 @@ class GrassPlayer {
     e.style.alignItems = "center"
     e.style.backgroundColor = "rgba(0, 0, 0, 0.2)"
     e.style.cursor = "pointer"
+    e.style.zIndex = "2"
     e.addEventListener("click", () => {
       this.video.muted = false
       this.root.removeChild(e)
