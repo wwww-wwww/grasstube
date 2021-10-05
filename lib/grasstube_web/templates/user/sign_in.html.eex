@@ -2,10 +2,6 @@
 	<div class="inner">
 		<%= form_for(@conn, Routes.user_path(@conn, :sign_in), [class: "form"], fn f -> %>
 			<div>
-				<div class="alerts">
-					<p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
-					<p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
-				</div>
 				<%= text_input(f, :username, placeholder: "Username") %>
 				<%= text_input(f, :password, placeholder: "Password", type: "password") %>
 				<%= submit "Sign in" %>
@@ -15,4 +11,4 @@
 	</div>
 </div>
 
-<link rel="stylesheet" type="text/css" href="/css/sign_in.css">
+<link phx-track-static rel="stylesheet" href="<%= Routes.static_path(@conn, "/assets/sign_in.css") %>"/>

@@ -1,5 +1,9 @@
-body>div {
+body > div {
   overflow-y: hidden;
+}
+
+main {
+  display: flex;
 }
 
 #chat_container {
@@ -16,7 +20,7 @@ body>div {
     padding: 0.25em;
   }
 
-  >.right {
+  > .right {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -69,8 +73,8 @@ body>div {
     line-height: 14px;
   }
 
-  .message_content>*>img,
-  .message_content>img {
+  .message_content > * > img,
+  .message_content > img {
     max-height: 6em;
   }
 
@@ -79,11 +83,9 @@ body>div {
   }
 
   @media (min-width: 768px) {
-
     #input_area {
       font-size: 1em;
     }
-
   }
 
   hr {
@@ -105,11 +107,15 @@ body>div {
     height: 100%;
   }
 
-  .message_content>.ff-container {
+  .message_content > .ff-container {
     margin-bottom: 0.25em;
   }
 
-  .freeze>div>.message_content>.ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
+  .freeze
+    > div
+    > .message_content
+    > .ff-container.ff-inactive
+    .ff-canvas.ff-canvas-ready {
     opacity: 1;
     transition: opacity 0.3s;
     width: 100%;

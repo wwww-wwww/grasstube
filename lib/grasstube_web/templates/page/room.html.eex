@@ -1,4 +1,4 @@
-<script src="/includes/subtitles-octopus.js"></script>
+<script src="<%= Routes.static_path(@conn, "/includes/subtitles-octopus.js") %>"></script>
 
 <div id="container1">
 	<div id="container2">
@@ -34,11 +34,11 @@
 				<div id="polls_list"></div>
 			</div>
 			<div class="col" style="text-align: right">
-				<%= render @view_module, "playlist.html", assigns %>
+				<%= render GrasstubeWeb.PageView, "playlist.html", assigns %>
 			</div>
 		</div>
 	</div>
 </div>
 
-<link rel="stylesheet" type="text/css" href="/css/room.css">
-<script src="/js/room.js"></script>
+<link phx-track-static rel="stylesheet" href="<%= Routes.static_path(@conn, "/assets/room.css") %>"/>
+<script defer phx-track-static type="text/javascript" src="<%= Routes.static_path(@conn, "/assets/room.js") %>"></script>

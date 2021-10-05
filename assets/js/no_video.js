@@ -1,4 +1,3 @@
-import css from "../css/no_video.scss"
 import socket, { auth } from "./socket"
 
 import Chat from "./grasschat"

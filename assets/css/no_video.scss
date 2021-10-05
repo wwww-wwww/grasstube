@@ -1,3 +1,5 @@
+@import "chat", "playlist";
+
 html,
 body {
   width: 100%;
@@ -43,7 +45,7 @@ body {
     padding: 0.25em;
   }
 
-  >.right {
+  > .right {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -96,8 +98,8 @@ body {
     line-height: 14px;
   }
 
-  .message_content>*>img,
-  .message_content>img {
+  .message_content > * > img,
+  .message_content > img {
     max-height: 6em;
   }
 
@@ -106,11 +108,9 @@ body {
   }
 
   @media (min-width: 768px) {
-
     #input_area {
       font-size: 1em;
     }
-
   }
 
   hr {
@@ -132,11 +132,15 @@ body {
     height: 100%;
   }
 
-  .message_content>.ff-container {
+  .message_content > .ff-container {
     margin-bottom: 0.25em;
   }
 
-  .freeze>div>.message_content>.ff-container.ff-inactive .ff-canvas.ff-canvas-ready {
+  .freeze
+    > div
+    > .message_content
+    > .ff-container.ff-inactive
+    .ff-canvas.ff-canvas-ready {
     opacity: 1;
     transition: opacity 0.3s;
     width: 100%;
@@ -226,7 +230,7 @@ body {
   word-wrap: break-word;
 }
 
-.poll_choice>span {
+.poll_choice > span {
   font-size: 1em;
   line-height: 1.5em;
   margin-left: 0.5em;
@@ -234,7 +238,7 @@ body {
   word-wrap: break-word;
 }
 
-.poll_choice>button {
+.poll_choice > button {
   float: left;
 }
 
@@ -252,7 +256,7 @@ body {
 }
 
 .isactive,
-.isactive>a {
+.isactive > a {
   background-color: rgb(60, 60, 60);
   color: rgb(220, 220, 220);
 }

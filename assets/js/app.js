@@ -1,5 +1,3 @@
-import css from "../css/index.scss"
-
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <%= csrf_meta_tag() %>
+    <%= live_title_tag assigns[:page_title] || "Grasstube", suffix: " · Phoenix Framework" %>
+    <link phx-track-static rel="stylesheet" href={Routes.static_path(@conn, "/assets/app.css")}/>
+    <script defer phx-track-static type="text/javascript" src={Routes.static_path(@conn, "/assets/app.js")}></script>
+
+    <meta name="user_token" content={assigns[:user_token]}>
+    <%= if Guardian.Plug.current_token(@conn) do %>
+      <meta name="guardian_token" content={Guardian.Plug.current_token(@conn)}>
+    <% end %>
+    <%= if assigns[:room] do %>
+      <meta name="room" content={@room}>
+    <% end%>
+    <%= if assigns[:room_has_password] do %>
+      <meta name="room_has_password" content="1">
+    <% end%>
+  </head>
+  <body id="body" page={assigns[:view_template] || ""}>
+    <header>
+      <section>
+        <nav role="navigation">
+          <span style="float: left"><%= link("grasstube", to: Routes.live_path(@conn, GrasstubeWeb.RoomsLive)) %></span>
+          <span style="float: right">
+            <%= link("google drive", to: Routes.page_path(@conn, :gdrive), id: "userscript_google_drive") %>
+            <%= get_user_links(@conn) %>
+          </span>
+        </nav>
+      </section>
+    </header>
+    <%= @inner_content %>
+  </body>
+</html>

@@ -71,4 +71,13 @@ defmodule GrasstubeWeb.Router do
       get "/yt_search", YTController, :yt_search
     end
   end
+
+  if Mix.env() in [:dev, :test] do
+    import Phoenix.LiveDashboard.Router
+
+    scope "/" do
+      pipe_through :browser
+      live_dashboard "/dashboard", metrics: GrasstubeWeb.Telemetry
+    end
+  end
 end

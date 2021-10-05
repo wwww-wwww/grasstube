@@ -13,5 +13,5 @@
   <br>
   Then install the
   <br>
-  <%= link("userscript", to: Routes.static_path(@conn, "/gdrive.user.js")) %>
+  <%= link("userscript", to: Routes.static_path(@conn, "/static/gdrive.user.js")) %>
 </div>

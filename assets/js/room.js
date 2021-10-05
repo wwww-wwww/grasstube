@@ -1,4 +1,3 @@
-import "../css/room.scss"
 import socket, { auth } from "./socket"
 
 import GrassPlayer from "./grassplayer"

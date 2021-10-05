@@ -1,4 +1,4 @@
-<script src="/includes/subtitles-octopus.js"></script>
+<script src="<%= Routes.static_path(@conn, "/includes/subtitles-octopus.js") %>"></script>
 
 <style>
 	#player, #player_overlay {
@@ -16,7 +16,7 @@
 	header:hover {
 		opacity: 1;
 	}
-	
+
 	main {
 		height: 100%;
 		width: 100%;
@@ -27,5 +27,5 @@
 
 <div id="player"></div>
 
-<link rel="stylesheet" type="text/css" href="/css/video.css">
-<script src="/js/video.js"></script>
+<link phx-track-static rel="stylesheet" href="<%= Routes.static_path(@conn, "/assets/video.css") %>"/>
+<script defer phx-track-static type="text/javascript" src="<%= Routes.static_path(@conn, "/assets/video.js") %>"></script>

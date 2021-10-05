@@ -1,4 +1,3 @@
-import css from "../css/playlist.css"
 import "phoenix_html"
 import { create_window } from "./window"
 import { seconds_to_hms, unescape_html, create_element } from "./util"

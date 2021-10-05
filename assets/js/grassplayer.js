@@ -1,4 +1,3 @@
-import "../css/grassplayer.scss"
 import { get_cookie, set_cookie } from "./cookies"
 import { create_element, seconds_to_hms } from "./util"
 

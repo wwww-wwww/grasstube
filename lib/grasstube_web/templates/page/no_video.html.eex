@@ -21,11 +21,11 @@
 				<div id="polls_list"></div>
 			</div>
 			<div class="col" style="text-align: right">
-				<%= render @view_module, "playlist.html", assigns %>
+				<%= render GrasstubeWeb.PageView, "playlist.html", assigns %>
 			</div>
 		</div>
 	</div>
 </div>
 
-<link rel="stylesheet" type="text/css" href="/css/no_video.css">
-<script src="/js/no_video.js"></script>
+<link phx-track-static rel="stylesheet" href="<%= Routes.static_path(@conn, "/assets/no_video.css") %>"/>
+<script defer phx-track-static type="text/javascript" src="<%= Routes.static_path(@conn, "/assets/no_video.js") %>"></script>

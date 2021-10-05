@@ -13,25 +13,25 @@
   width: 12em;
   max-width: 100%;
   margin-top: 0.5em;
-}
 
-.form>div>input {
-  display: block;
-  margin: 0.5em 0;
-  padding: 0.25em 0.75em;
-  width: 100%;
-  border-radius: 1em;
-}
+  > div {
+    display: inline-block;
 
-.form>div {
-  display: inline-block;
-}
+    > input {
+      display: block;
+      margin: 0.5em 0;
+      padding: 0.25em 0.75em;
+      width: 100%;
+      border-radius: 1em;
+    }
 
-.form>div>button {
-  padding: 0.25em 0.75em;
-  font-size: 1em;
-  border-radius: 1em;
-  cursor: pointer;
+    > button {
+      padding: 0.25em 0.75em;
+      font-size: 1em;
+      border-radius: 1em;
+      cursor: pointer;
+    }
+  }
 }
 
 .sign_in {

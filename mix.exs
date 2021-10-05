@@ -5,9 +5,9 @@ defmodule Grasstube.MixProject do
     [
       app: :grasstube,
       version: "0.1.0",
-      elixir: "~> 1.7",
+      elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
+      compilers: [:gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps()
@@ -21,35 +21,59 @@ defmodule Grasstube.MixProject do
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
   defp deps do
     [
+      {:phoenix, "~> 1.6.0"},
+      {:phoenix_ecto, "~> 4.4"},
+      {:ecto_sql, "~> 3.6"},
+      {:postgrex, ">= 0.0.0"},
+      {:phoenix_html, "~> 3.0"},
+      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:phoenix_live_view, "~> 0.16.0"},
+      {:floki, ">= 0.30.0", only: :test},
+      {:phoenix_live_dashboard, "~> 0.5"},
+      {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
+      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_poller, "~> 1.0"},
+      {:gettext, "~> 0.18"},
+      {:jason, "~> 1.2"},
+      {:plug_cowboy, "~> 2.5"},
       {:guardian, "~> 2.0"},
       {:guardian_phoenix, "~> 2.0"},
       {:comeonin, "~> 5.1"},
       {:bcrypt_elixir, "~> 2.0"},
-      {:phoenix, "~> 1.5.4"},
-      {:phoenix_ecto, "~> 4.1"},
-      {:ecto_sql, "~> 3.4"},
-      {:postgrex, ">= 0.0.0"},
-      {:phoenix_html, "~> 2.11"},
-      {:phoenix_live_view, "~> 0.14.2"},
-      {:floki, ">= 0.0.0", only: :test},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:gettext, "~> 0.11"},
-      {:jason, "~> 1.0"},
-      {:plug_cowboy, "~> 2.0"},
       {:auto_linker, "~> 0.2.2"},
-      {:httpoison, "~> 1.5"}
+      {:httpoison, "~> 1.5"},
+      {:dart_sass, "~> 0.2", runtime: Mix.env() == :dev}
     ]
   end
 
   defp aliases do
     [
+      setup: ["deps.get", "ecto.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      "assets.deploy": [
+        "esbuild app --minify",
+        "esbuild room --minify",
+        "esbuild no_video --minify",
+        "esbuild video --minify",
+        "esbuild chat --minify",
+        "esbuild controls --minify",
+        "sass app --no-source-map --style=compressed",
+        "sass index --no-source-map --style=compressed",
+        "sass room --no-source-map --style=compressed",
+        "sass sign_in --no-source-map --style=compressed",
+        "sass no_video --no-source-map --style=compressed",
+        "sass video --no-source-map --style=compressed",
+        "sass chat --no-source-map --style=compressed",
+        "sass controls --no-source-map --style=compressed",
+        "phx.digest"
+      ]
     ]
   end
 end

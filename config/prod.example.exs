@@ -8,12 +8,20 @@ config :grasstube, Grasstube.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+config :grasstube, Grasstube.Guardian,
+  issuer: "Grasstube",
+  secret_key: "02ndGhNBaZIwERN0NTB5HJb8yT56as",
+  ttl: {30, :days}
+
+config :grasstube,
+  youtube_api_keys: [
+  ]
+
 config :grasstube, GrasstubeWeb.Endpoint,
   http: [:inet6, port: System.get_env("PORT") || 4001],
-  url: [host: "o.okea.moe", port: 80],
+  url: [host: "tube.grass.moe"],
   cache_static_manifest: "priv/static/cache_manifest.json",
-  static_url: [path: "/"]
+  static_url: [path: "/"],
+  secret_key_base: "tZqi2wgaIRtzw+O25GserhwHSIx+57etZ8dhwxlK4UB5q8Mab7gbPZTfv4S6cRlk"
 
 config :logger, level: :info
-
-import_config "prod.secret.exs"
