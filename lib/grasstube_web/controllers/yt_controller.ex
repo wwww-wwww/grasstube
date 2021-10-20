@@ -13,8 +13,7 @@ defmodule GrasstubeWeb.YTController do
     else
       keys = Application.get_env(:grasstube, :youtube_api_keys)
 
-      key = keys |> Enum.at(rem(Grasstube.YTCounter.value(), length(keys)))
-      Grasstube.YTCounter.increment()
+      key = keys |> Enum.at(rem(Grasstube.YTCounter.inc(), length(keys)))
 
       case HTTPoison.get("https://www.googleapis.com/youtube/v3/search", [],
              params: %{key: key, part: "snippet", type: "video", maxResults: 50, q: query}
@@ -71,11 +70,7 @@ defmodule Grasstube.YTCounter do
     Agent.start_link(fn -> 0 end, name: __MODULE__)
   end
 
-  def value do
-    Agent.get(__MODULE__, & &1)
-  end
-
-  def increment do
-    Agent.update(__MODULE__, &(&1 + 1))
+  def inc do
+    Agent.get_and_update(__MODULE__, &{&1, &1 + 1})
   end
 end

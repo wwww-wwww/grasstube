@@ -33,12 +33,8 @@ defmodule GrasstubeWeb.Counter do
     Agent.start_link(fn -> 0 end, name: __MODULE__)
   end
 
-  def value do
-    Agent.get(__MODULE__, & &1)
-  end
-
-  def increment do
-    Agent.update(__MODULE__, &(&1 + 1))
+  def inc do
+    Agent.get_and_update(__MODULE__, &{&1, &1 + 1})
   end
 end
 
@@ -84,8 +80,7 @@ defmodule GrasstubeWeb.UserSocket do
   end
 
   def new_id() do
-    ret = GrasstubeWeb.Counter.value()
-    GrasstubeWeb.Counter.increment()
-    Integer.to_string(ret)
+    GrasstubeWeb.Counter.inc()
+    |> Integer.to_string()
   end
 end
