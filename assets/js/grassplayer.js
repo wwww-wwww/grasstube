@@ -561,21 +561,23 @@ class GrassPlayer {
       events: {
         "onStateChange": e => {
           e.target.setVolume(this.get_volume() * 100)
+          this.update_youtube_time()
+        },
+        "onApiChange": e => {
           const options = e.target.getOptions()
-
           options.forEach(option => {
             if (option == "captions" || option == "cc") {
+              e.target.setOption(option, "reload", true)
+
               if (this.btn_cc.checked) {
-                e.target.loadModule(option)
+                this.current_video.yt.loadModule(option)
               } else {
-                e.target.unloadModule(option)
+                this.current_video.yt.unloadModule(option)
               }
             }
           })
 
           this.btn_cc.classList.toggle("hidden", !(options.includes("captions") || options.includes("cc")))
-
-          this.update_youtube_time()
         }
       }
     })
