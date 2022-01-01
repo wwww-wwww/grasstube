@@ -1,7 +1,8 @@
 import Config
 
 config :grasstube,
-  ecto_repos: [Grasstube.Repo]
+  ecto_repos: [Grasstube.Repo],
+  ytdl: "yt-dlp"
 
 config :grasstube, GrasstubeWeb.Endpoint,
   url: [host: "localhost"],

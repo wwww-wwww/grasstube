@@ -27,12 +27,14 @@ defmodule GrasstubeWeb.RoomsLive do
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(@topic)
 
     user = Grasstube.Guardian.user(session)
-    can_make_room = if user do
-      rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
-      length(rooms) == 0
-    else
-      false
-    end
+
+    can_make_room =
+      if user do
+        rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
+        length(rooms) == 0
+      else
+        false
+      end
 
     socket =
       socket

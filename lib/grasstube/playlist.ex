@@ -101,11 +101,42 @@ defmodule Grasstube.PlaylistAgent do
   def update_queue_item(pid, queue_id, opts) do
     Agent.update(pid, fn val ->
       new_videos =
-        Map.update(val.videos, queue_id, %Video{}, fn video ->
-          Map.merge(video, opts)
-        end)
+        Map.has_key?(val.videos, queue_id)
+        |> if do
+          Map.update(val.videos, queue_id, %Video{}, fn video ->
+            Map.merge(video, opts)
+          end)
+        else
+          val.videos
+        end
 
       %{val | videos: new_videos}
+    end)
+  end
+
+  def insert_queue(pid, queue_id, videos) do
+    Agent.update(pid, fn val ->
+      new_videos =
+        Map.update(val.videos, queue_id, %Video{}, fn _ ->
+          videos |> Enum.at(0)
+        end)
+
+      {new_videos, queue, count} =
+        videos
+        |> Enum.drop(1)
+        |> Enum.reduce({new_videos, [], val.current_qid}, fn video, {videos, queue, count} ->
+          new_videos = Map.put(videos, count, video)
+
+          {new_videos, queue ++ [count], count + 1}
+        end)
+
+      {right, left} =
+        val.queue
+        |> Enum.reverse()
+        |> Enum.split_while(&(&1 != queue_id))
+
+      new_queue = Enum.reverse(right ++ Enum.reverse(queue) ++ left)
+      %{val | videos: new_videos, current_qid: count, queue: new_queue}
     end)
   end
 
@@ -135,20 +166,35 @@ defmodule Grasstube.PlaylistAgent do
   end
 
   def get_yt_info(url) do
-    case System.cmd("youtube-dl", ["-s", "-q", "--get-title", "--get-id", "--get-duration", url]) do
+    case System.cmd(Application.get_env(:grasstube, :ytdl), ["-j", url]) do
       {output, 0} ->
-        [title, id, duration] = output |> String.trim() |> String.split("\n")
+        case output |> Jason.decode() do
+          {:ok, video} ->
+            {:ok, %{id: video["id"], duration: video["duration"], title: video["title"]}}
 
-        seconds =
-          duration
-          |> String.split(":")
-          |> Enum.map(&String.to_integer/1)
-          |> Enum.reverse()
-          |> Enum.with_index()
-          |> Enum.map(fn {v, k} -> v * :math.pow(60, k) end)
-          |> Enum.sum()
+          _ ->
+            :error
+        end
 
-        {:ok, %{id: id, duration: seconds, title: title}}
+      _ ->
+        :error
+    end
+  end
+
+  def get_yt_playlist(id) do
+    case System.cmd(Application.get_env(:grasstube, :ytdl), ["-j", "--flat-playlist", id]) do
+      {output, 0} ->
+        results =
+          output
+          |> String.trim()
+          |> String.split("\n")
+          |> Enum.map(&Jason.decode(&1))
+          |> Enum.map(&elem(&1, 1))
+          |> Enum.map(fn video ->
+            %{id: video["id"], duration: video["duration"], title: video["title"]}
+          end)
+
+        {:ok, results}
 
       _ ->
         :error
@@ -177,91 +223,123 @@ defmodule Grasstube.PlaylistAgent do
   end
 
   def queue_lookup(pid, room_name, queue_id, custom_title, url, sub, alts) do
-    success =
-      case URI.parse(url) do
-        %URI{host: nil} ->
-          update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
-          false
+    case URI.parse(url) do
+      %URI{host: nil} ->
+        update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+        false
 
-        %URI{host: host} ->
-          cond do
-            Enum.member?(@yt_domains, String.downcase(host)) ->
-              info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_yt_info(url) end)
+      %URI{host: host, query: query} ->
+        cond do
+          Enum.member?(@yt_domains, String.downcase(host)) ->
+            query
+            |> String.split("&")
+            |> Enum.map(&(String.split(&1, "=") |> List.to_tuple()))
+            |> Enum.filter(&(elem(&1, 0) == "list"))
+            |> Enum.at(0)
+            |> case do
+              {"list", list} ->
+                info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_yt_playlist(list) end)
 
-              case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
-                {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
-                  title =
-                    if custom_title |> String.length() > 0, do: custom_title, else: new_title
+                case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
+                  {:ok, {:ok, videos}} ->
+                    videos =
+                      videos
+                      |> Enum.map(fn video ->
+                        %Video{
+                          title: video.title,
+                          url: video.id,
+                          sub: nil,
+                          type: "yt",
+                          duration: video.duration,
+                          ready: true
+                        }
+                      end)
 
-                  update_queue_item(pid, queue_id, %{
-                    title: title,
-                    url: id,
-                    sub: sub,
-                    type: "yt",
-                    duration: duration,
-                    ready: true
-                  })
+                    insert_queue(pid, queue_id, videos)
 
-                  true
+                    true
 
-                _ ->
-                  update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
-                  false
-              end
+                  _ ->
+                    update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                    false
+                end
 
-            Enum.member?(@gdrive_domains, String.downcase(host)) ->
-              info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_yt_info(url) end)
+              _ ->
+                info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_yt_info(url) end)
 
-              case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
-                {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
-                  title = if String.length(custom_title) > 0, do: custom_title, else: new_title
+                case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
+                  {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
+                    title = if String.length(custom_title) > 0, do: custom_title, else: new_title
 
-                  update_queue_item(pid, queue_id, %{
-                    title: title,
-                    url: id,
-                    sub: sub,
-                    type: "gdrive",
-                    duration: duration,
-                    ready: true
-                  })
+                    update_queue_item(pid, queue_id, %{
+                      title: title,
+                      url: id,
+                      sub: sub,
+                      type: "yt",
+                      duration: duration,
+                      ready: true
+                    })
 
-                  true
+                    true
 
-                _ ->
-                  update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
-                  false
-              end
+                  _ ->
+                    update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                    false
+                end
+            end
 
-            true ->
-              info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_file_duration(url) end)
+          Enum.member?(@gdrive_domains, String.downcase(host)) ->
+            info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_yt_info(url) end)
 
-              case Task.yield(info_task, @ffprobe_timeout) || Task.shutdown(info_task) do
-                {:ok, duration} ->
-                  title =
-                    if String.length(custom_title) > 0,
-                      do: custom_title,
-                      else: Path.basename(URI.decode(url))
+            case Task.yield(info_task, @yt_timeout) || Task.shutdown(info_task) do
+              {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
+                title = if String.length(custom_title) > 0, do: custom_title, else: new_title
 
-                  update_queue_item(pid, queue_id, %{
-                    title: title,
-                    url: url,
-                    sub: sub,
-                    alts: alts,
-                    type: "default",
-                    duration: duration,
-                    ready: true
-                  })
+                update_queue_item(pid, queue_id, %{
+                  title: title,
+                  url: id,
+                  sub: sub,
+                  type: "gdrive",
+                  duration: duration,
+                  ready: true
+                })
 
-                  true
+                true
 
-                _ ->
-                  update_queue_item(pid, queue_id, %{title: "failed"})
-                  false
-              end
-          end
-      end
+              _ ->
+                update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                false
+            end
 
-    if success do
+          true ->
+            info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_file_duration(url) end)
+
+            case Task.yield(info_task, @ffprobe_timeout) || Task.shutdown(info_task) do
+              {:ok, duration} ->
+                title =
+                  if String.length(custom_title) > 0,
+                    do: custom_title,
+                    else: Path.basename(URI.decode(url))
+
+                update_queue_item(pid, queue_id, %{
+                  title: title,
+                  url: url,
+                  sub: sub,
+                  alts: alts,
+                  type: "default",
+                  duration: duration,
+                  ready: true
+                })
+
+                true
+
+              _ ->
+                update_queue_item(pid, queue_id, %{title: "failed"})
+                false
+            end
+        end
+    end
+    |> if do
       video = ProcessRegistry.lookup(room_name, :video)
       current_video = VideoAgent.get_current_video(video)
 
