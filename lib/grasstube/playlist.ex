@@ -24,13 +24,11 @@ defmodule Grasstube.PlaylistAgent do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 
-  def via_tuple(room_name) do
-    ProcessRegistry.via_tuple({room_name, :playlist})
-  end
+  def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :playlist})
 
-  def get_room_name(pid) do
-    Agent.get(pid, fn val -> val.room_name end)
-  end
+  def get_room_name(pid), do: Agent.get(pid, & &1.room_name)
+
+  def get_videos(pid), do: Agent.get(pid, & &1.videos)
 
   def get_video(pid, id) when is_integer(id) do
     Agent.get(pid, fn val ->
@@ -46,14 +44,10 @@ defmodule Grasstube.PlaylistAgent do
     get_video(pid, id)
   end
 
-  def get_queue(pid) do
-    Agent.get(pid, fn val -> val.queue end)
-  end
+  def get_queue(pid), do: Agent.get(pid, & &1.queue)
 
   def set_queue(pid, queue) do
-    Agent.update(pid, fn val ->
-      %{val | queue: queue}
-    end)
+    Agent.update(pid, &%{&1 | queue: queue})
 
     Endpoint.broadcast("playlist:" <> get_room_name(pid), "playlist", %{
       playlist: get_playlist(pid)
@@ -91,7 +85,7 @@ defmodule Grasstube.PlaylistAgent do
     room_name = get_room_name(pid)
     Endpoint.broadcast("playlist:" <> room_name, "playlist", %{playlist: get_playlist(pid)})
 
-    queue_id = Agent.get(pid, fn val -> val.current_qid - 1 end)
+    queue_id = Agent.get(pid, &(&1.current_qid - 1))
 
     Task.Supervisor.async_nolink(Tasks, fn ->
       queue_lookup(pid, room_name, queue_id, title, url, sub, alts)
@@ -103,9 +97,7 @@ defmodule Grasstube.PlaylistAgent do
       new_videos =
         Map.has_key?(val.videos, queue_id)
         |> if do
-          Map.update(val.videos, queue_id, %Video{}, fn video ->
-            Map.merge(video, opts)
-          end)
+          Map.update(val.videos, queue_id, %Video{}, &Map.merge(&1, opts))
         else
           val.videos
         end
@@ -117,15 +109,14 @@ defmodule Grasstube.PlaylistAgent do
   def insert_queue(pid, queue_id, videos) do
     Agent.update(pid, fn val ->
       new_videos =
-        Map.update(val.videos, queue_id, %Video{}, fn _ ->
-          videos |> Enum.at(0)
-        end)
+        val.videos
+        |> Map.update(queue_id, %Video{}, &%Video{Enum.at(videos, 0) | id: &1.id})
 
       {new_videos, queue, count} =
         videos
         |> Enum.drop(1)
         |> Enum.reduce({new_videos, [], val.current_qid}, fn video, {videos, queue, count} ->
-          new_videos = Map.put(videos, count, video)
+          new_videos = Map.put(videos, count, %Video{video | id: count})
 
           {new_videos, queue ++ [count], count + 1}
         end)
@@ -143,7 +134,7 @@ defmodule Grasstube.PlaylistAgent do
   def remove_queue(pid, id) when is_integer(id) do
     Agent.update(pid, fn val ->
       new_videos = Map.drop(val.videos, [id])
-      new_queue = Enum.filter(val.queue, fn q_v -> q_v != id end)
+      new_queue = Enum.filter(val.queue, &(&1 != id))
       %{val | queue: new_queue, videos: new_videos}
     end)
 
@@ -190,9 +181,13 @@ defmodule Grasstube.PlaylistAgent do
           |> String.split("\n")
           |> Enum.map(&Jason.decode(&1))
           |> Enum.map(&elem(&1, 1))
-          |> Enum.map(fn video ->
-            %{id: video["id"], duration: video["duration"], title: video["title"]}
-          end)
+          |> Enum.map(
+            &%{
+              id: &1["id"],
+              duration: &1["duration"],
+              title: &1["title"]
+            }
+          )
 
         {:ok, results}
 
@@ -228,9 +223,11 @@ defmodule Grasstube.PlaylistAgent do
         update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
         false
 
-      %URI{host: host, query: query} ->
+      %URI{host: host, query: query, path: url_path} ->
         cond do
           Enum.member?(@yt_domains, String.downcase(host)) ->
+            query = query || ""
+
             query
             |> String.split("&")
             |> Enum.map(&(String.split(&1, "=") |> List.to_tuple()))
@@ -244,16 +241,16 @@ defmodule Grasstube.PlaylistAgent do
                   {:ok, {:ok, videos}} ->
                     videos =
                       videos
-                      |> Enum.map(fn video ->
-                        %Video{
-                          title: video.title,
-                          url: video.id,
+                      |> Enum.map(
+                        &%Video{
+                          title: &1.title,
+                          url: &1.id,
                           sub: nil,
                           type: "yt",
-                          duration: video.duration,
+                          duration: &1.duration,
                           ready: true
                         }
-                      end)
+                      )
 
                     insert_queue(pid, queue_id, videos)
 
@@ -396,7 +393,7 @@ defmodule Grasstube.PlaylistAgent do
   end
 
   def get_next_video(pid, queue, id) do
-    case queue |> Enum.at(Enum.find_index(queue, fn val -> val == id end) + 1) do
+    case queue |> Enum.at(Enum.find_index(queue, &(&1 == id)) + 1) do
       nil ->
         :nothing
 

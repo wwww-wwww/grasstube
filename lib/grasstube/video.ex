@@ -27,9 +27,7 @@ defmodule Grasstube.VideoAgent do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 
-  def via_tuple(room_name) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :video})
-  end
+  def via_tuple(room_name), do: Grasstube.ProcessRegistry.via_tuple({room_name, :video})
 
   def set_playing(pid, playing) do
     if not get_current_video(pid).ready do
@@ -46,7 +44,7 @@ defmodule Grasstube.VideoAgent do
         }
       end)
 
-      room_name = Agent.get(pid, fn val -> val.room_name end)
+      room_name = Agent.get(pid, & &1.room_name)
 
       Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
       |> VideoScheduler.cancel_play()
@@ -56,13 +54,9 @@ defmodule Grasstube.VideoAgent do
     end
   end
 
-  def playing?(pid) do
-    Agent.get(pid, fn val -> val.playing end)
-  end
+  def playing?(pid), do: Agent.get(pid, & &1.playing)
 
-  def get_time(pid) do
-    Agent.get(pid, fn val -> actual_get_time(val) end)
-  end
+  def get_time(pid), do: Agent.get(pid, &actual_get_time(&1))
 
   defp actual_get_time(val) do
     if val.playing and val.time_started != :not_started do
@@ -73,15 +67,11 @@ defmodule Grasstube.VideoAgent do
     end
   end
 
-  def set_seek(pid, t) do
-    Agent.update(pid, fn val ->
-      %{val | time_seek: t, time_started: DateTime.to_unix(DateTime.utc_now())}
-    end)
-  end
+  def set_seek(pid, t),
+    do:
+      Agent.update(pid, &%{&1 | time_seek: t, time_started: DateTime.to_unix(DateTime.utc_now())})
 
-  def set_time_started(pid, t) do
-    Agent.update(pid, fn val -> %{val | time_started: t} end)
-  end
+  def set_time_started(pid, t), do: Agent.update(pid, &%{&1 | time_started: t})
 
   def set_current_video(pid, next) do
     Agent.update(pid, fn val ->
@@ -94,7 +84,7 @@ defmodule Grasstube.VideoAgent do
       }
     end)
 
-    room_name = Agent.get(pid, fn val -> val.room_name end)
+    room_name = Agent.get(pid, & &1.room_name)
 
     scheduler = Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
 
@@ -130,29 +120,13 @@ defmodule Grasstube.VideoAgent do
     end
   end
 
-  def get_status(pid) do
-    Agent.get(pid, fn val ->
-      {val.current_video, actual_get_time(val), val.playing}
-    end)
-  end
+  def get_status(pid), do: Agent.get(pid, &{&1.current_video, actual_get_time(&1), &1.playing})
 
-  def get_current_video(pid) do
-    Agent.get(pid, fn val ->
-      val.current_video
-    end)
-  end
+  def get_current_video(pid), do: Agent.get(pid, & &1.current_video)
 
-  def set_play_on_ready(pid, b) do
-    Agent.update(pid, fn val ->
-      %{val | play_on_ready: b}
-    end)
-  end
+  def set_play_on_ready(pid, b), do: Agent.update(pid, &%{&1 | play_on_ready: b})
 
-  def play_on_ready?(pid) do
-    Agent.get(pid, fn val ->
-      val.play_on_ready
-    end)
-  end
+  def play_on_ready?(pid), do: Agent.get(pid, & &1.play_on_ready)
 end
 
 defmodule Grasstube.VideoScheduler do
@@ -179,9 +153,7 @@ defmodule Grasstube.VideoScheduler do
     )
   end
 
-  def via_tuple(room_name) do
-    ProcessRegistry.via_tuple({room_name, :video_scheduler})
-  end
+  def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :video_scheduler})
 
   def init(state) do
     {:ok, state}
@@ -255,8 +227,7 @@ defmodule Grasstube.VideoScheduler do
   end
 
   def handle_cast({:delayed_start, time}, state) do
-    new_state = %{state | play_task: Process.send_after(self(), :delayed_start, time)}
-    {:noreply, new_state}
+    {:noreply, %{state | play_task: Process.send_after(self(), :delayed_start, time)}}
   end
 
   def handle_cast(:cancel_play, state) do

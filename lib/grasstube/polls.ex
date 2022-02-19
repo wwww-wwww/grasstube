@@ -10,9 +10,7 @@ defmodule Grasstube.PollsAgent do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
   end
 
-  def via_tuple(room_name) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :polls})
-  end
+  def via_tuple(room_name), do: Grasstube.ProcessRegistry.via_tuple({room_name, :polls})
 
   def add_poll(pid, title, choices) do
     Agent.update(pid, fn val ->
@@ -29,12 +27,7 @@ defmodule Grasstube.PollsAgent do
     end)
   end
 
-  def remove_poll(pid, id) do
-    Agent.update(pid, fn val ->
-      new_polls = Map.drop(val.polls, [id])
-      %{val | polls: new_polls}
-    end)
-  end
+  def remove_poll(pid, id), do: Agent.update(pid, &%{&1 | polls: Map.drop(&1.polls, [id])})
 
   def get_polls(pid) do
     Agent.get(pid, fn val ->
@@ -45,13 +38,13 @@ defmodule Grasstube.PollsAgent do
           |> Enum.map(fn choice ->
             users =
               poll.votes
-              |> Enum.filter(fn {_, vote} -> vote == choice end)
+              |> Enum.filter(&(elem(&1, 1) == choice))
               |> Map.new()
               |> Map.keys()
 
             guests =
               poll.votes_guest
-              |> Enum.filter(fn {_, vote} -> vote == choice end)
+              |> Enum.filter(&(elem(&1, 1) == choice))
               |> Map.new()
               |> Map.keys()
 

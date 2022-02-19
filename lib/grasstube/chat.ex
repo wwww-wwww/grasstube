@@ -47,9 +47,7 @@ defmodule Grasstube.ChatAgent do
     )
   end
 
-  def via_tuple(room_name) do
-    ProcessRegistry.via_tuple({room_name, :chat})
-  end
+  def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :chat})
 
   def chat2(room, user_id, user, msg) do
     escaped =
@@ -263,9 +261,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "clear") do
-    Agent.update(channel, fn val ->
-      %{val | history: []}
-    end)
+    Agent.update(channel, &%{&1 | history: []})
 
     Endpoint.broadcast(socket.topic, "clear", %{})
   end
@@ -287,9 +283,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "controls") do
-    Agent.update(channel, fn val ->
-      %{val | public_controls: !val.public_controls}
-    end)
+    Agent.update(channel, &%{&1 | public_controls: !&1.public_controls})
 
     controls = public_controls?(channel)
 
@@ -323,9 +317,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "motd " <> motd) do
-    Agent.update(channel, fn val ->
-      %{val | motd: motd}
-    end)
+    Agent.update(channel, &%{&1 | motd: motd})
 
     Phoenix.Channel.push(socket, "chat", %{
       sender: "sys",
@@ -335,9 +327,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "clear_motd") do
-    Agent.update(channel, fn val ->
-      %{val | motd: ""}
-    end)
+    Agent.update(channel, &%{&1 | motd: ""})
 
     Phoenix.Channel.push(socket, "chat", %{
       sender: "sys",
@@ -354,31 +344,15 @@ defmodule Grasstube.ChatAgent do
     })
   end
 
-  def get_room_name(pid) do
-    Agent.get(pid, fn val ->
-      val.room_name
-    end)
-  end
+  def get_room_name(pid), do: Agent.get(pid, & &1.room_name)
 
-  def get_motd(pid) do
-    Agent.get(pid, fn val ->
-      val.motd
-    end)
-  end
+  def get_motd(pid), do: Agent.get(pid, & &1.motd)
 
-  def public_controls?(pid) do
-    Agent.get(pid, fn val ->
-      val.public_controls
-    end)
-  end
+  def public_controls?(pid), do: Agent.get(pid, & &1.public_controls)
 
-  def controls_user?(pid, user) do
-    public_controls?(pid) or mod?(pid, user)
-  end
+  def controls_user?(pid, user), do: public_controls?(pid) or mod?(pid, user)
 
-  def controls?(pid, socket) do
-    public_controls?(pid) or mod?(pid, socket.assigns.user)
-  end
+  def controls?(pid, socket), do: public_controls?(pid) or mod?(pid, socket.assigns.user)
 
   def add_to_history(pid, nickname, msg) do
     Agent.update(pid, fn val ->
@@ -392,54 +366,29 @@ defmodule Grasstube.ChatAgent do
     end)
   end
 
-  def get_history(pid) do
-    Agent.get(pid, fn val -> val.history end)
-  end
+  def get_history(pid), do: Agent.get(pid, & &1.history)
 
-  def get_admin(pid) do
-    Agent.get(pid, fn val -> val.admin end)
-  end
+  def get_admin(pid), do: Agent.get(pid, & &1.admin)
 
-  def get_mods(pid) do
-    Agent.get(pid, fn val -> val.mods end)
-  end
+  def get_mods(pid), do: Agent.get(pid, & &1.mods)
 
-  def add_emotelist(pid, user) do
-    Agent.update(pid, fn val ->
-      %{val | emotelists: [user | val.emotelists]}
-    end)
-  end
+  def add_emotelist(pid, user), do: Agent.update(pid, &%{&1 | emotelists: [user | &1.emotelists]})
 
-  def remove_emotelist(pid, user) do
-    Agent.update(pid, fn val ->
-      %{val | emotelists: List.delete(val.emotelists, user)}
-    end)
-  end
+  def remove_emotelist(pid, user),
+    do: Agent.update(pid, &%{&1 | emotelists: List.delete(&1.emotelists, user)})
 
-  def add_mod(pid, user) do
-    Agent.update(pid, fn val ->
-      %{val | mods: [user | val.mods]}
-    end)
-  end
+  def add_mod(pid, user), do: Agent.update(pid, &%{&1 | mods: [user | &1.mods]})
 
-  def remove_mod(pid, user) do
-    Agent.update(pid, fn val ->
-      %{val | mods: List.delete(val.mods, user)}
-    end)
-  end
+  def remove_mod(pid, user), do: Agent.update(pid, &%{&1 | mods: List.delete(&1.mods, user)})
 
-  def mod_username?(pid, user) do
-    get_mods(pid) |> Enum.any?(fn mod -> mod == user end)
-  end
+  def mod_username?(pid, user), do: get_mods(pid) |> Enum.any?(&(&1 == user))
 
-  def mod?(pid, user) when user != nil do
-    get_admin(pid) == user.username or
-      get_mods(pid) |> Enum.any?(fn mod -> mod == user.username end)
-  end
+  def mod?(pid, user) when not is_nil(user),
+    do:
+      get_admin(pid) == user.username or
+        get_mods(pid) |> Enum.any?(&(&1 == user.username))
 
-  def mod?(_, _) do
-    false
-  end
+  def mod?(_, _), do: false
 
   def socket_username(socket) do
     if socket.assigns.user != nil do
@@ -459,20 +408,16 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  defp get_emotelists(pid) do
-    Agent.get(pid, fn val -> val.emotelists end)
-  end
+  defp get_emotelists(pid), do: Agent.get(pid, & &1.emotelists)
 
   def get_emotes(pid) do
     get_emotelists(pid)
     |> Enum.reduce([], fn username, acc ->
-      user = Repo.get(Grasstube.User, username) |> Repo.preload(:emotes)
-
-      emotes =
-        user.emotes
-        |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, url: emote.url} | acc] end)
-
-      emotes ++ acc
+      Repo.get(Grasstube.User, username)
+      |> Repo.preload(:emotes)
+      |> Map.get(:emotes)
+      |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, url: emote.url} | acc] end)
+      |> Kernel.++(acc)
     end)
   end
 
@@ -481,15 +426,11 @@ defmodule Grasstube.ChatAgent do
     parse_emote(msg, "", emotes)
   end
 
-  defp split_emote(msg) do
-    Regex.split(~r{(:[^:]+:)}, msg, include_captures: true, parts: 2)
-  end
+  defp split_emote(msg), do: Regex.split(~r{(:[^:]+:)}, msg, include_captures: true, parts: 2)
 
   defp process_emote(input, emotes) do
     case emotes
-         |> Enum.find(:not_emote, fn emote ->
-           String.downcase(input) == ":" <> emote.emote <> ":"
-         end) do
+         |> Enum.find(:not_emote, &(String.downcase(input) == ":" <> &1.emote <> ":")) do
       :not_emote ->
         :not_emote
 
@@ -519,13 +460,12 @@ defmodule Grasstube.ChatAgent do
   end
 
   def password?(pid) do
-    password = Agent.get(pid, fn val -> val.password end)
-    String.length(password) > 0
+    Agent.get(pid, & &1.password)
+    |> String.length()
+    |> Kernel.>(0)
   end
 
-  def check_password(pid, password) do
-    Agent.get(pid, fn val -> val.password end) == password
-  end
+  def check_password(pid, password), do: Agent.get(pid, & &1.password) == password
 
   def auth(socket, room_name, password) do
     case Grasstube.ProcessRegistry.lookup(room_name, :chat) do

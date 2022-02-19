@@ -8,8 +8,8 @@ defmodule GrasstubeWeb.UserView do
     user = Repo.get(Grasstube.User, username) |> Repo.preload(:emotes)
 
     user.emotes
-    |> Enum.map(fn emote -> %{id: emote.id, emote: emote.emote, url: emote.url} end)
-    |> Enum.sort_by(fn e -> e.emote end)
+    |> Enum.map(&%{id: &1.id, emote: &1.emote, url: &1.url})
+    |> Enum.sort_by(& &1.emote)
   end
 
   def get_rooms(conn) do

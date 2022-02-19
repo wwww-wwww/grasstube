@@ -47,12 +47,12 @@ defmodule GrasstubeWeb.YTController do
 
             r ->
               conn
-              |> json(%{success: 0, response: r})
+              |> json(%{success: 0, response: inspect(r)})
           end
 
         r ->
           conn
-          |> json(%{success: 0, response: r})
+          |> json(%{success: 0, response: inspect(r)})
       end
     end
   end
