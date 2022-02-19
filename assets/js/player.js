@@ -8,7 +8,7 @@ class Video {
     this.set_video_on_ready = null
     this.current_video = null
 
-    fetch("https://res.cloudinary.com/okea/raw/upload/v1637558205/fonts.json")
+    fetch("https://res.cloudinary.com/grass/raw/upload/v1644403791/fonts.json")
       .then(res => res.json())
       .then(fonts => {
         this.player.set_fonts(fonts)

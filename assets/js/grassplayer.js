@@ -393,7 +393,7 @@ class GrassPlayer {
     this.octopusInstance = new SubtitlesOctopus({
       video: this.video,
       subUrl: subs,
-      fallbackFont: "https://res.cloudinary.com/okea/raw/upload/v1612694597/fonts/arialbd.ttf",
+      fallbackFont: "https://res.cloudinary.com/grass/raw/upload/v1612694597/fonts/arialbd.ttf",
       availableFonts: this.availableFonts,
       workerUrl: "/includes/subtitles-octopus-worker.js",
       renderMode: "fast"
