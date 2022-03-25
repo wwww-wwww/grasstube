@@ -31,49 +31,10 @@ class GrassPlayer {
 
     this.root.setAttribute("tabindex", "0")
 
-    this.root.addEventListener("keydown", e => {
-      if (e.target.tagName == "INPUT" && !(e in this)) return
-      switch (e.key) {
-        case "Enter":
-          break
-        case "ArrowLeft":
-          if (!this.settings.video_seek_arrow) return
-          if (!this.has_controls) return
-          this.on_seek(Math.max(this.get_time() - 5, 0))
-          break
-        case "ArrowRight":
-          if (!this.settings.video_seek_arrow) return
-          if (!this.has_controls) return
-          this.on_seek(Math.min(this.get_time() + 5, this.duration()))
-          break
-        case "ArrowUp":
-          if (!this.settings.video_volume_arrow) return
-          this.add_volume(5)
-          break
-        case "ArrowDown":
-          if (!this.settings.video_volume_arrow) return
-          this.add_volume(-5)
-          break
-        case " ":
-          if (!this.settings.video_play_space) return
-          if (!this.btn_play.disabled) this.btn_play.click()
-          break
-        case "f":
-          if (!this.settings.video_fullscreen_f) return
-          this.toggle_fullscreen()
-          break
-        default:
-          return
-      }
-      e.preventDefault()
-    })
+    this.root.addEventListener("keydown", e => this.on_keydown(e))
+    this.root.addEventListener("wheel", e => this.on_wheel(e))
 
-    this.root.addEventListener("wheel", e => {
-      if (!this.settings.video_volume_scroll) return
-      if (e.target != this.overlay && e.target != this.volume_slider) return
-      e.preventDefault()
-      this.add_volume(e.deltaY > 0 ? -5 : 5)
-    })
+    this.load_settings()
 
     this.current_video = {}
     this.current_video.type = ""
@@ -86,11 +47,12 @@ class GrassPlayer {
     this.playing = false
 
     this.on_toggle_playing = null
-    this.on_seek = t => { this.seek(t) }
+    this.on_seek = t => this.seek(t)
+
+    this.cc = this.settings.cc || true
+    this.on_toggle_cc = []
 
     this.octopusInstance = null
-
-    this.load_settings()
 
     this.resize = () => this._resize()
     new ResizeObserver(this.resize).observe(root)
@@ -244,17 +206,17 @@ class GrassPlayer {
     }
   }
 
-  on_toggle_cc() {
-    this.btn_cc.checked = !this.btn_cc.checked
-    this.btn_cc.textContent = this.btn_cc.checked ? "subtitles" : "subtitles_off"
-    this.settings.set("video_cc", this.btn_cc.checked)
+  toggle_cc() {
+    this.cc = !this.cc
+    this.settings.set("video_cc", this.cc)
+    this.on_toggle_cc.forEach(e => e(this.cc))
 
     if (this.current_video.yt) {
       const options = this.current_video.yt.getOptions()
 
       options.forEach(option => {
         if (option == "captions" || option == "cc") {
-          if (this.btn_cc.checked) {
+          if (this.cc) {
             this.current_video.yt.loadModule(option)
           } else {
             this.current_video.yt.unloadModule(option)
@@ -263,7 +225,7 @@ class GrassPlayer {
       })
       if (this.octopusInstance) this.octopusInstance.freeTrack()
     } else {
-      if (this.btn_cc.checked) {
+      if (this.cc) {
         if (this.current_video.subs.length > 0) {
           this.set_subtitles(this.current_video.subs)
         }
@@ -280,6 +242,50 @@ class GrassPlayer {
         this.octopusInstance.setCurrentTime(this.current_time())
       }
     }
+  }
+
+  on_keydown(e) {
+    if (e.target.tagName == "INPUT" && !(e in this)) return
+    switch (e.key) {
+      case "Enter":
+        break
+      case "ArrowLeft":
+        if (!this.settings.video_seek_arrow) return
+        if (!this.has_controls) return
+        this.on_seek(Math.max(this.get_time() - 5, 0))
+        break
+      case "ArrowRight":
+        if (!this.settings.video_seek_arrow) return
+        if (!this.has_controls) return
+        this.on_seek(Math.min(this.get_time() + 5, this.duration()))
+        break
+      case "ArrowUp":
+        if (!this.settings.video_volume_arrow) return
+        this.add_volume(5)
+        break
+      case "ArrowDown":
+        if (!this.settings.video_volume_arrow) return
+        this.add_volume(-5)
+        break
+      case " ":
+        if (!this.settings.video_play_space) return
+        if (!this.btn_play.disabled) this.btn_play.click()
+        break
+      case "f":
+        if (!this.settings.video_fullscreen_f) return
+        this.toggle_fullscreen()
+        break
+      default:
+        return
+    }
+    e.preventDefault()
+  }
+
+  on_wheel(e) {
+    if (!this.settings.video_volume_scroll) return
+    if (e.target != this.overlay && e.target != this.volume_slider) return
+    e.preventDefault()
+    this.add_volume(e.deltaY > 0 ? -5 : 5)
   }
 
   set_video(type, videos, subs = "") {
@@ -357,7 +363,7 @@ class GrassPlayer {
             }
           }
         }
-        if (this.btn_cc.checked && subs.length > 0) {
+        if (this.cc && subs.length > 0) {
           this.set_subtitles(subs)
         }
         break
@@ -466,7 +472,9 @@ class GrassPlayer {
       }
     } else {
       this.video.currentTime = t
-      if (this.video.currentTime >= this.video.duration) { this.video.pause() }
+      if (this.video.currentTime >= this.video.duration) {
+        this.video.pause()
+      }
     }
     this.seekbar.set_time(t / this.duration())
   }
@@ -569,7 +577,7 @@ class GrassPlayer {
             if (option == "captions" || option == "cc") {
               e.target.setOption(option, "reload", true)
 
-              if (this.btn_cc.checked) {
+              if (this.cc) {
                 this.current_video.yt.loadModule(option)
               } else {
                 this.current_video.yt.unloadModule(option)
@@ -699,12 +707,31 @@ class GrassPlayer {
         this.ctxmenu.parentElement.removeChild(this.ctxmenu)
       }
     })
+
+    const fullscreen = create_element(this.ctxmenu, "button")
+    fullscreen.textContent = "Enter Fullscreen"
+    fullscreen.addEventListener("click", () => this.toggle_fullscreen())
+
+    document.addEventListener("fullscreenchange", () => {
+      if (document.fullscreenElement) {
+        fullscreen.textContent = "Exit Fullscreen"
+      } else {
+        fullscreen.textContent = "Enter Fullscreen"
+      }
+    })
+
+    const captions = create_element(this.ctxmenu, "button")
+    captions.textContent = this.cc ? "Hide Captions" : "Show Captions"
+    captions.addEventListener("click", () => this.toggle_cc())
+    this.on_toggle_cc.push(cc => {
+      captions.textContent = cc ? "Hide Captions" : "Show Captions"
+    })
   }
 
   create_stats_panel() {
     const stats_panel = create_element(null, "div", "stats")
     const btn_stats = create_element(this.ctxmenu, "button")
-    btn_stats.textContent = "stats"
+    btn_stats.textContent = "Stats"
     btn_stats.addEventListener("click", () => {
       this.overlay.appendChild(stats_panel)
     })
@@ -756,7 +783,7 @@ class GrassPlayer {
   create_settings() {
     const settings = create_element(null, "div", "settings")
     const btn_settings = create_element(this.ctxmenu, "button")
-    btn_settings.textContent = "settings"
+    btn_settings.textContent = "Settings"
     btn_settings.addEventListener("click", () => {
       this.overlay.appendChild(settings)
     })
@@ -824,7 +851,9 @@ class GrassPlayer {
     const btn_close = create_element(settings, "button")
     btn_close.textContent = "close"
     btn_close.addEventListener("click", () => {
-      if (settings.parentElement) (settings.parentElement.removeChild(settings))
+      if (settings.parentElement) {
+        settings.parentElement.removeChild(settings)
+      }
     })
   }
 
@@ -855,7 +884,7 @@ class GrassPlayer {
     this.btn_next.textContent = "skip_next"
 
     this.on_next = void 0
-    this.btn_next.addEventListener("click", () => { this.on_next() })
+    this.btn_next.addEventListener("click", () => this.on_next())
 
     this.volume_slider = create_element(this.bottom_shade, "input", "volume_slider")
     this.volume_slider.type = "range"
@@ -879,7 +908,7 @@ class GrassPlayer {
       this.update_volume()
     }
 
-    this.volume_slider.addEventListener("input", () => { this.update_volume() })
+    this.volume_slider.addEventListener("input", () => this.update_volume())
 
     this.lbl_time = create_element(this.bottom_shade, "span", "player_time")
     this.lbl_time.textContent = "00:00 / 00:00"
@@ -888,16 +917,13 @@ class GrassPlayer {
 
     this.btn_cc = create_element(right_side, "button", "cc")
     disable_space(this.btn_cc)
-
-    const _cc = this.settings.cc
-    if (_cc == null) {
-      this.btn_cc.checked = true
-    } else {
-      this.btn_cc.checked = _cc
-    }
-
-    this.btn_cc.textContent = this.btn_cc.checked ? "subtitles" : "subtitles_off"
-    this.btn_cc.addEventListener("click", () => { this.on_toggle_cc() })
+    this.btn_cc.checked = this.cc
+    this.btn_cc.textContent = this.cc ? "subtitles" : "subtitles_off"
+    this.btn_cc.addEventListener("click", () => this.toggle_cc())
+    this.on_toggle_cc.push(cc => {
+      this.btn_cc.checked = cc
+      this.btn_cc.textContent = cc ? "subtitles" : "subtitles_off"
+    })
 
     this.select_quality = create_element(right_side, "select", "player_select_quality")
     disable_space(this.select_quality)
@@ -911,7 +937,7 @@ class GrassPlayer {
     this.btn_fullscreen = create_element(right_side, "button")
     disable_space(this.btn_fullscreen)
     this.btn_fullscreen.textContent = "fullscreen"
-    this.btn_fullscreen.addEventListener("click", () => { this.toggle_fullscreen() })
+    this.btn_fullscreen.addEventListener("click", () => this.toggle_fullscreen())
 
     document.addEventListener("fullscreenchange", () => {
       if (document.fullscreenElement) {
@@ -946,8 +972,9 @@ class GrassPlayer {
     seekbar.dial = create_element(seekbar, "div", "seekbar_dial")
 
     seekbar._seek = e => { return this._seek(e) }
-    seekbar._mouseup = e => { this.seekbar_on_mouse_up(e) }
-    seekbar.addEventListener("mousedown", e => { this.seekbar_on_mouse_down(e) })
+    seekbar._mouseup = e => this.seekbar_on_mouse_up(e)
+
+    seekbar.addEventListener("mousedown", e => this.seekbar_on_mouse_down(e))
     seekbar.addEventListener("mousemove", e => {
       if (!this.current_video.yt && Object.keys(this.current_video.videos).length == 0) {
         mtime.textContent = ""
@@ -1075,7 +1102,7 @@ class GrassPlayer {
 
     this.seekbar.graphic.classList.toggle("seeking", false)
     this.seekbar.dial.classList.toggle("seeking", false)
-    if (this.overlay_hide) clearTimeout(this.overlay_hide)
+    if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
     this.overlay.classList.toggle("overlay_hidden", false)
     this.overlay_hide = setTimeout(() => {
       this.overlay.classList.toggle("overlay_hidden", true)
