@@ -293,6 +293,10 @@
         left 0.1s linear;
     }
 
+    .seekbar_dial.seeking {
+      transition: left 0s;
+    }
+
     .seekbar_bar {
       position: absolute;
       width: 100%;
