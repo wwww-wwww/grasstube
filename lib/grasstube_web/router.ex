@@ -40,6 +40,10 @@ defmodule GrasstubeWeb.Router do
       get "/:room", PageController, :room
     end
 
+    scope "/r2" do
+      live "/:room/chat", ChatLive
+    end
+
     scope "/" do
       pipe_through :logged_out
       get "/sign_in", UserController, :sign_in_page

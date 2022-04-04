@@ -215,7 +215,7 @@ class Chat {
         set_cookie("nickname", name)
       }
 
-      this.channel.push("setname", { name: name })
+      this.channel.push("chat", { msg: `/nick ${name}` })
       return true
     } else {
       return false

@@ -95,33 +95,4 @@ defmodule GrasstubeWeb.ChatChannel do
 
     {:noreply, socket}
   end
-
-  def handle_in("setname", %{"name" => name}, socket) do
-    if String.length(name) > 0 and String.length(name) <= @max_name_length do
-      new_nickname =
-        cond do
-          String.downcase(name) == "anon" ->
-            "anon#{socket.id}"
-
-          # ChatAgent.get_users(chat)
-          # |> Enum.any?(fn s -> String.downcase(s.nickname) == String.downcase(name) end) ->
-          #  name <> "0"
-
-          true ->
-            name
-        end
-
-      # TODO: check for reserved names
-
-      ChatAgent.set_name(socket, new_nickname)
-      Presence.update(socket, socket.assigns.user_id, %{nickname: new_nickname})
-    else
-      push(socket, "chat", %{
-        id: "sys",
-        content: "nickname must be between 1 and #{@max_name_length} characters"
-      })
-    end
-
-    {:noreply, socket}
-  end
 end
