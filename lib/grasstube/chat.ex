@@ -51,7 +51,7 @@ defmodule Grasstube.ChatAgent do
   def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :chat})
 
   def push({_socket, pid}, event, payload) do
-    send(pid, {event, payload})
+    send(pid, %{event: event, payload: payload})
   end
 
   def push(socket, event, payload) do

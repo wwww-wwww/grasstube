@@ -1,6 +1,6 @@
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
-import { create_element, pad } from "./util"
+import { create_element, pad, enter } from "./util"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
@@ -86,6 +86,21 @@ const hooks = {
 
         this.on_message.forEach(fn => fn(msg, true))
       })
+
+      this.handleEvent("clear", _ => {
+        while (chat_messages.firstChild) {
+          chat_messages.removeChild(chat_messages.firstChild)
+        }
+      })
+    }
+  },
+
+  chat_submit: {
+    mounted() {
+      this.el.addEventListener("keydown", e => enter(e, () => {
+        this.pushEvent("chat", { message: this.el.value })
+        this.el.value = ""
+      }))
     }
   }
 }

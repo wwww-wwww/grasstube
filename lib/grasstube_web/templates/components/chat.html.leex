@@ -16,9 +16,7 @@
 </div>
 
 <div id="chat_input_container" phx-update="ignore">
-  <form phx-submit="chat" class="chat_form">
-    <input name="message" id="chat_input">
-  </form>
+  <input id="chat_input" phx-hook="chat_submit">
   <button id="chat_emotes" class="square">🙂</button>
 </div>
 

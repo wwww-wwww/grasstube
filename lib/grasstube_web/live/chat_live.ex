@@ -42,13 +42,19 @@ defmodule GrasstubeWeb.ChatLive do
         do: %{nickname: socket.assigns.user.nickname, username: socket.assigns.user.username},
         else: %{nickname: "anon#{socket.assigns.id}"}
 
-    presence = Presence.list(topic)
-
     Presence.track(self(), topic, socket.assigns.user_id, meta)
 
     socket =
       socket
       |> assign(users: Presence.list(topic))
+
+    case ChatAgent.get_motd(chat) do
+      "" ->
+        nil
+
+      motd ->
+        send(self(), %{event: "chat", payload: %{sender: "sys", name: room, content: motd}})
+    end
 
     {:ok, socket}
   end
@@ -77,16 +83,10 @@ defmodule GrasstubeWeb.ChatLive do
   end
 
   def handle_info(%{event: "chat", payload: payload}, socket) do
-    IO.inspect(payload)
     {:noreply, push_event(socket, "chat", payload)}
   end
 
-  def handle_info(d, socket) do
-    IO.inspect(d)
-    {:noreply, socket}
-  end
-
-  def update() do
-    # GrasstubeWeb.Endpoint.broadcast(@topic, "rooms:update", %{rooms: get_rooms()})
+  def handle_info(%{event: "clear"}, socket) do
+    {:noreply, push_event(socket, "clear", %{})}
   end
 end
