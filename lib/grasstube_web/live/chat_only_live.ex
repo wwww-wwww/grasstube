@@ -7,8 +7,7 @@ defmodule GrasstubeWeb.ChatOnlyLive do
     ~L"""
     <%= live_render(@socket, GrasstubeWeb.ChatLive,
       session: %{"room" => @room},
-      id: "chat:#{@room}",
-      container: {:div, class: page_name(@socket)}
+      id: "view_chat"
     ) %>
     """
   end

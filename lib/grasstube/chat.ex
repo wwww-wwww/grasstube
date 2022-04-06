@@ -427,6 +427,7 @@ defmodule Grasstube.ChatAgent do
       |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, url: emote.url} | acc] end)
       |> Kernel.++(acc)
     end)
+    |> Enum.sort_by(&Map.get(&1, :emote))
   end
 
   defp do_emote(pid, msg) do

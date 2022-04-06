@@ -1,10 +1,39 @@
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
-import { create_element, pad, enter } from "./util"
-import { seconds_to_hms } from "./util"
+import { create_element, enter, pad, seconds_to_hms } from "./util"
+import { create_window } from "./window"
 import GrassPlayer from "./grassplayer"
+import Text from "./danmaku"
+import init_drag from "./drag"
+import init_settings from "./settings"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+
+function autohide(msg) {
+  msg.expire = null
+
+  msg.show = n => {
+    msg.classList.toggle("hidden", false)
+    if (!n) return
+
+    if (msg.expire) clearTimeout(msg.expire)
+
+    msg.expire = setTimeout(() => {
+      msg.expire = null
+      if (view_chat.classList.contains("hidden")) {
+        msg.classList.toggle("hidden", true)
+      }
+    }, n)
+  }
+
+  msg.hide = () => {
+    if (!msg.expire) {
+      msg.classList.toggle("hidden", true)
+    }
+  }
+
+  return msg
+}
 
 class Message {
   constructor(data) {
@@ -41,13 +70,17 @@ class Message {
 const chat_state = {
   unread_messages: 0,
   last_chat_user: "",
-  on_message: []
+  on_message: [],
+  chat: null,
+  emotes_modal: null,
 }
 
 const hooks = {
   chat: {
     mounted() {
       const room_name = document.querySelector("meta[name='room']").getAttribute("content")
+
+      document.title = room_name
 
       window.addEventListener("focus", () => {
         chat_state.unread_messages = 0
@@ -64,7 +97,7 @@ const hooks = {
           //notify browser title
           if (!document.hasFocus()) {
             chat_state.unread_messages = chat_state.unread_messages + 1
-            document.title = `${this.unread_messages} • ${room_name}`
+            document.title = `${chat_state.unread_messages} • ${room_name}`
           }
         }
 
@@ -100,10 +133,58 @@ const hooks = {
   },
 
   chat_submit: {
+    send(message) {
+      this.pushEvent("chat", { message: message })
+    },
     mounted() {
+      chat_state.chat = this
+
+      chat_state.emotes_modal = create_window("chat_emotes", {
+        title: null,
+        root: this.root,
+        show: false,
+        close_on_unfocus: true,
+        invert_x: true,
+        invert_y: true
+      })
+      chat_state.emotes_modal.e.style.maxWidth = "500px"
+      chat_state.emotes_modal.e.style.maxHeight = "500px"
+
+      const chat_emotes = document.getElementById("chat_emotes")
+
+      chat_state.emotes_modal.get_body()
+
+      chat_state.emotes_modal.e.body_outer.classList.toggle("chat_emotes", true)
+      chat_state.emotes_modal.e.body_outer.classList.toggle("thin_scrollbar", true)
+
+      for (const emote of chat_emotes.children) {
+        const new_emote = emote.cloneNode(true)
+        chat_state.emotes_modal.get_body().appendChild(new_emote)
+        new_emote.addEventListener("click", _ => {
+          this.el.value += `:${emote.title}: `
+          chat_state.emotes_modal.close()
+          this.el.focus()
+        })
+      }
+
+      chat_btn_emotes.addEventListener("click", () => {
+        chat_state.emotes_modal.show()
+
+        if (!chat_state.emotes_modal.moved) {
+          chat_state.emotes_modal.moved = true
+          const rect = maincontent.getBoundingClientRect()
+          chat_state.emotes_modal.move_to(0, rect.height - this.el.offsetTop)
+          chat_state.emotes_modal.moved = false
+        }
+      })
+
       this.el.addEventListener("keydown", e => enter(e, () => {
-        this.pushEvent("chat", { message: this.el.value })
+        this.send(this.el.value)
         this.el.value = ""
+        chat_state.emotes_modal.close()
+        if (document.getElementById("player")) {
+          player.focus()
+        }
       }))
     }
   },
@@ -197,6 +278,103 @@ const hooks = {
             this.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
           }
         })
+    }
+  },
+
+  room: {
+    toggle_chat() {
+      view_chat.classList.toggle("hidden")
+      if (view_chat.classList.contains("hidden")) {
+        for (const msg of chat_messages.children) {
+          msg.hide()
+        }
+      } else {
+        for (const msg of chat_messages.children) {
+          msg.show()
+        }
+      }
+    },
+    mounted() {
+      init_drag()
+      init_settings()
+
+      for (const msg of chat_messages.children) {
+        autohide(msg).show(5000)
+      }
+
+      chat_state.on_message.push((msg, notify) => {
+        if (notify) new Text(chat_danmaku, msg)
+
+        autohide(msg.e).show(5000)
+      })
+
+      chat_input.addEventListener("keydown", e => {
+        if (!view_chat.classList.contains("hidden") && e.key == "Escape") {
+          e.preventDefault()
+          chat_input.value = ""
+          this.toggle_chat()
+          chat_state.emotes_modal.close()
+          player.focus()
+        }
+      })
+
+      const extra_emotes = create_window("chat_emotes2", {
+        title: null,
+        root: this.root,
+        show: false,
+        close_on_unfocus: true,
+        invert_x: true,
+        invert_y: true
+      })
+
+      extra_emotes.e.style.maxWidth = "500px"
+      extra_emotes.e.style.maxHeight = "500px"
+
+      const chat_emotes = document.getElementById("chat_emotes")
+
+      extra_emotes.get_body()
+
+      extra_emotes.e.body_outer.classList.toggle("chat_emotes", true)
+      extra_emotes.e.body_outer.classList.toggle("thin_scrollbar", true)
+
+      for (const emote of chat_emotes.children) {
+        const new_emote = emote.cloneNode(true)
+        extra_emotes.get_body().appendChild(new_emote)
+        new_emote.addEventListener("click", _ => {
+          chat_state.chat.send(`:${emote.title}:`)
+          extra_emotes.close()
+          player.focus()
+        })
+      }
+
+      document.addEventListener("keydown", e => {
+        const chat_open = !view_chat.classList.contains("hidden")
+        if (e.target.tagName == "INPUT" && e.target != chat_input) return
+        let nothing = false
+
+        if (e.key == "Enter") {
+          this.toggle_chat()
+          if (chat_open) {
+            player.focus()
+          } else {
+            chat_input.focus()
+          }
+        } else if (e.key == "\\" && !chat_open) {
+          this.toggle_chat()
+          chat_btn_emotes.click()
+          chat_input.focus()
+        } else if (e.key == "e" && !chat_open) {
+          if (extra_emotes.is_open()) {
+            extra_emotes.close()
+          } else {
+            extra_emotes.show()
+          }
+        } else {
+          nothing = true
+        }
+
+        if (!nothing) e.preventDefault()
+      })
     }
   }
 }

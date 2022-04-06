@@ -33,6 +33,7 @@ defmodule GrasstubeWeb.ChatLive do
       |> assign(user: user)
       |> assign(id: socket_id)
       |> assign(history: ChatAgent.get_history(chat))
+      |> assign(emotes: ChatAgent.get_emotes(chat))
 
     meta =
       if not is_nil(user),

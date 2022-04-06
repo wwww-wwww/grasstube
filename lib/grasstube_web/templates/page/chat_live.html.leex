@@ -17,9 +17,15 @@
   </div>
 </div>
 
+<div id="chat_emotes" class="chat_emotes" phx-update="ignore">
+  <%= for %{emote: emote, url: url} <- @emotes do %>
+  <img src="<%= url %>" alt="<%= emote %>" title="<%= emote %>">
+  <% end %>
+</div>
+
 <div id="chat_input_container" phx-update="ignore">
   <input id="chat_input" phx-hook="chat_submit">
-  <button id="chat_emotes" class="square">🙂</button>
+  <button id="chat_btn_emotes" class="square">🙂</button>
 </div>
 
 </div>

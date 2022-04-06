@@ -4,8 +4,14 @@
 @import url("https://fonts.googleapis.com/css?family=Google+Sans:400,500");
 
 @import "grassplayer";
-@import "chat2";
+
 @import "roomlist";
+
+@import "room2";
+@import "chat2";
+@import "auth";
+@import "chatonly";
+@import "videoonly";
 
 *,
 *:before,
@@ -160,7 +166,3 @@ main {
     font-size: 1em;
   }
 }
-
-@import "auth";
-@import "chatonly";
-@import "videoonly";

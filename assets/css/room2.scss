@@ -1,0 +1,64 @@
+@import "danmaku";
+
+.RoomLive {
+  overflow: hidden;
+
+  #maincontent {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .VideoLive,
+  .ChatLive,
+  #chat_danmaku {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: grid;
+  }
+
+  .VideoLive {
+    height: 100%;
+  }
+
+  .ChatLive {
+    z-index: 1;
+    margin-bottom: calc(3em + 8px);
+    height: calc(100% - 3em - 8px);
+    overflow: hidden;
+
+    .top {
+      flex-direction: column;
+    }
+  }
+
+  #chat_danmaku {
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  .ChatLive.hidden {
+    pointer-events: none;
+
+    #chat_messages {
+      opacity: 0.3;
+    }
+
+    #chat_input_container {
+      opacity: 0;
+    }
+
+    #chat_userlist {
+      display: none;
+    }
+  }
+
+  #bottom {
+    display: flex;
+    justify-content: space-between;
+  }
+}

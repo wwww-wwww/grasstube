@@ -1,12 +1,29 @@
+<div phx-update="ignore" phx-hook="room" id="maincontent">
 
 <%= live_render(@socket, GrasstubeWeb.VideoLive,
   session: %{"room" => @room},
-  id: "video:#{@room}",
-  container: {:div, class: "video_container"}
+  id: "view_video"
 ) %>
 
 <%= live_render(@socket, GrasstubeWeb.ChatLive,
   session: %{"room" => @room},
-  id: "chat:#{@room}",
-  container: {:div, class: "chat_container"}
+  id: "view_chat",
+  container: {:div, class: "ChatLive can_hide hidden"}
 ) %>
+
+<div id="chat_danmaku"></div>
+
+</div>
+
+<div id="bottom">
+
+<div class="col">
+  <button id="btn_open_chat">Open chat</button>
+  <button id="btn_user_settings">Settings</button>
+</div>
+
+<div class="col">
+playlist here
+</div>
+
+</div>

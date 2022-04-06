@@ -7,8 +7,7 @@ defmodule GrasstubeWeb.VideoOnlyLive do
     ~L"""
     <%= live_render(@socket, GrasstubeWeb.VideoLive,
       session: %{"room" => @room},
-      id: "video:#{@room}",
-      container: {:div, class: page_name(@socket)}
+      id: "view_video"
     ) %>
     """
   end

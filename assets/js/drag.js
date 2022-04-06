@@ -69,10 +69,11 @@ function init() {
 }
 
 function hide_scrollbar() {
-  window.addEventListener("resize", e => {
-    const scrollbar = container2.offsetWidth - container2.clientWidth
-    container2.style.paddingRight = scrollbar + "px"
-    container2.style.width = `calc(100% + ${scrollbar}px)`
+  window.addEventListener("resize", _e => {
+    const top = (window.container2 || main)
+    const scrollbar = top.offsetWidth - top.clientWidth
+    top.style.paddingRight = scrollbar + "px"
+    top.style.width = `calc(100% + ${scrollbar}px)`
     maincontent.style.width = `calc(100% + ${scrollbar}px)`
     bottom.style.width = `calc(100% + ${scrollbar}px)`
 
