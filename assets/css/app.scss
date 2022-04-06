@@ -30,7 +30,7 @@ body {
 body {
   font-size: 1.25em;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
 
   > div {
     flex: 1;
@@ -60,6 +60,9 @@ textarea {
   line-height: 2em;
 }
 
+h1,
+h2,
+input[type="submit"],
 button,
 select,
 .button {

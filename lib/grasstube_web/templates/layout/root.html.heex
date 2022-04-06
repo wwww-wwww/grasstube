@@ -21,7 +21,8 @@
       <meta name="room_has_password" content="1">
     <% end%>
   </head>
-  <body id="body" page={assigns[:view_template] || ""}>
+  <body id="body">
+    <%= @inner_content %>
     <header>
       <section>
         <nav role="navigation">
@@ -33,6 +34,5 @@
         </nav>
       </section>
     </header>
-    <%= @inner_content %>
   </body>
 </html>
