@@ -3,8 +3,6 @@ defmodule GrasstubeWeb.ChatLive do
 
   alias Grasstube.{Presence, ChatAgent}
 
-  @topic "chat_live"
-
   def render(assigns) do
     GrasstubeWeb.PageView.render("chat_live.html", assigns)
   end

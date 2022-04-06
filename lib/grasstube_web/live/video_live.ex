@@ -1,9 +1,7 @@
 defmodule GrasstubeWeb.VideoLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{Presence, ChatAgent}
-
-  @topic "video_live"
+  alias Grasstube.{ChatAgent, PlaylistAgent, Presence, ProcessRegistry, VideoAgent}
 
   def render(assigns) do
     GrasstubeWeb.PageView.render("video_live.html", assigns)
@@ -13,12 +11,15 @@ defmodule GrasstubeWeb.VideoLive do
     topic = "video:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
-    chat = Grasstube.ProcessRegistry.lookup(room, :chat)
+    chat = ProcessRegistry.lookup(room, :chat)
 
     user = Grasstube.Guardian.user(session)
 
     socket_id = GrasstubeWeb.UserSocket.new_id()
-    GrasstubeWeb.Endpoint.subscribe(socket_id)
+
+    if user do
+      GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{user.username}")
+    end
 
     user_id =
       if is_nil(user) do
@@ -29,12 +30,109 @@ defmodule GrasstubeWeb.VideoLive do
 
     socket =
       socket
-      |> assign(chat: chat)
+      |> assign(room: room)
       |> assign(topic: topic)
+      |> assign(chat: chat)
+      |> assign(video: ProcessRegistry.lookup(room, :video))
       |> assign(user_id: user_id)
       |> assign(user: user)
       |> assign(id: socket_id)
 
+    socket =
+      socket
+      |> assign(controls: ChatAgent.controls?(chat, socket))
+
+    socket.assigns.video
+    |> VideoAgent.get_status()
+    |> case do
+      {:nothing, _, _} ->
+        nil
+
+      {video, time, playing} ->
+        send(self(), %{
+          event: "setvid",
+          payload: %{
+            id: video.id,
+            type: video.type,
+            url: video.url,
+            sub: video.sub,
+            alts: video.alts,
+            duration: video.duration
+          }
+        })
+
+        send(self(), %{event: "seek", payload: %{t: time}})
+        send(self(), %{event: "playing", payload: %{playing: playing}})
+    end
+
     {:ok, socket}
+  end
+
+  def handle_event("play", _, socket) do
+    socket.assigns.chat
+    |> ChatAgent.controls?(socket)
+    |> if do
+      socket.assigns.video
+      |> VideoAgent.set_playing(true)
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("pause", _, socket) do
+    socket.assigns.chat
+    |> ChatAgent.controls?(socket)
+    |> if do
+      socket.assigns.video
+      |> VideoAgent.set_playing(false)
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("seek", %{"time" => time}, socket) do
+    socket.assigns.chat
+    |> ChatAgent.controls?(socket)
+    |> if do
+      socket.assigns.video
+      |> VideoAgent.set_seek(time)
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("next", _, socket) do
+    socket.assigns.chat
+    |> ChatAgent.controls?(socket)
+    |> if do
+      socket.assigns.room
+      |> ProcessRegistry.lookup(:playlist)
+      |> PlaylistAgent.next_video()
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%{event: "setvid", payload: payload}, socket) do
+    {:noreply, push_event(socket, "setvid", payload)}
+  end
+
+  def handle_info(%{event: "controls"}, socket) do
+    {:noreply,
+     push_event(socket, "controls", %{
+       controls: ChatAgent.controls?(socket.assigns.chat, socket)
+     })}
+  end
+
+  def handle_info(%{event: "playing", payload: payload}, socket) do
+    {:noreply, push_event(socket, "playing", payload)}
+  end
+
+  def handle_info(%{event: "time", payload: payload}, socket) do
+    {:noreply, push_event(socket, "time", payload)}
+  end
+
+  def handle_info(%{event: "seek", payload: payload}, socket) do
+    {:noreply, push_event(socket, "seek", payload)}
   end
 end

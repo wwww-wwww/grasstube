@@ -41,7 +41,7 @@ config :grasstube, GrasstubeWeb.Endpoint,
       ~w(--sourcemap=inline --watch)
     ) ++
       Watcher.watch(
-        [:app, :room, :index, :sign_in, :no_video, :video, :chat, :controls],
+        [:app, :room, :sign_in, :no_video, :video, :chat, :controls],
         DartSass,
         ~w(--embed-source-map --source-map-urls=absolute --watch)
       )

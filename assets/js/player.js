@@ -71,8 +71,11 @@ class Video {
 
     this.channel.on("time", data => {
       console.log("video: time", data)
-      if (Math.abs(data.t - this.player.current_time()) > 5 && (data.t <= this.player.duration()))
+      if (!this.player.playing || (
+        Math.abs(data.t - this.player.current_time()) > 5 && (data.t <= this.player.duration())
+      )) {
         this.player.seek(data.t)
+      }
     })
 
     this.channel.on("seek", data => {

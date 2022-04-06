@@ -1,6 +1,8 @@
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import { create_element, pad, enter } from "./util"
+import { seconds_to_hms } from "./util"
+import GrassPlayer from "./grassplayer"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
@@ -36,8 +38,6 @@ class Message {
   }
 }
 
-const room_name = document.querySelector("meta[name='room']").getAttribute("content")
-
 const chat_state = {
   unread_messages: 0,
   last_chat_user: "",
@@ -47,7 +47,8 @@ const chat_state = {
 const hooks = {
   chat: {
     mounted() {
-      console.log(this)
+      const room_name = document.querySelector("meta[name='room']").getAttribute("content")
+
       window.addEventListener("focus", () => {
         chat_state.unread_messages = 0
         document.title = room_name
@@ -104,6 +105,98 @@ const hooks = {
         this.pushEvent("chat", { message: this.el.value })
         this.el.value = ""
       }))
+    }
+  },
+
+  video: {
+    current_video: null,
+    fonts_complete: false,
+    set_video_on_ready: null,
+    mounted() {
+      this.player = new GrassPlayer(
+        this.el,
+        [],
+        document.querySelector("meta[name='controls']").getAttribute("content") == "true"
+      )
+
+      this.player.on_seek = t => {
+        this.pushEvent("seek", { time: Math.round(t) })
+      }
+
+      this.player.on_toggle_playing = playing => {
+        this.pushEvent(playing ? "play" : "pause", {})
+      }
+
+      this.player.on_next = () => {
+        this.pushEvent("next", {})
+      }
+
+      this.handleEvent("controls", data => {
+        console.log("video:controls", data)
+        this.player.set_controls(data.controls)
+      })
+
+      this.handleEvent("setvid", data => {
+        console.log("video: setvid", data)
+        if (this.current_video == data) return
+        this.current_video = data
+        let videos = {}
+        if (data.type == "default") {
+          if (data.url.length > 0) {
+            videos["normal"] = data.url
+          }
+          console.log(data.alts)
+          for (const alt in data.alts) {
+            videos[alt] = data.alts[alt]
+          }
+        } else {
+          videos = data.url
+        }
+        if (!this.fonts_complete) {
+          this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub }
+        } else {
+          this.player.set_video(data.type, videos, data.sub)
+        }
+      })
+
+      this.handleEvent("playing", data => {
+        console.log("video: playing", data)
+        if (this.player.playing != data.playing) {
+          this.player.show_osd(data.playing ? "Play" : "Pause")
+        }
+        this.player.set_playing(data.playing)
+      })
+
+      this.handleEvent("time", data => {
+        console.log("video: time", data)
+        if (!this.player.playing || (
+          Math.abs(data.t - this.player.current_time()) > 5 && (data.t <= this.player.duration())
+        )) {
+          this.player.seek(data.t)
+        }
+      })
+
+      this.handleEvent("seek", data => {
+        console.log("video: seek", data)
+        this.player.show_osd(`${seconds_to_hms(data.t, true)}`)
+        this.player.seek(data.t)
+      })
+
+      fetch("https://res.cloudinary.com/grass/raw/upload/v1648173707/fonts.json")
+        .then(res => res.json())
+        .then(fonts => {
+          this.player.set_fonts(fonts)
+          this.fonts_complete = true
+        })
+        .catch(err => {
+          console.log("fonts: error fetching", err)
+        })
+        .finally(() => {
+          console.log("fonts: loaded")
+          if (this.set_video_on_ready) {
+            this.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
+          }
+        })
     }
   }
 }
