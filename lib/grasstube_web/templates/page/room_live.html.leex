@@ -23,7 +23,10 @@
 </div>
 
 <div class="col">
-playlist here
+  <%= live_render(@socket, GrasstubeWeb.PlaylistLive,
+    session: %{"room" => @room},
+    id: "view_playlist"
+  ) %>
 </div>
 
 </div>

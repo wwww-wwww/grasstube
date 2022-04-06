@@ -11,8 +11,6 @@ defmodule GrasstubeWeb.VideoLive do
     topic = "video:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
-    chat = ProcessRegistry.lookup(room, :chat)
-
     user = Grasstube.Guardian.user(session)
 
     socket_id = GrasstubeWeb.UserSocket.new_id()
@@ -32,7 +30,7 @@ defmodule GrasstubeWeb.VideoLive do
       socket
       |> assign(room: room)
       |> assign(topic: topic)
-      |> assign(chat: chat)
+      |> assign(chat: ProcessRegistry.lookup(room, :chat))
       |> assign(video: ProcessRegistry.lookup(room, :video))
       |> assign(user_id: user_id)
       |> assign(user: user)
@@ -40,7 +38,7 @@ defmodule GrasstubeWeb.VideoLive do
 
     socket =
       socket
-      |> assign(controls: ChatAgent.controls?(chat, socket))
+      |> assign(controls: ChatAgent.controls?(socket.assigns.chat, socket))
 
     socket.assigns.video
     |> VideoAgent.get_status()

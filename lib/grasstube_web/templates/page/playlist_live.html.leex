@@ -1,0 +1,30 @@
+<div class="playlist_header">
+  <span class="playlist_count"><%= @current_index %> / <%= length(@playlist_items) %></span>
+  <span class="playlist_header_right">
+    <span class="playlist_duration"><%= seconds_to_string(@duration) %></span>
+    <%= if @controls do %>
+    <button id="show_playlist_dialog" class="square">＋</button>
+    <% end %>
+  </span>
+</div>
+
+<div id="playlist_container" phx-hook="playlist">
+  <%= for item <- @playlist_items do %>
+  <div <%= if item.id == @current do %>class="selected"<% end %>>
+    <%= if @controls do %>
+    <button class="playlist_remove square" value="<%= item.id %>" phx-click="remove">×</button>
+    <% end %>
+
+    <a class="title" <%= if String.length(item.url) > 0 do %> href="<%= item.url %>" <% end %>><%= item.title %></a>
+
+    <%= if item.duration != :unset do %>
+    <span class="duration"><%= seconds_to_string(item.duration) %></span>
+    <% end %>
+
+    <%= if @controls do %>
+    <button class="playlist_set" value="<%= item.id %>" phx-click="set">Set</button>
+    <button class="playlist_drag">☰</button>
+    <% end %>
+  </div>
+  <% end %>
+</div>

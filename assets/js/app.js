@@ -281,6 +281,14 @@ const hooks = {
     }
   },
 
+  playlist: {
+    mounted() {
+      this.el.addEventListener("click", e => {
+        console.log(e)
+      })
+    }
+  },
+
   room: {
     toggle_chat() {
       view_chat.classList.toggle("hidden")

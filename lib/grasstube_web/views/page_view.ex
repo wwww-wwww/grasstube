@@ -25,4 +25,18 @@ defmodule GrasstubeWeb.PageView do
     |> elem(0)
     |> Enum.reverse()
   end
+
+  def seconds_to_string(seconds) when is_float(seconds) do
+    seconds
+    |> Float.ceil()
+    |> trunc()
+    |> seconds_to_string()
+  end
+
+  def seconds_to_string(seconds) do
+    seconds
+    |> DateTime.from_unix!(:second)
+    |> to_string()
+    |> String.slice(11..-2)
+  end
 end
