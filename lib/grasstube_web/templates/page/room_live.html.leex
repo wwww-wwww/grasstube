@@ -1,0 +1,12 @@
+
+<%= live_render(@socket, GrasstubeWeb.VideoLive,
+  session: %{"room" => @room},
+  id: "video:#{@room}",
+  container: {:div, class: "video_container"}
+) %>
+
+<%= live_render(@socket, GrasstubeWeb.ChatLive,
+  session: %{"room" => @room},
+  id: "chat:#{@room}",
+  container: {:div, class: "chat_container"}
+) %>

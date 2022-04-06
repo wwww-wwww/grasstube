@@ -9,7 +9,7 @@ defmodule GrasstubeWeb.ChatLive do
     GrasstubeWeb.PageView.render("chat_live.html", assigns)
   end
 
-  def mount(%{"room" => room}, session, socket) do
+  def mount(params, %{"room" => room} = session, socket) do
     topic = "chat:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
@@ -18,6 +18,7 @@ defmodule GrasstubeWeb.ChatLive do
     user = Grasstube.Guardian.user(session)
 
     socket_id = GrasstubeWeb.UserSocket.new_id()
+    GrasstubeWeb.Endpoint.subscribe(socket_id)
 
     user_id =
       if is_nil(user) do
@@ -34,8 +35,6 @@ defmodule GrasstubeWeb.ChatLive do
       |> assign(user: user)
       |> assign(id: socket_id)
       |> assign(history: ChatAgent.get_history(chat))
-
-    GrasstubeWeb.Endpoint.subscribe(socket_id)
 
     meta =
       if not is_nil(user),
@@ -64,22 +63,18 @@ defmodule GrasstubeWeb.ChatLive do
     :ok
   end
 
-  def handle_params(_, _, socket) do
-    {:noreply, socket}
-  end
-
   def handle_event("chat", %{"message" => message}, socket) do
-    ChatAgent.chat(socket.assigns.chat, {socket, self()}, message)
+    message = String.trim(message)
+
+    if String.length(message) > 0 do
+      ChatAgent.chat(socket.assigns.chat, {socket, self()}, message)
+    end
+
     {:noreply, socket}
   end
 
   def handle_info(%{event: "presence_diff"}, socket) do
-    send_update(GrasstubeWeb.ChatComponent,
-      id: "chat:#{socket.assigns.topic}",
-      users: Presence.list(socket.assigns.topic)
-    )
-
-    {:noreply, socket}
+    {:noreply, socket |> assign(users: Presence.list(socket.assigns.topic))}
   end
 
   def handle_info(%{event: "chat", payload: payload}, socket) do

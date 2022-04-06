@@ -32,23 +32,25 @@ class Message {
     const username = create_element(null, "span", "message_user")
     username.textContent = this.data.name
 
-    const separator = create_element(null, "span")
-    separator.textContent = ": "
-
-    this.e.prepend(separator)
     this.e.prepend(username)
   }
 }
 
+const room_name = document.querySelector("meta[name='room']").getAttribute("content")
+
+const chat_state = {
+  unread_messages: 0,
+  last_chat_user: "",
+  on_message: []
+}
+
 const hooks = {
   chat: {
-    unread_messages: 0,
-    last_chat_user: "",
-    on_message: [],
     mounted() {
+      console.log(this)
       window.addEventListener("focus", () => {
-        this.unread_messages = 0
-        //document.title = this.socket.room
+        chat_state.unread_messages = 0
+        document.title = room_name
       })
 
       this.handleEvent("chat", data => {
@@ -60,13 +62,13 @@ const hooks = {
         if (data.sender != "sys") {
           //notify browser title
           if (!document.hasFocus()) {
-            this.unread_messages = this.unread_messages + 1
-            //document.title = `${this.unread_messages} • ${topic}`
+            chat_state.unread_messages = chat_state.unread_messages + 1
+            document.title = `${this.unread_messages} • ${room_name}`
           }
         }
 
-        if (data.name != this.last_chat_user) {
-          if (this.last_chat_user.length != 0) {
+        if (data.name != chat_state.last_chat_user) {
+          if (chat_state.last_chat_user.length != 0) {
             msg.e.style.marginTop = "0.5em"
           }
 
@@ -81,13 +83,14 @@ const hooks = {
               + pad(d.getSeconds(), 2) + "] "
             msg.e.prepend(timestamp)
           }
-          this.last_chat_user = data.name
+          chat_state.last_chat_user = data.name
         }
 
-        this.on_message.forEach(fn => fn(msg, true))
+        chat_state.on_message.forEach(fn => fn(msg, true))
       })
 
-      this.handleEvent("clear", _ => {
+      this.handleEvent("clear", data => {
+        console.log("chat:clear", data)
         while (chat_messages.firstChild) {
           chat_messages.removeChild(chat_messages.firstChild)
         }

@@ -1,0 +1,14 @@
+.ChatOnlyLive {
+  width: 100%;
+  height: 100%;
+  display: flex;
+
+  > .chat_container {
+    flex: 1;
+  }
+
+  #chat_userlist,
+  #chat_messages {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+}

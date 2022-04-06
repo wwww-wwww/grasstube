@@ -26,6 +26,14 @@ defmodule GrasstubeWeb.Router do
     plug Guardian.Plug.EnsureNotAuthenticated
   end
 
+  pipeline :room_exists do
+    plug GrasstubeWeb.Plug.RoomExists
+  end
+
+  pipeline :room_auth do
+    plug GrasstubeWeb.Plug.RoomAuth
+  end
+
   scope "/", GrasstubeWeb do
     pipe_through [:browser, :auth]
 
@@ -41,7 +49,15 @@ defmodule GrasstubeWeb.Router do
     end
 
     scope "/r2" do
-      live "/:room/chat", ChatLive
+      pipe_through :room_exists
+      live "/:room/auth", AuthLive
+
+      scope "/" do
+        pipe_through :room_auth
+        live "/:room/chat", ChatOnlyLive
+        live "/:room/video", VideoOnlyLive
+        live "/:room", RoomLive
+      end
     end
 
     scope "/" do
