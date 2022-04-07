@@ -67,9 +67,7 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def handle_event("play", _, socket) do
-    socket.assigns.chat
-    |> ChatAgent.controls?(socket)
-    |> if do
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
       socket.assigns.video
       |> VideoAgent.set_playing(true)
     end
@@ -78,9 +76,7 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def handle_event("pause", _, socket) do
-    socket.assigns.chat
-    |> ChatAgent.controls?(socket)
-    |> if do
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
       socket.assigns.video
       |> VideoAgent.set_playing(false)
     end
@@ -89,9 +85,7 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def handle_event("seek", %{"time" => time}, socket) do
-    socket.assigns.chat
-    |> ChatAgent.controls?(socket)
-    |> if do
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
       socket.assigns.video
       |> VideoAgent.set_seek(time)
     end
@@ -100,9 +94,7 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def handle_event("next", _, socket) do
-    socket.assigns.chat
-    |> ChatAgent.controls?(socket)
-    |> if do
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
       socket.assigns.room
       |> ProcessRegistry.lookup(:playlist)
       |> PlaylistAgent.next_video()

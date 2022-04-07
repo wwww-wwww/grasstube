@@ -75,36 +75,44 @@ defmodule GrasstubeWeb.PlaylistLive do
         %{"title" => title, "url" => user_url, "sub" => sub, "alts" => alts},
         socket
       ) do
-    alts =
-      case Jason.decode(alts) do
-        {:ok, alts} -> alts
-        {:error, _} -> %{}
-      end
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
+      alts =
+        case Jason.decode(alts) do
+          {:ok, alts} -> alts
+          {:error, _} -> %{}
+        end
 
-    socket.assigns.playlist
-    |> PlaylistAgent.add_queue(title, user_url, sub, alts)
+      socket.assigns.playlist
+      |> PlaylistAgent.add_queue(title, user_url, sub, alts)
+    end
 
     {:noreply, socket}
   end
 
   def handle_event("order", %{"order" => order}, socket) do
-    socket.assigns.playlist
-    |> PlaylistAgent.set_queue(order)
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
+      socket.assigns.playlist
+      |> PlaylistAgent.set_queue(order)
+    end
 
     {:noreply, socket}
   end
 
   def handle_event("set", %{"value" => id}, socket) do
-    case PlaylistAgent.get_video(socket.assigns.playlist, id) do
-      :not_found -> nil
-      vid -> VideoAgent.set_current_video(socket.assigns.video, vid)
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
+      case PlaylistAgent.get_video(socket.assigns.playlist, id) do
+        :not_found -> nil
+        vid -> VideoAgent.set_current_video(socket.assigns.video, vid)
+      end
     end
 
     {:noreply, socket}
   end
 
   def handle_event("remove", %{"value" => id}, socket) do
-    PlaylistAgent.remove_queue(socket.assigns.playlist, id)
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
+      PlaylistAgent.remove_queue(socket.assigns.playlist, id)
+    end
 
     {:noreply, socket}
   end

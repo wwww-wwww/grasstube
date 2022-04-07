@@ -358,8 +358,8 @@ const hooks = {
 
           let rect = el.getBoundingClientRect()
           let mouse_y = Math.min(Math.max(clientY,
-            this.el.firstElementChild.getBoundingClientRect().y + rect.height / 2),
-            this.el.lastElementChild.getBoundingClientRect().bottom - rect.height / 2)
+            this.el.firstElementChild.getBoundingClientRect().y),
+            this.el.lastElementChild.getBoundingClientRect().bottom)
           let y = rect.y
           let off = mouse_y - y - rect.height / 2
 
