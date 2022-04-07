@@ -70,6 +70,30 @@ defmodule GrasstubeWeb.PlaylistLive do
     {:ok, socket}
   end
 
+  def handle_event(
+        "add",
+        %{"title" => title, "url" => user_url, "sub" => sub, "alts" => alts},
+        socket
+      ) do
+    alts =
+      case Jason.decode(alts) do
+        {:ok, alts} -> alts
+        {:error, _} -> %{}
+      end
+
+    socket.assigns.playlist
+    |> PlaylistAgent.add_queue(title, user_url, sub, alts)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("order", %{"order" => order}, socket) do
+    socket.assigns.playlist
+    |> PlaylistAgent.set_queue(order)
+
+    {:noreply, socket}
+  end
+
   def handle_event("set", %{"value" => id}, socket) do
     case PlaylistAgent.get_video(socket.assigns.playlist, id) do
       :not_found -> nil
@@ -125,5 +149,13 @@ defmodule GrasstubeWeb.PlaylistLive do
 
   def handle_info(%{event: "controls"}, socket) do
     {:noreply, assign(socket, controls: ChatAgent.controls?(socket.assigns.chat, socket))}
+  end
+
+  def handle_info({:DOWN, _, :process, _pid, _reason}, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_info({_ref, _}, socket) do
+    {:noreply, socket}
   end
 end

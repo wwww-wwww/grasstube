@@ -282,10 +282,98 @@ const hooks = {
   },
 
   playlist: {
+    start_drag(e) {
+      const target = e.touches ? e.touches[0].target : e.target
+      if (!(target.tagName == "BUTTON" && target.classList.contains("playlist_drag"))) {
+        return
+      }
+
+      target.parentElement.classList.toggle("dragging", true)
+      document.addEventListener("mouseup", e => this.stop_drag(e))
+      document.addEventListener("mousemove", e => this.drag(e))
+      document.addEventListener("touchend", e => this.stop_drag(e))
+      document.addEventListener("touchmove", e => this.drag(e))
+    },
+    stop_drag(_) {
+      const order = []
+      for (const item of this.el.children) {
+        order.push(parseInt(item.dataset.id))
+        item.style.transform = "none"
+        item.classList.toggle("dragging", false)
+      }
+
+      this.pushEvent("order", { order: order })
+
+      document.removeEventListener("mouseup", e => this.stop_drag(e))
+      document.removeEventListener("mousemove", e => this.drag(e))
+      document.removeEventListener("touchend", e => this.stop_drag(e))
+      document.removeEventListener("touchmove", e => this.drag(e))
+    },
+    drag(e) {
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY
+      for (let i = 0; i < this.el.children.length; i++) {
+        const el = this.el.children[i]
+
+        if (el.classList.contains("dragging")) {
+          el.style.transform = "none"
+
+          let rect = el.getBoundingClientRect()
+          let mouse_y = Math.min(Math.max(clientY,
+            this.el.firstElementChild.getBoundingClientRect().y + rect.height / 2),
+            this.el.lastElementChild.getBoundingClientRect().bottom - rect.height / 2)
+          let y = rect.y
+          let off = mouse_y - y - rect.height / 2
+
+          for (let j = i - 1; j <= i + 1; j++) { // only 1 before and after
+            if (j < 0 || j == i || j >= this.el.children.length) continue
+            const el2 = this.el.children[j]
+            if ((j < i && mouse_y <= (el2.getBoundingClientRect().y + el2.getBoundingClientRect().height / 2)) ||
+              (j > i && mouse_y >= (el2.getBoundingClientRect().y + el2.getBoundingClientRect().height / 2))) {
+              if (j < i) {
+                this.el.insertBefore(el, el2)
+              } else {
+                this.el.insertBefore(el2, el)
+              }
+
+              rect = el.getBoundingClientRect()
+              y = rect.y
+              off = mouse_y - y - rect.height / 2
+              break
+            }
+          }
+
+          el.style.transform = `translate(0, ${off}px)`
+          break
+        }
+      }
+    },
     mounted() {
-      this.el.addEventListener("click", e => {
-        console.log(e)
+      playlist_add.addEventListener("click", () => {
+        this.pushEvent("add", {
+          title: playlist_add_title.value,
+          url: playlist_add_url.value,
+          sub: playlist_add_sub.value,
+          alts: playlist_add_small.value
+        })
+        playlist_add_title.value = ""
+        playlist_add_url.value = ""
+        playlist_add_sub.value = ""
+        playlist_add_small.value = ""
       })
+
+      const playlist_modal = create_window("playlist", { title: null, modal: true, show: false })
+      const tab1 = playlist_modal.create_tab("hosted")
+      const tab2 = playlist_modal.create_tab("youtube")
+
+      tab1.appendChild(playlist_tab1)
+      tab2.appendChild(playlist_tab2)
+
+      playlist_btn_show.addEventListener("click", () => {
+        playlist_modal.show()
+      })
+
+      this.el.addEventListener("mousedown", e => this.start_drag(e))
+      this.el.addEventListener("touchstart", e => this.start_drag(e))
     }
   },
 

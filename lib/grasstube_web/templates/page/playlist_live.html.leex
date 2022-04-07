@@ -1,16 +1,35 @@
+<div style="display: none;" phx-update="ignore">
+	<div id="playlist_tab1">
+		<div>
+			<input id="playlist_add_title" placeholder="title (auto)"/>
+			<input id="playlist_add_url" placeholder="url"/>
+			<input id="playlist_add_sub" placeholder="subtitles"/>
+			<input id="playlist_add_small" placeholder="alts"/>
+			<button id="playlist_add">add</button>
+		</div>
+	</div>
+	<div id="playlist_tab2">
+		<input id="playlist_yt_input" placeholder="search">
+		<div class="yt_list_outer">
+			<div id="playlist_yt_list">
+			</div>
+		</div>
+	</div>
+</div>
+
 <div class="playlist_header">
   <span class="playlist_count"><%= @current_index %> / <%= length(@playlist_items) %></span>
   <span class="playlist_header_right">
     <span class="playlist_duration"><%= seconds_to_string(@duration) %></span>
     <%= if @controls do %>
-    <button id="show_playlist_dialog" class="square">＋</button>
+    <button id="playlist_btn_show" class="square">＋</button>
     <% end %>
   </span>
 </div>
 
 <div id="playlist_container" phx-hook="playlist">
   <%= for item <- @playlist_items do %>
-  <div <%= if item.id == @current do %>class="selected"<% end %>>
+  <div <%= if item.id == @current do %>class="selected"<% end %> data-id="<%= item.id %>">
     <%= if @controls do %>
     <button class="playlist_remove square" value="<%= item.id %>" phx-click="remove">×</button>
     <% end %>
