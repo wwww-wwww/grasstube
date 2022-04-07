@@ -28,7 +28,7 @@ function init() {
       e.preventDefault()
       dragging_v = true
       document.addEventListener("mousemove", drag_v)
-      dragbar_v.style.opacity = 1
+      dragbar_v.classList.toggle("active", true)
     })
   }
 
@@ -58,7 +58,7 @@ function init() {
       }
 
       if (document.getElementById("dragbar_v")) {
-        dragbar_v.style.opacity = 0
+        dragbar_v.classList.toggle("active", false)
       }
 
       window.dispatchEvent(new Event("resize"))
@@ -86,7 +86,7 @@ function hide_scrollbar() {
     }
 
     if (document.getElementById("dragbar_v")) {
-      dragbar_v.style.transform = `translate(0, ${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px)`
+      dragbar_v.style.top = `${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px`
     }
   })
 
@@ -106,7 +106,7 @@ function drag_v(e) {
 
   r_height = top
 
-  dragbar_v.style.transform = `translate(0, ${top - 1}px)`
+  dragbar_v.style.top = `${top - 1}px`
 }
 
 export default init

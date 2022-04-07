@@ -21,9 +21,7 @@
   <span class="playlist_count"><%= @current_index %> / <%= length(@playlist_items) %></span>
   <span class="playlist_header_right">
     <span class="playlist_duration"><%= seconds_to_string(@duration) %></span>
-    <%= if @controls do %>
-    <button id="playlist_btn_show" class="square">＋</button>
-    <% end %>
+    <button id="playlist_btn_show" class="square" <%= if not @controls do %>style="display: none;"<% end %>>＋</button>
   </span>
 </div>
 

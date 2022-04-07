@@ -5,11 +5,11 @@ function init() {
   const settings_modal = make_settings()
   btn_user_settings.addEventListener("click", () => settings_modal.show())
 
-  document.getElementsByTagName("header")[0].classList.toggle("hidden", (get_cookie("room_hide_header") || 0))
+  document.getElementsByTagName("header")[0].classList.toggle("hide", (get_cookie("room_hide_header") || 0))
 }
 
 function make_settings() {
-  const modal = create_window("Settings", {title: "Settings", modal: true, show: false})
+  const modal = create_window("Settings", { title: "Settings", modal: true, show: false })
   const modal_body = modal.get_body()
 
   let row = document.createElement("div")
@@ -83,7 +83,7 @@ function make_settings() {
     const header_hide = (get_cookie("room_hide_header") || 0)
     set_cookie("room_hide_header", !header_hide)
     toggle_header.textContent = !header_hide ? "Off" : "On"
-    document.getElementsByTagName("header")[0].classList.toggle("hidden", !header_hide)
+    document.getElementsByTagName("header")[0].classList.toggle("hide", !header_hide)
   })
   return modal
 }
