@@ -400,6 +400,46 @@ const hooks = {
         playlist_add_small.value = ""
       })
 
+      playlist_yt_input.addEventListener("keydown", () => {
+        if (playlist_yt_input.value.length <= 0) { return }
+        this.pushEvent("yt_search", { query: playlist_yt_input.value }, reply => {
+          if (!reply.success) { return }
+          while (playlist_yt_list.firstChild) playlist_yt_list.removeChild(playlist_yt_list.firstChild)
+
+          for (const video of reply.items) {
+            const video_url = `https://youtube.com/watch?v=${video.id}`
+
+            const video_e = create_element(playlist_yt_list, "div", "yt-video")
+
+            const video_e_thumbnail = create_element(video_e, "img")
+            video_e_thumbnail.style.height = "6em"
+            video_e_thumbnail.src = `https://img.youtube.com/vi/${video.id}/mqdefault.jpg`
+
+            let column = create_element(video_e, "div")
+
+            const video_e_title = create_element(column, "a")
+            video_e_title.textContent = video.title
+            video_e_title.href = video_url
+
+            const video_e_author = create_element(column, "a")
+            video_e_author.textContent = video.channel_title
+            video_e_author.href = `https://youtube.com/channel/${video.channel_id}`
+
+            const video_add = create_element(video_e, "button")
+            video_add.textContent = "Add"
+
+            video_add.addEventListener("click", () => {
+              this.pushEvent("add", {
+                title: "",
+                url: video_url,
+                sub: "",
+                alts: "{}"
+              })
+            })
+          }
+        })
+      })
+
       const playlist_modal = create_window("playlist", { title: null, modal: true, show: false })
       const tab1 = playlist_modal.create_tab("hosted")
       const tab2 = playlist_modal.create_tab("youtube")

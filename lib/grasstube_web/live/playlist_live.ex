@@ -117,6 +117,10 @@ defmodule GrasstubeWeb.PlaylistLive do
     {:noreply, socket}
   end
 
+  def handle_event("yt_search", %{"query" => query}, socket) do
+    {:reply, GrasstubeWeb.YTController.search(query), socket}
+  end
+
   def handle_info(%{event: "current", payload: %{id: id}}, socket) do
     current_index =
       Enum.with_index(socket.assigns.playlist_items, 1)
