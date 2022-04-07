@@ -484,8 +484,8 @@ const hooks = {
       }
     },
     mounted() {
-      init_drag()
       init_settings()
+      init_drag()
 
       if (document.getElementById("chat_container")) {
         this.load()
