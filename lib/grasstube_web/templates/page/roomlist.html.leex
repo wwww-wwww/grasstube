@@ -13,7 +13,7 @@
 
 </div>
 
-<%= if @can_make_room do live_redirect("create a room", to: Routes.user_path(@socket, :create_room_page)) end %>
+<%= if @can_make_room do live_redirect("create a room", to: Routes.live_path(@socket, GrasstubeWeb.CreateRoomLive)) end %>
 
 <div class="footer">
 	<%= link("GitHub", to: "https://github.com/wwww-wwww/grasstube") %>

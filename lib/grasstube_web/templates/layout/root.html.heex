@@ -29,7 +29,14 @@
           <span style="float: left"><%= live_redirect("grasstube", to: Routes.live_path(@conn, GrasstubeWeb.RoomsLive)) %></span>
           <span style="float: right">
             <%= live_redirect("google drive", to: Routes.page_path(@conn, :gdrive), id: "userscript_google_drive") %>
-            <%= get_user_links(@conn) %>
+            <%= if Guardian.Plug.authenticated?(@conn) and Guardian.Plug.current_resource(@conn) != nil do %>
+              <% user = Guardian.Plug.current_resource(@conn) %>
+              <%= live_redirect(user.name, to: Routes.live_path(@conn, GrasstubeWeb.UserLive, user.username)) %>
+              <%= live_redirect("Sign out", to: Routes.user_path(@conn, :sign_out)) %>
+            <% else %>
+              <%= live_redirect("Sign In", to: Routes.live_path(@conn, GrasstubeWeb.SignInLive)) %>
+              <%= live_redirect("Sign Up", to: Routes.live_path(@conn, GrasstubeWeb.SignUpLive)) %>
+            <% end %>
           </span>
         </nav>
       </section>

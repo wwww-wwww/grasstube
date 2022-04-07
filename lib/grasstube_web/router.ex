@@ -62,22 +62,23 @@ defmodule GrasstubeWeb.Router do
 
     scope "/" do
       pipe_through :logged_out
-      get "/sign_in", UserController, :sign_in_page
+      live "/sign_in", SignInLive
       post "/sign_in", UserController, :sign_in
 
-      get "/sign_up", UserController, :sign_up_page
+      live "/sign_up", SignUpLive
       post "/sign_up", UserController, :sign_up
     end
 
     get "/sign_out", UserController, :sign_out
-    get "/u/:username", UserController, :show_user
+    live "/u/:username", UserLive
 
     scope "/" do
       pipe_through :logged_in
+      live "/create_room", CreateRoomLive
+
       post "/add_emote", UserController, :add_emote
       post "/import_emotes", UserController, :import_emotes
       post "/delete_emote", UserController, :delete_emote
-      get "/create_room", UserController, :create_room_page
       post "/create_room", UserController, :create_room
       post "/close_room", UserController, :close_room
     end

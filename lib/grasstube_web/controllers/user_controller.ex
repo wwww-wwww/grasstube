@@ -6,19 +6,6 @@ defmodule GrasstubeWeb.UserController do
   alias Grasstube.User
   alias Grasstube.Emote
 
-  def sign_up_page(conn, _params) do
-    changeset = User.changeset(%User{})
-    render(conn, "sign_up.html", changeset: changeset)
-  end
-
-  def sign_in_page(conn, _params) do
-    render(conn, "sign_in.html")
-  end
-
-  def create_room_page(conn, _params) do
-    render(conn, "create_room.html")
-  end
-
   def sign_in(conn, %{"username" => username, "password" => password}) do
     case Repo.get_by(User, username: username |> to_string() |> String.downcase()) do
       nil ->
@@ -70,8 +57,8 @@ defmodule GrasstubeWeb.UserController do
     |> redirect(to: Routes.live_path(conn, GrasstubeWeb.RoomsLive))
   end
 
-  def sign_up(conn, %{"user" => user}) do
-    changeset = User.changeset(%User{}, user)
+  def sign_up(conn, %{"username" => username, "password" => password}) do
+    changeset = User.changeset(%User{}, %{username: username, password: password})
 
     case Repo.insert(changeset) do
       {:ok, user} ->
@@ -91,18 +78,6 @@ defmodule GrasstubeWeb.UserController do
         conn
         |> put_flash(:error, errors |> Enum.at(0))
         |> redirect(to: Routes.user_path(conn, :sign_up))
-    end
-  end
-
-  def show_user(conn, %{"username" => username}) do
-    user = Repo.get(Grasstube.User, username |> to_string() |> String.downcase())
-
-    if user != nil do
-      render(conn, "profile.html", name: user.name, username: user.username)
-    else
-      conn
-      |> put_flash(:info, "user does not exist")
-      |> render(GrasstubeWeb.ErrorView, "404.html")
     end
   end
 
@@ -191,12 +166,12 @@ defmodule GrasstubeWeb.UserController do
       length(rooms) > 0 ->
         conn
         |> put_flash("error", "you already have a room")
-        |> redirect(to: Routes.user_path(conn, :create_room_page))
+        |> redirect(to: "/")
 
       String.length(room_name) == 0 ->
         conn
         |> put_flash("error", "room name is too short")
-        |> redirect(to: Routes.user_path(conn, :create_room_page))
+        |> redirect(to: "/")
 
       true ->
         case Grasstube.ProcessRegistry.create_room(room_name, user.username, room_password) do
@@ -209,12 +184,12 @@ defmodule GrasstubeWeb.UserController do
               :already_started ->
                 conn
                 |> put_flash("error", "room already exists with this name")
-                |> redirect(to: Routes.user_path(conn, :create_room_page))
+                |> redirect(to: "/")
 
               _ ->
                 conn
                 |> put_flash("error", "error creating room")
-                |> redirect(to: Routes.user_path(conn, :create_room_page))
+                |> redirect(to: "/")
             end
         end
     end

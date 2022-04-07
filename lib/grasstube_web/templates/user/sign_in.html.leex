@@ -1,0 +1,9 @@
+<h1>Sign In</h1>
+
+<%= form_tag(Routes.user_path(@socket, :sign_in)) do %>
+<%= tag(:input, type: "text", name: "username", placeholder: "Username") %>
+<%= tag(:input, type: "password", name: "password", placeholder: "Password") %>
+<%= submit("Sign In") %>
+<% end %>
+
+<span class="sign_up">Don't have an account? <%= live_redirect("Sign Up", to: Routes.live_path(@socket, GrasstubeWeb.SignUpLive)) %></span>

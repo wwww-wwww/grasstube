@@ -73,6 +73,7 @@ const chat_state = {
   on_message: [],
   chat: null,
   emotes_modal: null,
+  on_load: null,
 }
 
 const hooks = {
@@ -129,6 +130,15 @@ const hooks = {
           chat_messages.removeChild(chat_messages.firstChild)
         }
       })
+
+      if (chat_state.on_load) {
+        chat_state.on_load()
+        chat_state.on_load = null
+      }
+    },
+    destroyed() {
+      chat_state.on_message = []
+      chat_state.chat = null
     }
   },
 
@@ -186,6 +196,9 @@ const hooks = {
           player.focus()
         }
       }))
+    },
+    destroyed() {
+      delete document.windows["chat_emotes"]
     }
   },
 
@@ -218,7 +231,7 @@ const hooks = {
       })
 
       this.handleEvent("setvid", data => {
-        console.log("video: setvid", data)
+        console.log("video:setvid", data)
         if (this.current_video == data) return
         this.current_video = data
         let videos = {}
@@ -241,7 +254,7 @@ const hooks = {
       })
 
       this.handleEvent("playing", data => {
-        console.log("video: playing", data)
+        console.log("video:playing", data)
         if (this.player.playing != data.playing) {
           this.player.show_osd(data.playing ? "Play" : "Pause")
         }
@@ -258,7 +271,7 @@ const hooks = {
       })
 
       this.handleEvent("seek", data => {
-        console.log("video: seek", data)
+        console.log("video:seek", data)
         this.player.show_osd(`${seconds_to_hms(data.t, true)}`)
         this.player.seek(data.t)
       })
@@ -270,10 +283,10 @@ const hooks = {
           this.fonts_complete = true
         })
         .catch(err => {
-          console.log("fonts: error fetching", err)
+          console.log("fonts:error fetching", err)
         })
         .finally(() => {
-          console.log("fonts: loaded")
+          console.log("fonts:loaded")
           if (this.set_video_on_ready) {
             this.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
           }
@@ -374,10 +387,14 @@ const hooks = {
 
       this.el.addEventListener("mousedown", e => this.start_drag(e))
       this.el.addEventListener("touchstart", e => this.start_drag(e))
+    },
+    destroyed() {
+      delete document.windows["playlist"]
     }
   },
 
   room: {
+    extra_emotes: null,
     toggle_chat() {
       view_chat.classList.toggle("hidden")
       if (view_chat.classList.contains("hidden")) {
@@ -390,10 +407,7 @@ const hooks = {
         }
       }
     },
-    mounted() {
-      init_drag()
-      init_settings()
-
+    load() {
       for (const msg of chat_messages.children) {
         autohide(msg).show(5000)
       }
@@ -414,33 +428,43 @@ const hooks = {
         }
       })
 
-      const extra_emotes = create_window("chat_emotes2", {
+      this.extra_emotes = create_window("chat_emotes2", {
         title: null,
-        root: this.root,
+        root: null,
         show: false,
         close_on_unfocus: true,
         invert_x: true,
         invert_y: true
       })
 
-      extra_emotes.e.style.maxWidth = "500px"
-      extra_emotes.e.style.maxHeight = "500px"
+      this.extra_emotes.e.style.maxWidth = "500px"
+      this.extra_emotes.e.style.maxHeight = "500px"
 
       const chat_emotes = document.getElementById("chat_emotes")
 
-      extra_emotes.get_body()
+      this.extra_emotes.get_body()
 
-      extra_emotes.e.body_outer.classList.toggle("chat_emotes", true)
-      extra_emotes.e.body_outer.classList.toggle("thin_scrollbar", true)
+      this.extra_emotes.e.body_outer.classList.toggle("chat_emotes", true)
+      this.extra_emotes.e.body_outer.classList.toggle("thin_scrollbar", true)
 
       for (const emote of chat_emotes.children) {
         const new_emote = emote.cloneNode(true)
-        extra_emotes.get_body().appendChild(new_emote)
+        this.extra_emotes.get_body().appendChild(new_emote)
         new_emote.addEventListener("click", _ => {
           chat_state.chat.send(`:${emote.title}:`)
-          extra_emotes.close()
+          this.extra_emotes.close()
           player.focus()
         })
+      }
+    },
+    mounted() {
+      init_drag()
+      init_settings()
+
+      if (document.getElementById("chat_container")) {
+        this.load()
+      } else {
+        chat_state.on_load = () => this.load()
       }
 
       document.addEventListener("keydown", e => {
@@ -460,10 +484,10 @@ const hooks = {
           chat_btn_emotes.click()
           chat_input.focus()
         } else if (e.key == "e" && !chat_open) {
-          if (extra_emotes.is_open()) {
-            extra_emotes.close()
+          if (this.extra_emotes.is_open()) {
+            this.extra_emotes.close()
           } else {
-            extra_emotes.show()
+            this.extra_emotes.show()
           }
         } else {
           nothing = true
@@ -471,6 +495,10 @@ const hooks = {
 
         if (!nothing) e.preventDefault()
       })
+    },
+    destroyed() {
+      delete document.windows["Settings"]
+      delete document.windows["chat_emotes2"]
     }
   }
 }

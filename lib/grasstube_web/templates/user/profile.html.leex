@@ -1,0 +1,40 @@
+<h1><%= @user.name %></h1>
+
+<%= if @is_current_user do %>
+	<%= if length(@rooms) > 0 do %>
+		<div class="heading">
+			you have <%= if length(@rooms) > 1 do %>rooms<% else %>a room<% end%> at:
+		</div>
+
+		<%= for room_name <- @rooms do %>
+			<div>
+				<%= live_redirect(room_name, to: Routes.live_path(@socket, GrasstubeWeb.RoomLive, room_name)) %>
+        <button phx-click="room_delete" phx-value-name="<%= room_name %>">Close</button>
+			</div>
+		<% end %>
+	<% else %>
+		<div>
+			Create a room <%= live_redirect("here", to: Routes.live_path(@socket, GrasstubeWeb.CreateRoomLive)) %>
+		</div>
+	<% end %>
+
+	<br>
+<% end %>
+
+<%= @user.name %>'s emotes:
+
+<%= for %{id: id, emote: emote, url: url} <- @emotes do %>
+	<div>
+		<%= img_tag(url, alt: emote, title: emote, class: "emote") %>
+    <span>:<%= emote %>:</span>
+    <%= if @is_current_user do %>
+      <button phx-click="emote_delete" phx-value-id="<%= id %>">Delete</button>
+		<% end %>
+	</div>
+<% end %>
+
+<form phx-submit="emote_add">
+<%= tag(:input, type: "text", name: "name", placeholder: "Name") %>
+<%= tag(:input, type: "text", name: "url", placeholder: "URL") %>
+<%= submit("Add") %>
+</form>

@@ -28,6 +28,7 @@ defmodule GrasstubeWeb.ChatLive do
     socket =
       socket
       |> assign(chat: chat)
+      |> assign(room: room)
       |> assign(topic: topic)
       |> assign(user_id: user_id)
       |> assign(user: user)

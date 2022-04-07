@@ -1,45 +1,160 @@
+defmodule GrasstubeWeb.SignInLive do
+  use GrasstubeWeb, :live_view
+
+  def render(assigns) do
+    GrasstubeWeb.UserView.render("sign_in.html", assigns)
+  end
+
+  def mount(_, _, socket) do
+    {:ok, socket}
+  end
+end
+
+defmodule GrasstubeWeb.SignUpLive do
+  use GrasstubeWeb, :live_view
+
+  def render(assigns) do
+    GrasstubeWeb.UserView.render("sign_up.html", assigns)
+  end
+
+  def mount(_, _, socket) do
+    {:ok, socket}
+  end
+end
+
 defmodule GrasstubeWeb.UserLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.ChatAgent
+  alias Grasstube.{Emote, User, Repo}
 
   def render(assigns) do
-    GrasstubeWeb.PageView.render("auth_live.html", assigns)
+    GrasstubeWeb.UserView.render("profile.html", assigns)
   end
 
-  def mount(%{"room" => room}, %{"target" => target}, socket) do
+  def mount(%{"username" => username}, session, socket) do
     socket =
-      case Grasstube.ProcessRegistry.lookup(room, :chat) do
-        :not_found ->
+      case Repo.get(User, username) do
+        nil ->
           socket
-          |> put_flash(:error, "Room does not exist")
-          |> redirect(to: "/")
+          |> put_flash(:error, "User does not exist")
+          |> push_redirect(to: Routes.live_path(socket, GrasstubeWeb.RoomsLive))
 
-        chat ->
+        user ->
+          current_user = Grasstube.Guardian.user(session)
+
           socket
-          |> assign(chat: chat)
-          |> assign(room: room)
-          |> assign(target: target)
+          |> assign(user: user)
+          |> assign(current_user: current_user)
+          |> assign(is_current_user: current_user.username == user.username)
+          |> assign(rooms: Grasstube.ProcessRegistry.rooms_of(user.username))
+          |> assign(emotes: Repo.preload(user, :emotes).emotes |> Enum.sort_by(& &1.emote))
       end
 
     {:ok, socket}
   end
 
-  def handle_event(
-        "auth",
-        %{"password" => password},
-        %{assigns: %{room: room, target: target, chat: chat}} = socket
-      ) do
+  def handle_event("room_delete", %{"name" => name}, socket) do
+    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user.username)
+
     socket =
-      if ChatAgent.check_password(chat, password) do
-        socket
-        |> push_redirect(
-          to: Routes.live_path(socket, target, room),
-          replace: true
+      if name in rooms do
+        Grasstube.ProcessRegistry.close_room(name)
+
+        assign(socket,
+          rooms: Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user.username)
         )
       else
-        socket
-        |> put_flash(:error, "Incorrect password")
+        put_flash(socket, :error, "You can't close this room")
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("emote_add", %{"name" => name, "url" => url}, socket) do
+    user = socket.assigns.current_user
+
+    socket =
+      Ecto.build_assoc(user, :emotes,
+        emote: name |> String.downcase() |> String.trim(":"),
+        url: url
+      )
+      |> Repo.insert()
+      |> case do
+        {:ok, _} ->
+          assign(socket, emotes: Repo.preload(user, :emotes).emotes |> Enum.sort_by(& &1.emote))
+
+        {:error, err} ->
+          put_flash(socket, :error, inspect(err))
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("emote_delete", %{"id" => id}, socket) do
+    socket =
+      case Repo.get(Emote, id) do
+        nil ->
+          put_flash(socket, :error, "Emote does not exist")
+
+        emote ->
+          if emote.user_username == socket.assigns.current_user.username do
+            case Repo.delete(emote) do
+              {:ok, _} ->
+                assign(socket,
+                  emotes:
+                    Repo.preload(socket.assigns.current_user, :emotes).emotes
+                    |> Enum.sort_by(& &1.emote)
+                )
+
+              {:error, err} ->
+                put_flash(socket, :error, inspect(err))
+            end
+          else
+            put_flash(socket, :error, "This emote does not belong to you")
+          end
+      end
+
+    {:noreply, socket}
+  end
+end
+
+defmodule GrasstubeWeb.CreateRoomLive do
+  use GrasstubeWeb, :live_view
+
+  def render(assigns) do
+    GrasstubeWeb.UserView.render("create_room.html", assigns)
+  end
+
+  def mount(_, session, socket) do
+    {:ok, assign(socket, user: Grasstube.Guardian.user(session))}
+  end
+
+  def handle_event("create", %{"name" => name, "password" => password}, socket) do
+    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.user.username)
+
+    socket =
+      cond do
+        length(rooms) > 0 ->
+          put_flash(socket, :error, "You already have a room")
+
+        String.length(name) == 0 ->
+          put_flash(socket, :room, "Room name is too short")
+
+        true ->
+          case Grasstube.ProcessRegistry.create_room(name, socket.assigns.user.username, password) do
+            {:ok, _} ->
+              GrasstubeWeb.RoomsLive.update()
+              push_redirect(socket, to: Routes.live_path(socket, GrasstubeWeb.RoomLive, name))
+
+            {:error, {reason, _}} ->
+              case reason do
+                :already_started ->
+                  put_flash(socket, :error, "A room already exists with this name")
+
+                _ ->
+                  put_flash(socket, :error, "Error creating room #{inspect(reason)}")
+              end
+          end
       end
 
     {:noreply, socket}

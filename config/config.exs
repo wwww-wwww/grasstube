@@ -53,14 +53,6 @@ config :dart_sass,
     args: ~w(css/room.scss ../priv/static/assets/room.css),
     cd: Path.expand("../assets", __DIR__)
   ],
-  index: [
-    args: ~w(css/index.scss ../priv/static/assets/index.css),
-    cd: Path.expand("../assets", __DIR__)
-  ],
-  sign_in: [
-    args: ~w(css/sign_in.scss ../priv/static/assets/sign_in.css),
-    cd: Path.expand("../assets", __DIR__)
-  ],
   no_video: [
     args: ~w(css/no_video.scss ../priv/static/assets/no_video.css),
     cd: Path.expand("../assets", __DIR__)
