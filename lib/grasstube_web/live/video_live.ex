@@ -111,6 +111,10 @@ defmodule GrasstubeWeb.VideoLive do
     {:noreply, socket}
   end
 
+  def handle_event("ping", _, socket) do
+    {:reply, %{}, socket}
+  end
+
   def handle_info(%{event: "setvid", payload: payload}, socket) do
     {:noreply, push_event(socket, "setvid", payload)}
   end

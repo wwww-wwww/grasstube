@@ -21,7 +21,7 @@ class GrassPlayer {
     const yt = create_element(document.head, "script")
     yt.src = "https://www.youtube.com/iframe_api"
     window.onYouTubeIframeAPIReady = () => {
-      this.yt_loaded = YT.loaded
+      document.yt_loaded = YT.loaded
       if (YT.loaded == 1) {
         if (typeof (this.current_video.yt) == "string") {
           this.set_youtube(this.current_video.yt)
@@ -560,7 +560,7 @@ class GrassPlayer {
 
   set_youtube(video_id) {
     this.current_video.yt = video_id
-    if (!this.yt_loaded) return
+    if (!document.yt_loaded) return
     this.current_video.yt = new YT.Player(this.video2, {
       height: "100%",
       width: "100%",

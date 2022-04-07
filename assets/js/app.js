@@ -206,6 +206,18 @@ const hooks = {
     current_video: null,
     fonts_complete: false,
     set_video_on_ready: null,
+    ping_time: null,
+    latency_rtt: 0,
+    ping_interval: null,
+    ping() {
+      this.ping_time = Date.now()
+      console.log("video:ping")
+      this.pushEvent("ping", {}, () => {
+        const latency = (Date.now() - this.ping_time) / 1000
+        this.latency_rtt = latency * 0.75 + (this.latency_rtt || latency) * 0.25
+        console.log("video:pong", this.latency_rtt)
+      })
+    },
     mounted() {
       this.player = new GrassPlayer(
         this.el,
@@ -224,6 +236,9 @@ const hooks = {
       this.player.on_next = () => {
         this.pushEvent("next", {})
       }
+
+      this.ping()
+      this.ping_interval = setInterval(() => this.ping(), 5000)
 
       this.handleEvent("controls", data => {
         console.log("video:controls", data)
@@ -257,15 +272,23 @@ const hooks = {
         console.log("video:playing", data)
         if (this.player.playing != data.playing) {
           this.player.show_osd(data.playing ? "Play" : "Pause")
+          if (data.playing) {
+            console.log("video: adding offset", this.latency_rtt / 2)
+            this.player.seek(this.player.current_time() + this.latency_rtt / 2)
+          }
         }
         this.player.set_playing(data.playing)
       })
 
       this.handleEvent("time", data => {
-        console.log("video: time", data)
-        if (!this.player.playing || (
-          Math.abs(data.t - this.player.current_time()) > 5 && (data.t <= this.player.duration())
-        )) {
+        console.log("video:time", data)
+        if (this.player.playing) {
+          const offset_time = data.t + this.latency_rtt / 2
+          if (offset_time >= this.player.duration()) { return }
+          if (Math.abs(offset_time - this.player.current_time()) > 5) {
+            this.player.seek(offset_time)
+          }
+        } else {
           this.player.seek(data.t)
         }
       })
@@ -291,6 +314,9 @@ const hooks = {
             this.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
           }
         })
+    },
+    destroyed() {
+      clearInterval(this.ping_interval)
     }
   },
 

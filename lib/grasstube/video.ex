@@ -29,6 +29,12 @@ defmodule Grasstube.VideoAgent do
 
   def via_tuple(room_name), do: Grasstube.ProcessRegistry.via_tuple({room_name, :video})
 
+  def current_time() do
+    DateTime.utc_now()
+    |> DateTime.to_unix(:millisecond)
+    |> Kernel./(1000)
+  end
+
   def set_playing(pid, playing) do
     if not get_current_video(pid).ready do
       set_play_on_ready(pid, true)
@@ -40,7 +46,7 @@ defmodule Grasstube.VideoAgent do
           val
           | playing: playing,
             time_seek: actual_get_time(val),
-            time_started: DateTime.to_unix(DateTime.utc_now())
+            time_started: current_time()
         }
       end)
 
@@ -49,8 +55,8 @@ defmodule Grasstube.VideoAgent do
       Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
       |> VideoScheduler.cancel_play()
 
-      Endpoint.broadcast("video:#{room_name}", "playing", %{playing: playing?(pid)})
       Endpoint.broadcast("video:#{room_name}", "time", %{t: get_time(pid)})
+      Endpoint.broadcast("video:#{room_name}", "playing", %{playing: playing?(pid)})
     end
   end
 
@@ -60,7 +66,7 @@ defmodule Grasstube.VideoAgent do
 
   defp actual_get_time(val) do
     if val.playing and val.time_started != :not_started do
-      now = DateTime.to_unix(DateTime.utc_now())
+      now = current_time()
       val.time_seek + now - val.time_started
     else
       val.time_seek
@@ -68,8 +74,7 @@ defmodule Grasstube.VideoAgent do
   end
 
   def set_seek(pid, t),
-    do:
-      Agent.update(pid, &%{&1 | time_seek: t, time_started: DateTime.to_unix(DateTime.utc_now())})
+    do: Agent.update(pid, &%{&1 | time_seek: t, time_started: current_time()})
 
   def set_time_started(pid, t), do: Agent.update(pid, &%{&1 | time_started: t})
 
