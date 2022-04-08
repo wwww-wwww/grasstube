@@ -76,6 +76,11 @@ const chat_state = {
   on_load: null,
 }
 
+const player_state = {
+  player: null,
+  fullscreen_element: null,
+}
+
 const hooks = {
   chat: {
     focus: null,
@@ -225,32 +230,36 @@ const hooks = {
       })
     },
     mounted() {
-      this.player = new GrassPlayer(
+      player_state.player = new GrassPlayer(
         this.el,
         [],
         document.querySelector("meta[name='controls']").getAttribute("content") == "true"
       )
 
-      this.player.on_seek = t => {
+      if (player_state.fullscreen_element) {
+        player_state.player.fullscreen_element = player_state.fullscreen_element
+      }
+
+      player_state.player.on_seek = t => {
         this.pushEvent("seek", { time: Math.round(t) })
       }
 
-      this.player.on_toggle_playing = playing => {
+      player_state.player.on_toggle_playing = playing => {
         this.pushEvent(playing ? "play" : "pause", { offset: -this.latency_rtt / 2000 })
       }
 
-      this.player.on_next = () => {
+      player_state.player.on_next = () => {
         this.pushEvent("next", {})
       }
 
-      this.stats_latency = this.player.stats_add_row("Latency (RTT):", this.latency_rtt)
+      this.stats_latency = player_state.player.stats_add_row("Latency (RTT):", this.latency_rtt)
 
       this.ping()
       this.ping_interval = setInterval(() => this.ping(), 5000)
 
       this.handleEvent("controls", data => {
         console.log("video:controls", data)
-        this.player.set_controls(data.controls)
+        player_state.player.set_controls(data.controls)
       })
 
       this.handleEvent("setvid", data => {
@@ -272,51 +281,51 @@ const hooks = {
         if (!this.fonts_complete) {
           this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub }
         } else {
-          this.player.set_video(data.type, videos, data.sub)
+          player_state.player.set_video(data.type, videos, data.sub)
         }
       })
 
       this.handleEvent("playing", data => {
-        if (this.player.playing != data.playing) {
+        if (player_state.player.playing != data.playing) {
           console.log("video:playing", data)
-          this.player.show_osd(data.playing ? "Play" : "Pause")
+          player_state.player.show_osd(data.playing ? "Play" : "Pause")
           if (data.playing) {
             const offset_time = data.t + this.latency_rtt / 2000
-            if (Math.abs(offset_time - this.player.current_time()) > 0.1) {
+            if (Math.abs(offset_time - player_state.player.current_time()) > 0.1) {
               console.log("video:play offset", this.latency_rtt / 2000)
-              this.player.seek(offset_time)
+              player_state.player.seek(offset_time)
             }
           }
         }
-        this.player.set_playing(data.playing)
+        player_state.player.set_playing(data.playing)
       })
 
       this.handleEvent("time", data => {
-        if (this.player.playing) {
+        if (player_state.player.playing) {
           const offset_time = data.t + this.latency_rtt / 2000
-          if (offset_time >= this.player.duration()) { return }
-          if (Math.abs(offset_time - this.player.current_time()) > 5) {
+          if (offset_time >= player_state.player.duration()) { return }
+          if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
             console.log("video:time offset", this.latency_rtt / 2000)
-            this.player.seek(offset_time)
+            player_state.player.seek(offset_time)
           }
         } else {
           console.log("video:time", data)
-          this.player.seek(data.t)
+          player_state.player.seek(data.t)
         }
       })
 
       this.handleEvent("seek", data => {
-        if (Math.abs(data.t - this.player.current_time()) > 0.1) {
+        if (Math.abs(data.t - player_state.player.current_time()) > 0.1) {
           console.log("video:seek", data)
-          this.player.show_osd(`${seconds_to_hms(data.t, true)}`)
-          this.player.seek(data.t)
+          player_state.player.show_osd(`${seconds_to_hms(data.t, true)}`)
+          player_state.player.seek(data.t)
         }
       })
 
       fetch("https://res.cloudinary.com/grass/raw/upload/v1648173707/fonts.json")
         .then(res => res.json())
         .then(fonts => {
-          this.player.set_fonts(fonts)
+          player_state.player.set_fonts(fonts)
           this.fonts_complete = true
         })
         .catch(err => {
@@ -325,12 +334,14 @@ const hooks = {
         .finally(() => {
           console.log("fonts:loaded")
           if (this.set_video_on_ready) {
-            this.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
+            player_state.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
           }
         })
     },
     destroyed() {
       clearInterval(this.ping_interval)
+      player_state.player = null
+      player_state.fullscreen_element = null
     }
   },
 
@@ -522,7 +533,7 @@ const hooks = {
 
       this.extra_emotes = create_window("chat_emotes2", {
         title: null,
-        root: null,
+        root: this.el,
         show: false,
         close_on_unfocus: true,
         invert_x: true,
@@ -553,6 +564,12 @@ const hooks = {
     mounted() {
       init_settings()
       init_drag()
+
+      if (player_state.player) {
+        player_state.player.fullscreen_element = this.el
+      } else {
+        player_state.fullscreen_element = this.el
+      }
 
       if (document.getElementById("chat_container")) {
         this.load()

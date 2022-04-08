@@ -5,6 +5,7 @@ import SubtitlesOctopus from "./subtitles-octopus"
 class GrassPlayer {
   constructor(root, fonts, controls = true) {
     this.root = root
+    this.fullscreen_element = this.root
     this.availableFonts = fonts
     this.root.classList.toggle("grassplayer", true)
 
@@ -638,7 +639,7 @@ class GrassPlayer {
     if (document.fullscreenElement) {
       document.exitFullscreen()
     } else {
-      this.root.requestFullscreen()
+      this.fullscreen_element.requestFullscreen()
     }
   }
 
