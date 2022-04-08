@@ -223,7 +223,7 @@ defmodule Grasstube.PlaylistAgent do
         update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
         false
 
-      %URI{host: host, query: query, path: url_path} ->
+      %URI{host: host, query: query} ->
         cond do
           Enum.member?(@yt_domains, String.downcase(host)) ->
             query = query || ""

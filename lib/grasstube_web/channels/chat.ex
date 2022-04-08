@@ -3,8 +3,6 @@ defmodule GrasstubeWeb.ChatChannel do
 
   alias Grasstube.{Presence, ChatAgent}
 
-  @max_name_length 24
-
   def join("chat:" <> room_name, %{"password" => password}, socket) do
     case Grasstube.ProcessRegistry.lookup(room_name, :playlist) do
       :not_found ->

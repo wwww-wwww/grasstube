@@ -4,42 +4,6 @@ defmodule GrasstubeWeb.PageController do
   alias Grasstube.Guardian
   alias Grasstube.ChatAgent
 
-  def chat(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :chat) do
-      :not_found ->
-        text(conn, "room not found")
-
-      chat ->
-        render(conn, "chat_only.html",
-          room: room,
-          room_has_password: password_required?(conn, chat)
-        )
-    end
-  end
-
-  def no_video(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :chat) do
-      :not_found ->
-        text(conn, "room not found")
-
-      chat ->
-        render(conn, "no_video.html",
-          room: room,
-          room_has_password: password_required?(conn, chat)
-        )
-    end
-  end
-
-  def video(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :chat) do
-      :not_found ->
-        text(conn, "room not found")
-
-      chat ->
-        render(conn, "video.html", room: room, room_has_password: password_required?(conn, chat))
-    end
-  end
-
   def room(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
@@ -47,19 +11,6 @@ defmodule GrasstubeWeb.PageController do
 
       chat ->
         render(conn, "room.html", room: room, room_has_password: password_required?(conn, chat))
-    end
-  end
-
-  def controls(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :chat) do
-      :not_found ->
-        text(conn, "room not found")
-
-      chat ->
-        render(conn, "controls.html",
-          room: room,
-          room_has_password: password_required?(conn, chat)
-        )
     end
   end
 

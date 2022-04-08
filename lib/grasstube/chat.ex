@@ -4,7 +4,6 @@ defmodule Grasstube.ChatAgent do
   alias GrasstubeWeb.Endpoint
 
   alias Grasstube.{ProcessRegistry, Repo}
-  alias Guardian.Phoenix.Socket
 
   alias Phoenix.HTML
 
@@ -36,6 +35,7 @@ defmodule Grasstube.ChatAgent do
 
   @max_message_size 250
   @max_history_size 20
+  @max_name_length 24
 
   def start_link(opts) do
     room_name = opts |> Keyword.get(:room_name)
@@ -58,7 +58,7 @@ defmodule Grasstube.ChatAgent do
     Phoenix.Channel.push(socket, event, payload)
   end
 
-  def topic({socket, pid}), do: socket.assigns.topic
+  def topic({socket, _pid}), do: socket.assigns.topic
 
   def topic(socket), do: socket.topic
 
@@ -167,13 +167,21 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(_channel, socket, "nick " <> nick) do
-    if not is_nil(get_socket(socket).assigns.user) do
-      Repo.get(Grasstube.User, get_socket(socket).assigns.user_id)
-      |> Ecto.Changeset.change(nickname: nick)
-      |> Repo.update()
-    end
+    if String.length(nick) > @max_name_length do
+      push(socket, "chat", %{
+        sender: "sys",
+        name: "System",
+        content: "Nickname must be #{@max_name_length} characters or less"
+      })
+    else
+      if not is_nil(get_socket(socket).assigns.user) do
+        Repo.get(Grasstube.User, get_socket(socket).assigns.user_id)
+        |> Ecto.Changeset.change(nickname: nick)
+        |> Repo.update()
+      end
 
-    update_presence(socket, %{nickname: nick})
+      update_presence(socket, %{nickname: nick})
+    end
   end
 
   defp command(channel, socket, "op " <> username) do

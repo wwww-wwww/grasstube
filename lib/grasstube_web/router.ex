@@ -41,10 +41,6 @@ defmodule GrasstubeWeb.Router do
     get "/gdrive", PageController, :gdrive
 
     scope "/r" do
-      get "/:room/controls", PageController, :controls
-      get "/:room/chat", PageController, :chat
-      get "/:room/no_video", PageController, :no_video
-      get "/:room/video", PageController, :video
       get "/:room", PageController, :room
     end
 

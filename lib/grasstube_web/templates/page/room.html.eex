@@ -22,14 +22,6 @@
 			<div class="col">
 				<button id="btn_open_chat">Open chat</button>
 				<button id="btn_user_settings">Settings</button>
-				<div class="collapsed_btns">
-					Rooms
-					<div>
-						<%= link("No video", to: Routes.page_path(@conn, :no_video, @room), class: "button") %>
-						<%= link("Video only", to: Routes.page_path(@conn, :video, @room), class: "button") %>
-						<%= link("Chat only", to: Routes.page_path(@conn, :chat, @room), class: "button") %>
-					</div>
-				</div>
 				<button id="btn_create_poll" class="hidden">Create poll</button>
 				<div id="polls_list"></div>
 			</div>

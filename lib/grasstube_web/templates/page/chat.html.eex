@@ -1,9 +1,0 @@
-<div id="chat_container">
-	<div id="chat_input_container" class="hidden">
-		<input id="chat_input">
-		<button id="chat_emotes" class="square">🙂</button>
-	</div>
-	<div id="chat_messages"></div>
-	<div id="chat_userlist" class="hidden"></div>
-	<div id="chat_danmaku"></div>
-</div>

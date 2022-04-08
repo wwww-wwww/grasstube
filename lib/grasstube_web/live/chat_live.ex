@@ -7,7 +7,7 @@ defmodule GrasstubeWeb.ChatLive do
     GrasstubeWeb.PageView.render("chat_live.html", assigns)
   end
 
-  def mount(params, %{"room" => room} = session, socket) do
+  def mount(_params, %{"room" => room} = session, socket) do
     topic = "chat:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 

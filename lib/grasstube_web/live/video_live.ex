@@ -1,13 +1,13 @@
 defmodule GrasstubeWeb.VideoLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{ChatAgent, PlaylistAgent, Presence, ProcessRegistry, VideoAgent}
+  alias Grasstube.{ChatAgent, PlaylistAgent, ProcessRegistry, VideoAgent}
 
   def render(assigns) do
     GrasstubeWeb.PageView.render("video_live.html", assigns)
   end
 
-  def mount(params, %{"room" => room} = session, socket) do
+  def mount(_params, %{"room" => room} = session, socket) do
     topic = "video:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 

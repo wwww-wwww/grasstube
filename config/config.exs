@@ -21,26 +21,6 @@ config :esbuild,
     args: ~w(js/room.js --bundle --target=es2016 --outdir=../priv/static/assets),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  no_video: [
-    args: ~w(js/no_video.js --bundle --target=es2016 --outdir=../priv/static/assets),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  video: [
-    args: ~w(js/video.js --bundle --target=es2016 --outdir=../priv/static/assets),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  chat: [
-    args: ~w(js/chat.js --bundle --target=es2016 --outdir=../priv/static/assets),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ],
-  controls: [
-    args: ~w(js/controls.js --bundle --target=es2016 --outdir=../priv/static/assets),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 
 config :dart_sass,
@@ -51,22 +31,6 @@ config :dart_sass,
   ],
   room: [
     args: ~w(css/room.scss ../priv/static/assets/room.css),
-    cd: Path.expand("../assets", __DIR__)
-  ],
-  no_video: [
-    args: ~w(css/no_video.scss ../priv/static/assets/no_video.css),
-    cd: Path.expand("../assets", __DIR__)
-  ],
-  video: [
-    args: ~w(css/video.scss ../priv/static/assets/video.css),
-    cd: Path.expand("../assets", __DIR__)
-  ],
-  chat: [
-    args: ~w(css/chat.scss ../priv/static/assets/chat.css),
-    cd: Path.expand("../assets", __DIR__)
-  ],
-  controls: [
-    args: ~w(css/controls.scss ../priv/static/assets/controls.css),
     cd: Path.expand("../assets", __DIR__)
   ]
 
