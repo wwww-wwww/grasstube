@@ -1,12 +1,12 @@
 <div phx-update="ignore" phx-hook="room" id="maincontent">
 
 <%= live_render(@socket, GrasstubeWeb.VideoLive,
-  session: %{"room" => @room},
+  session: %{"room" => @room, "current_user" => @current_user},
   id: "view_video"
 ) %>
 
 <%= live_render(@socket, GrasstubeWeb.ChatLive,
-  session: %{"room" => @room},
+  session: %{"room" => @room, "current_user" => @current_user},
   id: "view_chat",
   container: {:div, class: "ChatLive can_hide hidden"}
 ) %>
@@ -26,7 +26,7 @@
 
 <div class="col">
   <%= live_render(@socket, GrasstubeWeb.PlaylistLive,
-    session: %{"room" => @room},
+    session: %{"room" => @room, "current_user" => @current_user},
     id: "view_playlist"
   ) %>
 </div>

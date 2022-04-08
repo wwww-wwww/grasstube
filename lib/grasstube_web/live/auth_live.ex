@@ -7,7 +7,7 @@ defmodule GrasstubeWeb.AuthLive do
     GrasstubeWeb.PageView.render("auth_live.html", assigns)
   end
 
-  def mount(%{"room" => room}, %{"target" => target}, socket) do
+  def mount(%{"room" => room}, session, socket) do
     socket =
       case Grasstube.ProcessRegistry.lookup(room, :chat) do
         :not_found ->
@@ -19,7 +19,6 @@ defmodule GrasstubeWeb.AuthLive do
           socket
           |> assign(chat: chat)
           |> assign(room: room)
-          |> assign(target: target)
       end
 
     {:ok, socket}
@@ -28,19 +27,26 @@ defmodule GrasstubeWeb.AuthLive do
   def handle_event(
         "auth",
         %{"password" => password},
-        %{assigns: %{room: room, target: target, chat: chat}} = socket
+        %{assigns: %{room: room, chat: chat, flash: %{"target" => target}}} = socket
       ) do
     socket =
-      if ChatAgent.check_password(chat, password) do
-        socket
-        |> push_redirect(
-          to: Routes.live_path(socket, target, room),
-          replace: true
-        )
-      else
-        socket
-        |> put_flash(:error, "Incorrect password")
-      end
+      socket
+      |> put_flash(:target, target)
+      |> put_flash(:password, password)
+      |> push_redirect(to: Routes.live_path(socket, target, room))
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "auth",
+        %{"password" => password},
+        %{assigns: %{room: room, chat: chat}} = socket
+      ) do
+    socket =
+      socket
+      |> put_flash(:password, password)
+      |> push_redirect(to: Routes.live_path(socket, GrasstubeWeb.RoomLive, room))
 
     {:noreply, socket}
   end

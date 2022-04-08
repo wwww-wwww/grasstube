@@ -7,23 +7,21 @@ defmodule GrasstubeWeb.PlaylistLive do
     GrasstubeWeb.PageView.render("playlist_live.html", assigns)
   end
 
-  def mount(_params, %{"room" => room} = session, socket) do
+  def mount(_params, %{"room" => room, "current_user" => current_user} = session, socket) do
     topic = "playlist:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
-    user = Grasstube.Guardian.user(session)
-
     socket_id = GrasstubeWeb.UserSocket.new_id()
 
-    if user do
-      GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{user.username}")
+    if current_user do
+      GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
     end
 
     user_id =
-      if is_nil(user) do
+      if is_nil(current_user) do
         "$" <> socket_id
       else
-        user.username
+        current_user.username
       end
 
     socket =
@@ -34,7 +32,7 @@ defmodule GrasstubeWeb.PlaylistLive do
       |> assign(video: ProcessRegistry.lookup(room, :video))
       |> assign(playlist: ProcessRegistry.lookup(room, :playlist))
       |> assign(user_id: user_id)
-      |> assign(user: user)
+      |> assign(user: current_user)
       |> assign(id: socket_id)
 
     current_video =

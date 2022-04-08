@@ -37,6 +37,6 @@ defmodule GrasstubeWeb.PageView do
     seconds
     |> DateTime.from_unix!(:second)
     |> to_string()
-    |> String.slice(11..-2)
+    |> String.slice(-9..-2)
   end
 end
