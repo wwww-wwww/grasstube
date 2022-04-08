@@ -245,7 +245,7 @@ const hooks = {
       }
 
       player_state.player.on_toggle_playing = playing => {
-        this.pushEvent(playing ? "play" : "pause", { offset: -this.latency_rtt / 2000 })
+        this.pushEvent(playing ? "play" : "pause", { offset: -this.latency_rtt / 1000 })
       }
 
       player_state.player.on_next = () => {
@@ -290,9 +290,9 @@ const hooks = {
           console.log("video:playing", data)
           player_state.player.show_osd(data.playing ? "Play" : "Pause")
           if (data.playing) {
-            const offset_time = data.t + this.latency_rtt / 2000
+            const offset_time = data.t + this.latency_rtt / 1000
             if (Math.abs(offset_time - player_state.player.current_time()) > 0.1) {
-              console.log("video:play offset", this.latency_rtt / 2000)
+              console.log("video:play offset", this.latency_rtt / 1000)
               player_state.player.seek(offset_time)
             }
           }
@@ -302,10 +302,10 @@ const hooks = {
 
       this.handleEvent("time", data => {
         if (player_state.player.playing) {
-          const offset_time = data.t + this.latency_rtt / 2000
+          const offset_time = data.t + this.latency_rtt / 1000
           if (offset_time >= player_state.player.duration()) { return }
           if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
-            console.log("video:time offset", this.latency_rtt / 2000)
+            console.log("video:time offset", this.latency_rtt / 1000)
             player_state.player.seek(offset_time)
           }
         } else {
