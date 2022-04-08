@@ -78,15 +78,18 @@ const chat_state = {
 
 const hooks = {
   chat: {
+    focus: null,
     mounted() {
       const room_name = document.querySelector("meta[name='room']").getAttribute("content")
 
       document.title = room_name
 
-      window.addEventListener("focus", () => {
-        chat_state.unread_messages = 0
+      this.focus = () => {
+        chat_state.unread_
+        messages = 0
         document.title = room_name
-      })
+      }
+      window.addEventListener("focus", this.focus)
 
       this.handleEvent("chat", data => {
         console.log("chat:chat", data)
@@ -139,6 +142,7 @@ const hooks = {
     destroyed() {
       chat_state.on_message = []
       chat_state.chat = null
+      window.removeEventListener("focus", this.focus)
     }
   },
 
@@ -545,6 +549,7 @@ const hooks = {
         })
       }
     },
+    on_keydown: null,
     mounted() {
       init_settings()
       init_drag()
@@ -555,7 +560,7 @@ const hooks = {
         chat_state.on_load = () => this.load()
       }
 
-      document.addEventListener("keydown", e => {
+      this.on_keydown = e => {
         const chat_open = !view_chat.classList.contains("hidden")
         if (e.target.tagName == "INPUT" && e.target != chat_input) return
         let nothing = false
@@ -582,11 +587,14 @@ const hooks = {
         }
 
         if (!nothing) e.preventDefault()
-      })
+      }
+
+      document.addEventListener("keydown", this.on_keydown)
     },
     destroyed() {
       delete document.windows["Settings"]
       delete document.windows["chat_emotes2"]
+      document.removeEventListener("keydown", this.on_keydown)
     }
   }
 }
