@@ -66,6 +66,16 @@ defmodule GrasstubeWeb.VideoLive do
     {:ok, socket}
   end
 
+  def handle_event("play", %{"offset" => offset}, socket) do
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
+      socket.assigns.video
+      |> VideoAgent.seek_shift(offset)
+      |> VideoAgent.set_playing(true)
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_event("play", _, socket) do
     if ChatAgent.controls?(socket.assigns.chat, socket) do
       socket.assigns.video

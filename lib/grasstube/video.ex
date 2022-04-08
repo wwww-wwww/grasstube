@@ -55,9 +55,12 @@ defmodule Grasstube.VideoAgent do
       Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
       |> VideoScheduler.cancel_play()
 
-      Endpoint.broadcast("video:#{room_name}", "time", %{t: get_time(pid)})
-      Endpoint.broadcast("video:#{room_name}", "playing", %{playing: playing?(pid)})
+      time = get_time(pid)
+      Endpoint.broadcast("video:#{room_name}", "playing", %{playing: playing?(pid), t: time})
+      Endpoint.broadcast("video:#{room_name}", "time", %{t: time})
     end
+
+    pid
   end
 
   def playing?(pid), do: Agent.get(pid, & &1.playing)
@@ -73,8 +76,29 @@ defmodule Grasstube.VideoAgent do
     end
   end
 
-  def set_seek(pid, t),
-    do: Agent.update(pid, &%{&1 | time_seek: t, time_started: current_time()})
+  def seek_shift(pid, t) do
+    new_time =
+      Agent.get_and_update(
+        pid,
+        &{&1.time_seek + t,
+         %{
+           &1
+           | time_seek: &1.time_seek + t,
+             time_started: current_time()
+         }}
+      )
+
+    room_name = Agent.get(pid, & &1.room_name)
+    Endpoint.broadcast("video:#{room_name}", "seek", %{t: new_time})
+    pid
+  end
+
+  def set_seek(pid, t) do
+    Agent.update(pid, &%{&1 | time_seek: t, time_started: current_time()})
+    room_name = Agent.get(pid, & &1.room_name)
+    Endpoint.broadcast("video:#{room_name}", "seek", %{t: t})
+    pid
+  end
 
   def set_time_started(pid, t), do: Agent.update(pid, &%{&1 | time_started: t})
 
@@ -169,12 +193,12 @@ defmodule Grasstube.VideoScheduler do
       Process.cancel_timer(state.play_task)
     end
 
-    video = ProcessRegistry.lookup(state.room_name, :video)
+    ProcessRegistry.lookup(state.room_name, :video)
+    |> VideoAgent.seek_shift(0)
+    |> VideoAgent.set_playing(true)
 
-    VideoAgent.set_seek(video, VideoAgent.get_time(video))
-    VideoAgent.set_playing(video, true)
     start_timer(self(), 0)
-    Endpoint.broadcast("video:#{state.room_name}", "playing", %{playing: true})
+    Endpoint.broadcast("video:#{state.room_name}", "playing", %{playing: true, t: 0})
 
     {:noreply, %{state | play_task: :nothing}}
   end
@@ -200,7 +224,8 @@ defmodule Grasstube.VideoScheduler do
           Endpoint.broadcast("video:#{state.room_name}", "time", %{t: time})
 
           Endpoint.broadcast("video:#{state.room_name}", "playing", %{
-            playing: playing
+            playing: playing,
+            t: time
           })
 
           if current.duration == :unset do

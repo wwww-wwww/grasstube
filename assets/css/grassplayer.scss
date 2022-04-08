@@ -17,7 +17,7 @@
 .grassplayer {
   width: 100%;
   height: 100%;
-  overflow-x: hidden;
+  overflow: hidden;
   position: relative;
   background-color: black;
   font-family: "Roboto", sans-serif;
@@ -391,12 +391,16 @@
     max-height: calc(100% - 6em);
     position: absolute;
 
-    > div > *:not(:last-child) {
-      margin-right: 0.25em;
+    > div > div {
+      display: flex;
+      gap: 0.25em;
     }
+  }
 
-    > button {
-      align-self: start;
+  .settings {
+    > div {
+      display: flex;
+      gap: 0.25em;
     }
   }
 }

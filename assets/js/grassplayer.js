@@ -1,5 +1,6 @@
 import { get_cookie, set_cookie } from "./cookies"
 import { create_element, seconds_to_hms } from "./util"
+import SubtitlesOctopus from "./subtitles-octopus"
 
 class GrassPlayer {
   constructor(root, fonts, controls = true) {
@@ -108,7 +109,7 @@ class GrassPlayer {
 
     this.create_ctxmenu()
     this.create_settings()
-    this.create_stats_panel()
+    this.stats_panel = this.create_stats_panel()
     this.create_controls()
     this.create_seekbar(controls)
 
@@ -738,35 +739,37 @@ class GrassPlayer {
 
     this.stats = {}
 
-    let row = create_element(stats_panel, "div")
+    const stats_body = create_element(stats_panel, "div")
+
+    let row = create_element(stats_body, "div")
     const lbl_videos = create_element(row, "span")
     lbl_videos.textContent = "videos:"
     this.stats.videos = create_element(row, "span")
     this.stats.videos.textContent = "not loaded"
 
-    row = create_element(stats_panel, "div")
+    row = create_element(stats_body, "div")
     const lbl_video = create_element(row, "span")
     lbl_video.textContent = "video:"
     this.stats.video = create_element(row, "span")
     this.stats.video.textContent = "not loaded"
 
-    row = create_element(stats_panel, "div")
+    row = create_element(stats_body, "div")
     const lbl_subs = create_element(row, "span")
     lbl_subs.textContent = "subtitles:"
     this.stats.subs = create_element(row, "span")
     this.stats.subs.textContent = "not loaded"
 
-    row = create_element(stats_panel, "div")
+    row = create_element(stats_body, "div")
     const lbl_volume = create_element(row, "span")
     lbl_volume.textContent = "volume:"
     this.stats.volume = create_element(row, "span")
 
-    row = create_element(stats_panel, "div")
+    row = create_element(stats_body, "div")
     const lbl_thumbs = create_element(row, "span")
     lbl_thumbs.textContent = "thumbs:"
     this.stats.thumbs = create_element(row, "span")
 
-    row = create_element(stats_panel, "div")
+    row = create_element(stats_body, "div")
     const lbl_styles = create_element(row, "span")
     lbl_styles.textContent = "loaded styles:"
     this.stats.styles = create_element(row, "span")
@@ -778,6 +781,21 @@ class GrassPlayer {
         stats_panel.parentElement.removeChild(stats_panel)
       }
     })
+
+    return stats_body
+  }
+
+  stats_add_row(label, value) {
+    let row = create_element(this.stats_panel, "div")
+    if (label) {
+      const lbl = create_element(row, "span")
+      lbl.textContent = label
+    }
+    if (value != null && value != undefined) {
+      const val = create_element(row, "span")
+      return val
+    }
+    return row
   }
 
   create_settings() {

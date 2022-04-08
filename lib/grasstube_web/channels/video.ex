@@ -103,8 +103,6 @@ defmodule GrasstubeWeb.VideoChannel do
     |> if do
       ProcessRegistry.lookup(room_name, :video)
       |> VideoAgent.set_seek(t)
-
-      Endpoint.broadcast("video:" <> room_name, "seek", %{t: t})
     end
 
     {:noreply, socket}

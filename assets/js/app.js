@@ -209,12 +209,14 @@ const hooks = {
     ping_time: null,
     latency_rtt: 0,
     ping_interval: null,
+    stats_latency: null,
     ping() {
       this.ping_time = Date.now()
       console.log("video:ping")
       this.pushEvent("ping", {}, () => {
-        const latency = (Date.now() - this.ping_time) / 1000
+        const latency = (Date.now() - this.ping_time)
         this.latency_rtt = latency * 0.75 + (this.latency_rtt || latency) * 0.25
+        this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
         console.log("video:pong", this.latency_rtt)
       })
     },
@@ -230,12 +232,14 @@ const hooks = {
       }
 
       this.player.on_toggle_playing = playing => {
-        this.pushEvent(playing ? "play" : "pause", {})
+        this.pushEvent(playing ? "play" : "pause", { offset: -this.latency_rtt / 2000 })
       }
 
       this.player.on_next = () => {
         this.pushEvent("next", {})
       }
+
+      this.stats_latency = this.player.stats_add_row("Latency (RTT):", this.latency_rtt)
 
       this.ping()
       this.ping_interval = setInterval(() => this.ping(), 5000)
@@ -269,34 +273,40 @@ const hooks = {
       })
 
       this.handleEvent("playing", data => {
-        console.log("video:playing", data)
         if (this.player.playing != data.playing) {
+          console.log("video:playing", data)
           this.player.show_osd(data.playing ? "Play" : "Pause")
           if (data.playing) {
-            console.log("video: adding offset", this.latency_rtt / 2)
-            this.player.seek(this.player.current_time() + this.latency_rtt / 2)
+            const offset_time = data.t + this.latency_rtt / 2000
+            if (Math.abs(offset_time - this.player.current_time()) > 0.1) {
+              console.log("video:play offset", this.latency_rtt / 2000)
+              this.player.seek(offset_time)
+            }
           }
         }
         this.player.set_playing(data.playing)
       })
 
       this.handleEvent("time", data => {
-        console.log("video:time", data)
         if (this.player.playing) {
-          const offset_time = data.t + this.latency_rtt / 2
+          const offset_time = data.t + this.latency_rtt / 2000
           if (offset_time >= this.player.duration()) { return }
           if (Math.abs(offset_time - this.player.current_time()) > 5) {
+            console.log("video:time offset", this.latency_rtt / 2000)
             this.player.seek(offset_time)
           }
         } else {
+          console.log("video:time", data)
           this.player.seek(data.t)
         }
       })
 
       this.handleEvent("seek", data => {
-        console.log("video:seek", data)
-        this.player.show_osd(`${seconds_to_hms(data.t, true)}`)
-        this.player.seek(data.t)
+        if (Math.abs(data.t - this.player.current_time()) > 0.1) {
+          console.log("video:seek", data)
+          this.player.show_osd(`${seconds_to_hms(data.t, true)}`)
+          this.player.seek(data.t)
+        }
       })
 
       fetch("https://res.cloudinary.com/grass/raw/upload/v1648173707/fonts.json")
