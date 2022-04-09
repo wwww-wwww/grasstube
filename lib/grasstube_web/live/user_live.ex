@@ -6,7 +6,7 @@ defmodule GrasstubeWeb.SignInLive do
   end
 
   def mount(_, _, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, page_title: "Sign In")}
   end
 end
 
@@ -18,7 +18,7 @@ defmodule GrasstubeWeb.SignUpLive do
   end
 
   def mount(_, _, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, page_title: "Sign Up")}
   end
 end
 
@@ -127,7 +127,12 @@ defmodule GrasstubeWeb.CreateRoomLive do
   end
 
   def mount(_, session, socket) do
-    {:ok, assign(socket, user: Grasstube.Guardian.user(session))}
+    socket =
+      socket
+      |> assign(page_title: "Create a room")
+      |> assign(user: Grasstube.Guardian.user(session))
+
+    {:ok, socket}
   end
 
   def handle_event("create", %{"name" => name, "password" => password}, socket) do

@@ -4,24 +4,6 @@ defmodule GrasstubeWeb.Plug.RoomExists do
 
   def init(options), do: options
 
-  def call(%{params: %{"room" => "null"}} = conn, _opts) do
-    get_session(conn, :room)
-    |> case do
-      nil -> "null"
-      room -> room
-    end
-    |> Grasstube.ProcessRegistry.lookup(:chat)
-    |> case do
-      :not_found ->
-        conn
-        |> put_flash(:error, "Room does not exist")
-        |> redirect(to: "/")
-
-      chat ->
-        assign(conn, :chat, chat)
-    end
-  end
-
   def call(%{params: %{"room" => room}} = conn, _opts) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
@@ -56,7 +38,7 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
       |> put_flash(:target, view)
       |> redirect(to: GrasstubeWeb.Router.Helpers.live_path(conn, GrasstubeWeb.AuthLive, room))
     else
-      put_session(conn, :room, room)
+      conn
     end
   end
 
@@ -74,7 +56,7 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
       |> put_flash(:target, view)
       |> redirect(to: GrasstubeWeb.Router.Helpers.live_path(conn, GrasstubeWeb.AuthLive, room))
     else
-      put_session(conn, :room, room)
+      conn
     end
   end
 end
