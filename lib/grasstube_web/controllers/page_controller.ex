@@ -26,11 +26,9 @@ defmodule GrasstubeWeb.PageController do
   end
 
   def list_rooms(conn, _) do
-    room_names = Grasstube.ProcessRegistry.list_rooms()
-
     json(
       conn,
-      room_names
+      Grasstube.ProcessRegistry.list_rooms()
       |> Enum.reduce(%{}, fn name, acc ->
         Map.put(acc, name, Grasstube.Presence.list("chat:#{name}") |> Enum.count())
       end)

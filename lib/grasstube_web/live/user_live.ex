@@ -47,7 +47,7 @@ defmodule GrasstubeWeb.UserLive do
           |> assign(user: user)
           |> assign(current_user: current_user)
           |> assign(is_current_user: current_user.username == user.username)
-          |> assign(rooms: Grasstube.ProcessRegistry.rooms_of(user.username))
+          |> assign(rooms: Grasstube.ProcessRegistry.rooms_of(user))
           |> assign(emotes: Repo.preload(user, :emotes).emotes |> Enum.sort_by(& &1.emote))
       end
 
@@ -55,14 +55,14 @@ defmodule GrasstubeWeb.UserLive do
   end
 
   def handle_event("room_delete", %{"name" => name}, socket) do
-    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user.username)
+    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user)
 
     socket =
       if name in rooms do
         Grasstube.ProcessRegistry.close_room(name)
 
         assign(socket,
-          rooms: Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user.username)
+          rooms: Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user)
         )
       else
         put_flash(socket, :error, "You can't close this room")
@@ -136,7 +136,7 @@ defmodule GrasstubeWeb.CreateRoomLive do
   end
 
   def handle_event("create", %{"name" => name, "password" => password}, socket) do
-    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.user.username)
+    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.user)
 
     socket =
       cond do

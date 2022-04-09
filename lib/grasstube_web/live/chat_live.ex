@@ -7,42 +7,37 @@ defmodule GrasstubeWeb.ChatLive do
     GrasstubeWeb.PageView.render("chat_live.html", assigns)
   end
 
-  def mount(_params, %{"room" => room, "current_user" => current_user} = session, socket) do
+  def mount(
+        _params,
+        %{"room" => room, "current_user" => current_user, "chat" => chat},
+        socket
+      ) do
     topic = "chat:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
-    chat = Grasstube.ProcessRegistry.lookup(room, :chat)
-
-    socket_id = GrasstubeWeb.UserSocket.new_id()
-    GrasstubeWeb.Endpoint.subscribe(socket_id)
-
     user_id =
       if is_nil(current_user) do
-        "$" <> socket_id
+        "$" <> GrasstubeWeb.UserSocket.new_id()
       else
         current_user.username
       end
 
-    socket =
-      socket
-      |> assign(chat: chat)
-      |> assign(room: room)
-      |> assign(topic: topic)
-      |> assign(user_id: user_id)
-      |> assign(user: current_user)
-      |> assign(id: socket_id)
-      |> assign(history: ChatAgent.get_history(chat))
-      |> assign(emotes: ChatAgent.get_emotes(chat))
-
     meta =
       if not is_nil(current_user),
         do: %{nickname: current_user.nickname, username: current_user.username},
-        else: %{nickname: "anon#{socket.assigns.id}"}
+        else: %{nickname: "anon#{user_id |> String.slice(1..-1)}"}
 
-    Presence.track(self(), topic, socket.assigns.user_id, meta)
+    Presence.track(self(), topic, user_id, meta)
 
     socket =
       socket
+      |> assign(room: room)
+      |> assign(topic: topic)
+      |> assign(user: current_user)
+      |> assign(user_id: user_id)
+      |> assign(chat: chat)
+      |> assign(history: ChatAgent.get_history(chat))
+      |> assign(emotes: ChatAgent.get_emotes(chat))
       |> assign(users: Presence.list(topic))
 
     case ChatAgent.get_motd(chat) do

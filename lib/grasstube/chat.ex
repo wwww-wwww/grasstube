@@ -375,7 +375,9 @@ defmodule Grasstube.ChatAgent do
 
   def controls_user?(pid, user), do: public_controls?(pid) or mod?(pid, user)
 
-  def controls?(pid, socket), do: public_controls?(pid) or mod?(pid, socket.assigns.user)
+  def controls?(pid, %{assigns: %{user: user}}), do: controls?(pid, user)
+
+  def controls?(pid, user), do: public_controls?(pid) or mod?(pid, user)
 
   def add_to_history(pid, nickname, msg) do
     Agent.update(pid, fn val ->

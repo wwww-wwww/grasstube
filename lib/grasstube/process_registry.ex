@@ -17,17 +17,18 @@ defmodule Grasstube.ProcessRegistry do
 
   def lookup(room_name, channel) do
     case Registry.lookup(__MODULE__, {room_name |> String.downcase(), channel}) do
-      [{pid, _}] ->
-        pid
-
-      _ ->
-        :not_found
+      [{pid, _}] -> pid
+      _ -> :not_found
     end
   end
 
-  def rooms_of(user) do
+  def rooms_of(user) when is_bitstring(user) do
     Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", user}}, [], [:"$1"]}])
   end
+
+  def rooms_of(%{username: username}), do: rooms_of(username)
+
+  def rooms_of(_), do: []
 
   def list_rooms() do
     Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", :"$4"}}, [], [:"$3"]}])

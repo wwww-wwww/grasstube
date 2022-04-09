@@ -58,9 +58,9 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def sign_up(conn, %{"username" => username, "password" => password}) do
-    changeset = User.changeset(%User{}, %{username: username, password: password})
-
-    case Repo.insert(changeset) do
+    User.changeset(%User{}, %{username: username, password: password})
+    |> Repo.insert()
+    |> case do
       {:ok, user} ->
         conn
         |> Guardian.Plug.sign_in(user)
@@ -160,7 +160,7 @@ defmodule GrasstubeWeb.UserController do
 
   def create_room(conn, %{"room_name" => room_name, "room_password" => room_password}) do
     user = Guardian.Plug.current_resource(conn)
-    rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
+    rooms = Grasstube.ProcessRegistry.rooms_of(user)
 
     cond do
       length(rooms) > 0 ->
@@ -197,7 +197,7 @@ defmodule GrasstubeWeb.UserController do
 
   def close_room(conn, %{"room_name" => room_name}) do
     user = Guardian.Plug.current_resource(conn)
-    rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
+    rooms = Grasstube.ProcessRegistry.rooms_of(user)
     room_id = room_name |> to_string() |> String.downcase()
 
     if room_id in rooms do

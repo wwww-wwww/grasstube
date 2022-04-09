@@ -18,7 +18,6 @@ defmodule GrasstubeWeb.Plug.RoomExists do
 end
 
 defmodule GrasstubeWeb.Plug.RoomAuth do
-  import Plug.Conn
   import Phoenix.Controller
 
   alias Grasstube.ChatAgent

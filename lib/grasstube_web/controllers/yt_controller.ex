@@ -46,16 +46,14 @@ defmodule GrasstubeWeb.YTController do
 
     if length(referer) == 0 or
          not String.match?(referer |> Enum.at(0), ~r/^https{0,1}:\/\/#{host}/) do
-      conn
-      |> json(%{success: 0, response: "you are not allowed to do this!"})
+      json(conn, %{success: 0, response: "you are not allowed to do this!"})
     else
-      conn |> json(search(query))
+      json(conn, search(query))
     end
   end
 
   def yt_search(conn, _) do
-    conn
-    |> json(%{success: 0, response: "what??"})
+    json(conn, %{success: 0, response: "what??"})
   end
 end
 

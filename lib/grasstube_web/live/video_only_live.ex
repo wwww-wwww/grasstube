@@ -5,7 +5,7 @@ defmodule GrasstubeWeb.VideoOnlyLive do
   def render(assigns) do
     ~L"""
     <%= live_render(@socket, GrasstubeWeb.VideoLive,
-      session: %{"room" => @room, "current_user" => @current_user},
+      session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
       id: "view_video"
     ) %>
     """

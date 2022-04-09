@@ -1,6 +1,8 @@
 defmodule GrasstubeWeb.RoomsLive do
   use GrasstubeWeb, :live_view
 
+  alias Grasstube.ProcessRegistry
+
   @topic "rooms_updates"
 
   def render(assigns) do
@@ -8,11 +10,11 @@ defmodule GrasstubeWeb.RoomsLive do
   end
 
   def get_rooms() do
-    room_names = Grasstube.ProcessRegistry.list_rooms()
+    room_names = ProcessRegistry.list_rooms()
 
     room_names
     |> Enum.reduce([], fn name, acc ->
-      chat = Grasstube.ProcessRegistry.lookup(name, :chat)
+      chat = ProcessRegistry.lookup(name, :chat)
 
       [
         {name, Grasstube.Presence.list("chat:#{name}") |> Enum.count(),
@@ -26,15 +28,11 @@ defmodule GrasstubeWeb.RoomsLive do
   def mount(_, session, socket) do
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(@topic)
 
-    user = Grasstube.Guardian.user(session)
-
     can_make_room =
-      if user do
-        rooms = Grasstube.ProcessRegistry.rooms_of(user.username)
-        length(rooms) == 0
-      else
-        false
-      end
+      Grasstube.Guardian.user(session)
+      |> ProcessRegistry.rooms_of()
+      |> length()
+      |> Kernel.==(0)
 
     socket =
       socket

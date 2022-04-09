@@ -226,9 +226,8 @@ defmodule Grasstube.PlaylistAgent do
       %URI{host: host, query: query} ->
         cond do
           Enum.member?(@yt_domains, String.downcase(host)) ->
-            query = query || ""
-
             query
+            |> Kernel.||("")
             |> String.split("&")
             |> Enum.map(&(String.split(&1, "=") |> List.to_tuple()))
             |> Enum.filter(&(elem(&1, 0) == "list"))

@@ -7,51 +7,33 @@ defmodule GrasstubeWeb.PlaylistLive do
     GrasstubeWeb.PageView.render("playlist_live.html", assigns)
   end
 
-  def mount(_params, %{"room" => room, "current_user" => current_user}, socket) do
+  def mount(_params, %{"room" => room, "current_user" => current_user, "chat" => chat}, socket) do
     topic = "playlist:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
-
-    socket_id = GrasstubeWeb.UserSocket.new_id()
 
     if current_user do
       GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
     end
 
-    user_id =
-      if is_nil(current_user) do
-        "$" <> socket_id
-      else
-        current_user.username
-      end
-
-    socket =
-      socket
-      |> assign(room: room)
-      |> assign(topic: topic)
-      |> assign(chat: ProcessRegistry.lookup(room, :chat))
-      |> assign(video: ProcessRegistry.lookup(room, :video))
-      |> assign(playlist: ProcessRegistry.lookup(room, :playlist))
-      |> assign(user_id: user_id)
-      |> assign(user: current_user)
-      |> assign(id: socket_id)
+    video = ProcessRegistry.lookup(room, :video)
+    playlist = ProcessRegistry.lookup(room, :playlist)
+    playlist_items = PlaylistAgent.get_playlist(playlist)
 
     current_video =
-      socket.assigns.video
+      video
       |> VideoAgent.get_current_video()
       |> case do
         :nothing -> nil
         current -> current.id
       end
 
-    playlist = PlaylistAgent.get_playlist(socket.assigns.playlist)
-
     duration =
-      playlist
+      playlist_items
       |> Enum.filter(&(&1.duration != :unset))
       |> Enum.reduce(0, &(&2 + &1.duration))
 
     current_index =
-      Enum.with_index(playlist, 1)
+      Enum.with_index(playlist_items, 1)
       |> Enum.filter(&(elem(&1, 0).id == current_video))
       |> Enum.map(&elem(&1, 1))
       |> Enum.at(0)
@@ -59,11 +41,15 @@ defmodule GrasstubeWeb.PlaylistLive do
 
     socket =
       socket
-      |> assign(playlist_items: playlist)
+      |> assign(user: current_user)
+      |> assign(chat: chat)
+      |> assign(video: video)
+      |> assign(playlist: playlist)
+      |> assign(controls: ChatAgent.controls?(chat, current_user))
+      |> assign(playlist_items: playlist_items)
       |> assign(duration: duration)
       |> assign(current: current_video)
       |> assign(current_index: current_index)
-      |> assign(controls: ChatAgent.controls?(socket.assigns.chat, socket))
 
     {:ok, socket}
   end
@@ -159,6 +145,14 @@ defmodule GrasstubeWeb.PlaylistLive do
 
   def handle_info(%{event: "controls"}, socket) do
     {:noreply, assign(socket, controls: ChatAgent.controls?(socket.assigns.chat, socket))}
+  end
+
+  def handle_info(%{event: "revoke_controls"}, socket) do
+    {:noreply, assign(socket, controls: ChatAgent.controls?(socket.assigns.chat, socket))}
+  end
+
+  def handle_info(%{event: "presence"}, socket) do
+    {:noreply, socket}
   end
 
   def handle_info({:DOWN, _, :process, _pid, _reason}, socket) do

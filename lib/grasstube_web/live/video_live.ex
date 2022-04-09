@@ -7,36 +7,20 @@ defmodule GrasstubeWeb.VideoLive do
     GrasstubeWeb.PageView.render("video_live.html", assigns)
   end
 
-  def mount(_params, %{"room" => room, "current_user" => current_user}, socket) do
+  def mount(_params, %{"room" => room, "current_user" => current_user, "chat" => chat}, socket) do
     topic = "video:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
-
-    socket_id = GrasstubeWeb.UserSocket.new_id()
 
     if current_user do
       GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
     end
 
-    user_id =
-      if is_nil(current_user) do
-        "$" <> socket_id
-      else
-        current_user.username
-      end
-
     socket =
       socket
-      |> assign(room: room)
-      |> assign(topic: topic)
-      |> assign(chat: ProcessRegistry.lookup(room, :chat))
-      |> assign(video: ProcessRegistry.lookup(room, :video))
-      |> assign(user_id: user_id)
       |> assign(user: current_user)
-      |> assign(id: socket_id)
-
-    socket =
-      socket
-      |> assign(controls: ChatAgent.controls?(socket.assigns.chat, socket))
+      |> assign(chat: chat)
+      |> assign(video: ProcessRegistry.lookup(room, :video))
+      |> assign(controls: ChatAgent.controls?(chat, current_user))
 
     socket.assigns.video
     |> VideoAgent.get_status()
@@ -126,6 +110,13 @@ defmodule GrasstubeWeb.VideoLive do
      })}
   end
 
+  def handle_info(%{event: "revoke_controls"}, socket) do
+    {:noreply,
+     push_event(socket, "controls", %{
+       controls: ChatAgent.controls?(socket.assigns.chat, socket)
+     })}
+  end
+
   def handle_info(%{event: "playing", payload: payload}, socket) do
     {:noreply, push_event(socket, "playing", payload)}
   end
@@ -136,5 +127,9 @@ defmodule GrasstubeWeb.VideoLive do
 
   def handle_info(%{event: "seek", payload: payload}, socket) do
     {:noreply, push_event(socket, "seek", payload)}
+  end
+
+  def handle_info(%{event: "presence"}, socket) do
+    {:noreply, socket}
   end
 end
