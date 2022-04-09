@@ -157,11 +157,20 @@ header {
     line-height: 1.5em;
   }
 }
+
 main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
   flex: 1;
   min-height: 0;
   overflow: auto;
   position: relative;
+}
+
+h1 {
+  margin-top: 1em;
+  align-self: center;
 }
 
 @media (min-width: 768px) {

@@ -43,6 +43,7 @@ defmodule GrasstubeWeb.UserLive do
           current_user = Grasstube.Guardian.user(session)
 
           socket
+          |> assign(page_title: user.username)
           |> assign(user: user)
           |> assign(current_user: current_user)
           |> assign(is_current_user: current_user.username == user.username)

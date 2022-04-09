@@ -3,6 +3,11 @@
 .RoomLive {
   overflow: hidden;
 
+  > main {
+    gap: 0;
+    display: block;
+  }
+
   #maincontent {
     width: 100%;
     height: 100%;

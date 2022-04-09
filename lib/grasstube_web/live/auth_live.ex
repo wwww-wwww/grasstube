@@ -15,6 +15,7 @@ defmodule GrasstubeWeb.AuthLive do
 
         _chat ->
           socket
+          |> assign(page_title: room)
           |> assign(room: room)
       end
 

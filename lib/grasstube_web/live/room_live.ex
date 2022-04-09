@@ -7,7 +7,6 @@ defmodule GrasstubeWeb.RoomLive do
   end
 
   def mount(%{"room" => room}, _session, socket) do
-    IO.inspect("room_live #{inspect(socket.assigns)}")
     {:ok, assign(socket, room: room)}
   end
 end

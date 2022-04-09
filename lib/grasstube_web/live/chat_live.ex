@@ -8,7 +8,6 @@ defmodule GrasstubeWeb.ChatLive do
   end
 
   def mount(_params, %{"room" => room, "current_user" => current_user} = session, socket) do
-    IO.inspect("chat_live #{inspect(session)}")
     topic = "chat:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 

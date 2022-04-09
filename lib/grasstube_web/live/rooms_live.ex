@@ -38,6 +38,7 @@ defmodule GrasstubeWeb.RoomsLive do
 
     socket =
       socket
+      |> assign(page_title: "Rooms")
       |> assign(rooms: get_rooms())
       |> assign(can_make_room: can_make_room)
 

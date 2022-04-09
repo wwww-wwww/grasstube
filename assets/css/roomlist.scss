@@ -1,11 +1,13 @@
+.RoomsLive > main {
+  overflow-y: auto;
+}
+
 main > .RoomsLive {
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow-y: auto;
   gap: 0.5em;
-  padding: 1em;
 
   .rooms {
     display: flex;
@@ -43,6 +45,7 @@ main > .RoomsLive {
 
   .footer {
     font-size: 0.9em;
+    padding-bottom: 1em;
   }
 
   .footer a {
