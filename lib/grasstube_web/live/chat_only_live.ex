@@ -2,8 +2,6 @@ defmodule GrasstubeWeb.ChatOnlyLive do
   use GrasstubeWeb, :live_view
   on_mount GrasstubeWeb.LiveAuth
 
-  import GrasstubeWeb.PageView
-
   def render(assigns) do
     ~L"""
     <%= live_render(@socket, GrasstubeWeb.ChatLive,

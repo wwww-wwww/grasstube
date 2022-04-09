@@ -1,13 +1,11 @@
 defmodule GrasstubeWeb.AuthLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.ChatAgent
-
   def render(assigns) do
     GrasstubeWeb.PageView.render("auth_live.html", assigns)
   end
 
-  def mount(%{"room" => room}, session, socket) do
+  def mount(%{"room" => room}, _session, socket) do
     socket =
       case Grasstube.ProcessRegistry.lookup(room, :chat) do
         :not_found ->
@@ -15,9 +13,8 @@ defmodule GrasstubeWeb.AuthLive do
           |> put_flash(:error, "Room does not exist")
           |> redirect(to: "/")
 
-        chat ->
+        _chat ->
           socket
-          |> assign(chat: chat)
           |> assign(room: room)
       end
 
@@ -27,7 +24,7 @@ defmodule GrasstubeWeb.AuthLive do
   def handle_event(
         "auth",
         %{"password" => password},
-        %{assigns: %{room: room, chat: chat, flash: %{"target" => target}}} = socket
+        %{assigns: %{room: room, flash: %{"target" => target}}} = socket
       ) do
     socket =
       socket
@@ -41,7 +38,7 @@ defmodule GrasstubeWeb.AuthLive do
   def handle_event(
         "auth",
         %{"password" => password},
-        %{assigns: %{room: room, chat: chat}} = socket
+        %{assigns: %{room: room}} = socket
       ) do
     socket =
       socket

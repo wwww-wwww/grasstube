@@ -221,12 +221,12 @@ const hooks = {
     stats_latency: null,
     ping() {
       this.ping_time = Date.now()
-      console.log("video:ping")
+      if (!document.hidden) { console.log("video:ping") }
       this.pushEvent("ping", {}, () => {
         const latency = (Date.now() - this.ping_time)
         this.latency_rtt = latency * 0.75 + (this.latency_rtt || latency) * 0.25
         this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
-        console.log("video:pong", this.latency_rtt)
+        if (!document.hidden) { console.log("video:pong", this.latency_rtt) }
       })
     },
     mounted() {

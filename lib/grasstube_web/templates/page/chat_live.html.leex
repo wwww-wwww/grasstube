@@ -15,7 +15,7 @@
     <% end %>
   </div>
   <div id="chat_messages" phx-update="ignore">
-    <%= render_history(@history) %>
+    <%= render_history(@history, assigns) %>
   </div>
 </div>
 

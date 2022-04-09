@@ -18,7 +18,7 @@ defmodule GrasstubeWeb.Plug.RoomExists do
         |> redirect(to: "/")
 
       chat ->
-        conn |> assign(:chat, chat)
+        assign(conn, :chat, chat)
     end
   end
 
@@ -30,7 +30,7 @@ defmodule GrasstubeWeb.Plug.RoomExists do
         |> redirect(to: "/")
 
       chat ->
-        conn |> assign(:chat, chat)
+        assign(conn, :chat, chat)
     end
   end
 end
@@ -56,8 +56,7 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
       |> put_flash(:target, view)
       |> redirect(to: GrasstubeWeb.Router.Helpers.live_path(conn, GrasstubeWeb.AuthLive, room))
     else
-      conn
-      |> put_session(:room, room)
+      put_session(conn, :room, room)
     end
   end
 
@@ -75,8 +74,7 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
       |> put_flash(:target, view)
       |> redirect(to: GrasstubeWeb.Router.Helpers.live_path(conn, GrasstubeWeb.AuthLive, room))
     else
-      conn
-      |> put_session(:room, room)
+      put_session(conn, :room, room)
     end
   end
 end
@@ -114,8 +112,7 @@ defmodule GrasstubeWeb.LiveAuth do
       ) do
     check_room(socket, session, room, fn socket, chat ->
       if ChatAgent.password?(chat) and ChatAgent.check_password(chat, password) do
-        socket |> assign(:chat, chat)
-        {:cont, socket}
+        {:cont, assign(socket, :chat, chat)}
       else
         socket =
           socket
@@ -141,7 +138,7 @@ defmodule GrasstubeWeb.LiveAuth do
 
         {:halt, socket}
       else
-        {:cont, socket}
+        {:cont, assign(socket, :chat, chat)}
       end
     end)
   end

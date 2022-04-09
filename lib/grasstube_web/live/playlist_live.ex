@@ -7,7 +7,7 @@ defmodule GrasstubeWeb.PlaylistLive do
     GrasstubeWeb.PageView.render("playlist_live.html", assigns)
   end
 
-  def mount(_params, %{"room" => room, "current_user" => current_user} = session, socket) do
+  def mount(_params, %{"room" => room, "current_user" => current_user}, socket) do
     topic = "playlist:#{room}"
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
