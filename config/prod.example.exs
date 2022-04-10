@@ -14,8 +14,7 @@ config :grasstube, Grasstube.Guardian,
   ttl: {30, :days}
 
 config :grasstube,
-  youtube_api_keys: [
-  ]
+  youtube_api_keys: []
 
 config :grasstube, GrasstubeWeb.Endpoint,
   http: [:inet6, port: System.get_env("PORT") || 4001],

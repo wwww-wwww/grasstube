@@ -4,7 +4,7 @@ import { create_element, enter, pad, seconds_to_hms } from "./util"
 import { create_window } from "./window"
 import GrassPlayer from "./grassplayer"
 import Text from "./danmaku"
-import init_drag from "./drag"
+import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -596,6 +596,7 @@ const hooks = {
       document.addEventListener("keydown", this.on_keydown)
     },
     destroyed() {
+      destroy_drag()
       delete document.windows["Settings"]
       delete document.windows["chat_emotes2"]
       document.removeEventListener("keydown", this.on_keydown)

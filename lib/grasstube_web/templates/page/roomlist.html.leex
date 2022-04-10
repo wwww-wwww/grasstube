@@ -3,7 +3,7 @@
 <div class="rooms">
 
 <%= for {room_name, num_users, has_password} <- @rooms do %>
-	<%= live_redirect(to: Routes.page_path(@socket, :room, room_name), class: "btn_room #{if has_password, do: 'password', else: ''}") do %>
+	<%= live_redirect(to: Routes.live_path(@socket, GrasstubeWeb.RoomLive, room_name), class: "btn_room #{if has_password, do: 'password', else: ''}") do %>
 	<span class="room_name"><%= room_name %></span>
 	<span class="user_count"><%= num_users %></span>
 	<% end %>

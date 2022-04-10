@@ -4,16 +4,6 @@ defmodule GrasstubeWeb.PageController do
   alias Grasstube.Guardian
   alias Grasstube.ChatAgent
 
-  def room(conn, %{"room" => room}) do
-    case Grasstube.ProcessRegistry.lookup(room, :chat) do
-      :not_found ->
-        text(conn, "room not found")
-
-      chat ->
-        render(conn, "room.html", room: room, room_has_password: password_required?(conn, chat))
-    end
-  end
-
   def emotes(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->

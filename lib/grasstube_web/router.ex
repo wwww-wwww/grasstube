@@ -41,10 +41,6 @@ defmodule GrasstubeWeb.Router do
     get "/gdrive", PageController, :gdrive
 
     scope "/r" do
-      get "/:room", PageController, :room
-    end
-
-    scope "/r2" do
       pipe_through :room_exists
       live "/:room/auth", AuthLive
 

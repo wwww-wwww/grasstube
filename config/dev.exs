@@ -36,12 +36,12 @@ config :grasstube, GrasstubeWeb.Endpoint,
   secret_key_base: "tZqi2wgaIRtzw+O25GserhwHSIx+57etZ8dhwxlK4UB5q8Mab7gbPZTfv4S6cRlk",
   watchers:
     Watcher.watch(
-      [:app, :room],
+      [:app],
       Esbuild,
       ~w(--sourcemap=inline --watch)
     ) ++
       Watcher.watch(
-        [:app, :room],
+        [:app],
         DartSass,
         ~w(--embed-source-map --source-map-urls=absolute --watch)
       )
