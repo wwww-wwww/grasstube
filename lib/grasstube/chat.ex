@@ -309,6 +309,7 @@ defmodule Grasstube.ChatAgent do
 
     Endpoint.broadcast("video:#{get_room_name(channel)}", "controls", %{})
     Endpoint.broadcast("playlist:#{get_room_name(channel)}", "controls", %{})
+    Endpoint.broadcast("polls:#{get_room_name(channel)}", "controls", %{})
 
     if controls do
       push(socket, "chat", %{

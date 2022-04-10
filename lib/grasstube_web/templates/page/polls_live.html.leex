@@ -1,4 +1,7 @@
-<button id="btn_create_poll" phx-hook="create_poll">Create poll</button>
+<%= if @controls do %>
+  <button id="btn_create_poll" phx-hook="create_poll">Create poll</button>
+<% end %>
+
 <div class="polls">
   <%= for {poll_id, %{title: title, choices: choices}} <- @polls_items do %>
   <div>
