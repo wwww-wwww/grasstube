@@ -20,8 +20,15 @@
 <div id="bottom">
 
 <div class="col">
-  <button id="btn_open_chat">Open chat</button>
-  <button id="btn_user_settings">Settings</button>
+  <div>
+    <button id="btn_open_chat">Open chat</button>
+    <button id="btn_user_settings">Settings</button>
+  </div>
+
+  <%= live_render(@socket, GrasstubeWeb.PollsLive,
+    session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
+    id: "view_polls"
+  ) %>
 </div>
 
 <div class="col">

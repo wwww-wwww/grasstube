@@ -1,0 +1,39 @@
+.PollsLive {
+  .polls {
+    margin-top: 0.5em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    align-items: flex-start;
+
+    button {
+      width: 1.6em;
+      height: 1.6em;
+      font-size: 1em;
+      line-height: 1em;
+    }
+
+    .title,
+    > div > * {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5em;
+    }
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 1em;
+
+      > * {
+        padding: 0.25em 0.5em;
+      }
+
+      > :first-child {
+        border-bottom: 1px solid white;
+      }
+    }
+  }
+}

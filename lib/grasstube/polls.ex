@@ -2,6 +2,8 @@ defmodule Grasstube.PollsAgent do
   use Agent
   require Logger
 
+  alias GrasstubeWeb.Endpoint
+
   defstruct polls: %{},
             current_id: 0,
             room_name: ""
@@ -11,6 +13,33 @@ defmodule Grasstube.PollsAgent do
   end
 
   def via_tuple(room_name), do: Grasstube.ProcessRegistry.via_tuple({room_name, :polls})
+
+  def get_polls(pid) do
+    Agent.get(pid, fn val ->
+      val.polls
+      |> Enum.map(fn {id, poll} ->
+        choices =
+          poll.choices
+          |> Enum.map(fn choice ->
+            users =
+              (Enum.to_list(poll.votes) ++ Enum.to_list(poll.votes_guest))
+              |> Enum.filter(&(elem(&1, 1) == choice))
+              |> Map.new()
+              |> Map.keys()
+
+            %{name: choice, users: users}
+          end)
+
+        {id, %{title: poll.title, choices: choices}}
+      end)
+      |> Map.new()
+    end)
+  end
+
+  def update(pid) do
+    room_name = Agent.get(pid, & &1.room_name)
+    Endpoint.broadcast("polls:#{room_name}", "polls", get_polls(pid))
+  end
 
   def add_poll(pid, title, choices) do
     Agent.update(pid, fn val ->
@@ -25,36 +54,14 @@ defmodule Grasstube.PollsAgent do
 
       %{val | polls: new_polls, current_id: val.current_id + 1}
     end)
+
+    update(pid)
   end
 
-  def remove_poll(pid, id), do: Agent.update(pid, &%{&1 | polls: Map.drop(&1.polls, [id])})
+  def remove_poll(pid, id) do
+    Agent.update(pid, &%{&1 | polls: Map.drop(&1.polls, [id])})
 
-  def get_polls(pid) do
-    Agent.get(pid, fn val ->
-      val.polls
-      |> Enum.map(fn {id, poll} ->
-        choices =
-          poll.choices
-          |> Enum.map(fn choice ->
-            users =
-              poll.votes
-              |> Enum.filter(&(elem(&1, 1) == choice))
-              |> Map.new()
-              |> Map.keys()
-
-            guests =
-              poll.votes_guest
-              |> Enum.filter(&(elem(&1, 1) == choice))
-              |> Map.new()
-              |> Map.keys()
-
-            %{name: choice, users: users, guests: guests}
-          end)
-
-        {id, %{title: poll.title, choices: choices}}
-      end)
-      |> Map.new()
-    end)
+    update(pid)
   end
 
   def set_vote(pid, poll_id, user, guest, choice) do
@@ -68,6 +75,8 @@ defmodule Grasstube.PollsAgent do
 
       %{val | polls: new_polls}
     end)
+
+    update(pid)
   end
 
   def remove_vote(pid, guest_id) do
@@ -80,5 +89,7 @@ defmodule Grasstube.PollsAgent do
 
       %{val | polls: new_polls}
     end)
+
+    update(pid)
   end
 end

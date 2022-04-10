@@ -13,6 +13,7 @@
 @import "auth";
 @import "chatonly";
 @import "videoonly";
+@import "polls";
 
 @import "sign_in";
 
@@ -98,8 +99,8 @@ button:disabled,
   color: rgba(255, 255, 255, 0.5);
 }
 
-button:active,
-.button:active {
+button:not(:disabled):active,
+.button:not(:disabled):active {
   background: rgba(255, 255, 255, 1);
   color: rgba(0, 0, 0, 255);
 }
@@ -176,5 +177,30 @@ h1 {
 @media (min-width: 768px) {
   body {
     font-size: 1em;
+  }
+}
+
+.poll_modal {
+  .window-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+
+    > .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+
+      > div {
+        display: flex;
+        gap: 0.5em;
+        align-items: center;
+      }
+    }
+
+    input,
+    button {
+      border-radius: 0.25em;
+    }
   }
 }

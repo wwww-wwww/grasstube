@@ -17,6 +17,7 @@ defmodule GrasstubeWeb.VideoLive do
 
     socket =
       socket
+      |> assign(room: room)
       |> assign(user: current_user)
       |> assign(chat: chat)
       |> assign(video: ProcessRegistry.lookup(room, :video))

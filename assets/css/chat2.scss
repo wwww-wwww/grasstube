@@ -111,15 +111,17 @@
 }
 
 .chat_emotes {
-  div {
+  max-width: 500px;
+  max-height: 500px;
+  .window-content {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-  }
 
-  img {
-    padding: 4px;
-    max-height: 100px;
+    img {
+      padding: 4px;
+      max-height: 100px;
+    }
   }
 }

@@ -98,8 +98,8 @@ class Polls {
 
         const poll_choose = document.createElement("button")
         poll_choose.className = "square"
-        poll_choose.textContent = choice.users.length + choice.guests.length
-        poll_choose.disabled = choice.users.includes(this.username) || choice.guests.includes(this.myid)
+        poll_choose.textContent = choice.users.length
+        poll_choose.disabled = choice.users.includes(this.username) || choice.users.includes(this.myid)
         poll_choose.addEventListener("click", () => {
           this.channel.push("poll_vote", { id: poll_id, choice: choice.name })
         })

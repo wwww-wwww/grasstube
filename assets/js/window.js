@@ -1,7 +1,7 @@
 import { create_element } from "./util"
 
 class Window {
-  constructor({ root = null, can_close = true, title = null, show = true, modal = false, close_on_unfocus = false, invert_x = false, invert_y = false } = {}) {
+  constructor({ root = null, can_close = true, title = null, show = true, modal = false, close_on_unfocus = false, invert_x = false, invert_y = false, classes = null } = {}) {
     this.root = root || document.querySelector("body")
     this.tabs = []
     this.selected_tab = null
@@ -15,6 +15,7 @@ class Window {
     this.on_close = null
 
     this.outer = create_element(null, "div", "modal-outer")
+
     if (modal) {
       this.e = create_element(this.outer, "div", "modal")
       this.back = create_element(this.outer, "div", "modal-back")
@@ -26,6 +27,10 @@ class Window {
       this.e = create_element(this.outer, "div", "window")
       this.outer.style.pointerEvents = "none"
       this.e.style.pointerEvents = "all"
+    }
+
+    if (classes != null) {
+      classes.split(" ").forEach(c => this.e.classList.toggle(c, true))
     }
 
     this.top = create_element(this.e, "div", "window-top")
@@ -257,11 +262,12 @@ class Modal extends Window {
 }
 
 function create_window(title, opts) {
+  if (title == null) { return new Window(opts) }
   if (document.windows == undefined) {
     document.windows = {}
   }
 
-  if (document.windows[title]) return document.windows[title]
+  if (document.windows[title]) { return document.windows[title] }
 
   if (opts.title === undefined) opts.title = title
   document.windows[title] = new Window(opts)

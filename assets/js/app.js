@@ -164,21 +164,15 @@ const hooks = {
         show: false,
         close_on_unfocus: true,
         invert_x: true,
-        invert_y: true
+        invert_y: true,
+        classes: "chat_emotes thin_scrollbar"
       })
-      chat_state.emotes_modal.e.style.maxWidth = "500px"
-      chat_state.emotes_modal.e.style.maxHeight = "500px"
 
       const chat_emotes = document.getElementById("chat_emotes")
 
-      chat_state.emotes_modal.get_body()
-
-      chat_state.emotes_modal.e.body_outer.classList.toggle("chat_emotes", true)
-      chat_state.emotes_modal.e.body_outer.classList.toggle("thin_scrollbar", true)
-
       for (const emote of chat_emotes.children) {
         const new_emote = emote.cloneNode(true)
-        chat_state.emotes_modal.get_body().appendChild(new_emote)
+        chat_state.emotes_modal.appendChild(new_emote)
         new_emote.addEventListener("click", _ => {
           this.el.value += `:${emote.title}: `
           chat_state.emotes_modal.close()
@@ -537,22 +531,15 @@ const hooks = {
         show: false,
         close_on_unfocus: true,
         invert_x: true,
-        invert_y: true
+        invert_y: true,
+        classes: "chat_emotes thin_scrollbar"
       })
-
-      this.extra_emotes.e.style.maxWidth = "500px"
-      this.extra_emotes.e.style.maxHeight = "500px"
 
       const chat_emotes = document.getElementById("chat_emotes")
 
-      this.extra_emotes.get_body()
-
-      this.extra_emotes.e.body_outer.classList.toggle("chat_emotes", true)
-      this.extra_emotes.e.body_outer.classList.toggle("thin_scrollbar", true)
-
       for (const emote of chat_emotes.children) {
         const new_emote = emote.cloneNode(true)
-        this.extra_emotes.get_body().appendChild(new_emote)
+        this.extra_emotes.appendChild(new_emote)
         new_emote.addEventListener("click", _ => {
           chat_state.chat.send(`:${emote.title}:`)
           this.extra_emotes.close()
@@ -612,6 +599,78 @@ const hooks = {
       delete document.windows["Settings"]
       delete document.windows["chat_emotes2"]
       document.removeEventListener("keydown", this.on_keydown)
+    }
+  },
+
+  create_poll: {
+    mounted() {
+      this.el.addEventListener("click", () => {
+        this.create_poll_modal()
+      })
+    },
+    create_choice(choices, choices_list) {
+      const choice = {}
+
+      choice.e = create_element(choices_list, "div")
+      choice.name = create_element(choice.e, "input")
+      choice.del = create_element(choice.e, "button", "square")
+      choice.del.textContent = "×"
+
+      choice.del.addEventListener("click", () => {
+        choices.forEach(c => {
+          if (c.del == choice.del) {
+            choices_list.removeChild(choice.e)
+            choices.splice(choices.indexOf(c), 1)
+          }
+        })
+      })
+
+      choices.push(choice)
+      return choice
+    },
+    create_poll_modal() {
+      const modal = create_window(null, { title: "Create a poll", classes: "poll_modal" })
+
+      const poll_title = create_element(modal, "input")
+      poll_title.placeholder = "Title"
+
+      const choices_list = create_element(modal, "div", "choices")
+
+      const choices = []
+      this.create_choice(choices, choices_list)
+
+      const poll_add_choice = create_element(modal, "button")
+      poll_add_choice.textContent = "Add another choice"
+
+      poll_add_choice.addEventListener("click", () => {
+        this.create_choice(choices, choices_list).name.focus()
+      })
+
+      const poll_create = create_element(modal, "button")
+      poll_create.textContent = "Create"
+
+      poll_create.addEventListener("click", () => {
+        const final_title = poll_title.value.trim()
+        if (final_title.length <= 0) { return }
+        if (choices.length <= 0) { return }
+
+        const final_choices = []
+        choices.forEach(e => {
+          const choice = e.name.value.trim()
+          if (choice.length > 0) {
+            final_choices.push(choice)
+          }
+        })
+
+        if (final_choices.length <= 0) { return }
+
+        this.pushEvent("add", { title: final_title, choices: final_choices })
+
+        modal.close()
+      })
+
+      modal.show()
+      poll_title.focus()
     }
   }
 }

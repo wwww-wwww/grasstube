@@ -2,7 +2,6 @@ defmodule GrasstubeWeb.PollsChannel do
   use Phoenix.Channel
 
   alias Grasstube.{Presence, PollsAgent, ChatAgent, ProcessRegistry}
-  alias GrasstubeWeb.Endpoint
 
   def join("polls:" <> room_name, %{"password" => password}, socket) do
     case ProcessRegistry.lookup(room_name, :polls) do
@@ -62,11 +61,10 @@ defmodule GrasstubeWeb.PollsChannel do
 
     if not Map.has_key?(presence, socket.assigns.user_id) do
       "polls:" <> room_name = socket.topic
-      polls = ProcessRegistry.lookup(room_name, :polls)
 
       if not Guardian.Phoenix.Socket.authenticated?(socket) do
-        PollsAgent.remove_vote(polls, socket.id)
-        Endpoint.broadcast(socket.topic, "polls", PollsAgent.get_polls(polls))
+        ProcessRegistry.lookup(room_name, :polls)
+        |> PollsAgent.remove_vote(socket.id)
       end
     end
   end
@@ -77,9 +75,8 @@ defmodule GrasstubeWeb.PollsChannel do
     ProcessRegistry.lookup(room_name, :chat)
     |> ChatAgent.controls?(socket)
     |> if do
-      polls = ProcessRegistry.lookup(room_name, :polls)
-      PollsAgent.add_poll(polls, title, choices)
-      Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
+      ProcessRegistry.lookup(room_name, :polls)
+      |> PollsAgent.add_poll(title, choices)
     end
 
     {:noreply, socket}
@@ -91,9 +88,8 @@ defmodule GrasstubeWeb.PollsChannel do
     ProcessRegistry.lookup(room_name, :chat)
     |> ChatAgent.controls?(socket)
     |> if do
-      polls = ProcessRegistry.lookup(room_name, :polls)
-      PollsAgent.remove_poll(polls, poll_id)
-      Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
+      ProcessRegistry.lookup(room_name, :polls)
+      |> PollsAgent.remove_poll(poll_id)
     end
 
     {:noreply, socket}
@@ -109,7 +105,6 @@ defmodule GrasstubeWeb.PollsChannel do
       PollsAgent.set_vote(polls, poll_id, socket.id, true, choice)
     end
 
-    Endpoint.broadcast("polls:" <> room_name, "polls", PollsAgent.get_polls(polls))
     {:noreply, socket}
   end
 end

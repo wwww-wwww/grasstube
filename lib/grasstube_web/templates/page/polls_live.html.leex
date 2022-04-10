@@ -1,0 +1,21 @@
+<button id="btn_create_poll" phx-hook="create_poll">Create poll</button>
+<div class="polls">
+  <%= for {poll_id, %{title: title, choices: choices}} <- @polls_items do %>
+  <div>
+    <span class="title">
+      <%= title %>
+      <%= if @controls do %>
+      <button phx-click="remove" value="<%= poll_id %>">×</button>
+      <% end %>
+    </span>
+    <%= for %{name: name, users: users} <- choices do %>
+      <div>
+        <span><%= name %></span>
+        <button phx-value-id="<%= poll_id %>" value="<%= name %>" phx-click="vote" <%= if @user_id in users do %>disabled<% end %>>
+          <%= length(users) %>
+        </button>
+      </div>
+    <% end %>
+  </div>
+  <% end %>
+</div>
