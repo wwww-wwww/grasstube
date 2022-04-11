@@ -4,7 +4,7 @@
     width: 100%;
     pointer-events: visible;
     background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 0.25em;
+    border-radius: var(--border-radius);
 
     #chat_input,
     #chat_btn_emotes {
@@ -13,7 +13,7 @@
     }
 
     #chat_btn_emotes {
-      border-radius: 0.25em;
+      border-radius: var(--border-radius);
     }
   }
 
@@ -48,7 +48,7 @@
 
   #chat_input {
     flex: 1;
-    border-radius: 0.25em;
+    border-radius: var(--border-radius);
   }
 
   #chat_messages {
@@ -113,11 +113,11 @@
 .chat_emotes {
   max-width: 500px;
   max-height: 500px;
+
   .window-content {
-    display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
-    align-items: center;
 
     img {
       padding: 4px;

@@ -1,7 +1,7 @@
 .PlaylistLive {
   display: inline-block;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 1em;
+  border-radius: var(--border-radius);
 
   .playlist_header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.3);
@@ -79,17 +79,6 @@
       text-align: center;
     }
 
-    .tag {
-      display: inline-block;
-      margin-left: 0.5em;
-      font-size: 0.75em;
-      border: 1px solid rgba(100, 255, 255, 0.6);
-      background-color: rgb(100, 255, 255, 0.2);
-      color: rgb(255, 255, 255);
-      border-radius: 4px;
-      padding: 0.15em;
-    }
-
     tr:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
@@ -125,7 +114,7 @@
     display: flex;
 
     img {
-      border-radius: 0.25em;
+      border-radius: var(--border-radius);
     }
 
     div {
@@ -137,7 +126,7 @@
     }
 
     button {
-      border-radius: 0.25em;
+      border-radius: var(--border-radius);
     }
   }
 }

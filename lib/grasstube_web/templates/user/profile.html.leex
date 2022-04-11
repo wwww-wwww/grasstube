@@ -15,12 +15,17 @@
 			Create a room <%= live_redirect("here", to: Routes.live_path(@socket, GrasstubeWeb.CreateRoomLive)) %>
 		</div>
 	<% end %>
-
-	<br>
 <% end %>
 
-<%= @user.name %>'s emotes:
+<h2><%= @user.name %>'s emotes:</h2>
 
+<form phx-submit="emote_add">
+<%= tag(:input, type: "text", name: "name", placeholder: "Name") %>
+<%= tag(:input, type: "text", name: "url", placeholder: "URL") %>
+<%= submit("Add") %>
+</form>
+
+<div class="emotes">
 <%= for %{id: id, emote: emote, url: url} <- @emotes do %>
 	<div>
 		<%= img_tag(url, alt: emote, title: emote, class: "emote") %>
@@ -30,9 +35,4 @@
 		<% end %>
 	</div>
 <% end %>
-
-<form phx-submit="emote_add">
-<%= tag(:input, type: "text", name: "name", placeholder: "Name") %>
-<%= tag(:input, type: "text", name: "url", placeholder: "URL") %>
-<%= submit("Add") %>
-</form>
+</div>

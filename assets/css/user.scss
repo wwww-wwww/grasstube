@@ -10,24 +10,6 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5em;
-
-    > * {
-      display: block;
-    }
-
-    > input {
-      display: block;
-      padding: 0.25em 0.75em;
-      width: 100%;
-      border-radius: 1em;
-    }
-
-    > button {
-      padding: 0.25em 0.75em;
-      font-size: 1em;
-      border-radius: 1em;
-      cursor: pointer;
-    }
   }
 
   .alerts {
@@ -38,5 +20,23 @@
 
   .alert {
     font-size: 0.75em;
+  }
+}
+
+.UserLive {
+  .emotes {
+    display: flex;
+    flex-direction: column;
+
+    img {
+      max-width: 20em;
+      max-height: 20em;
+    }
+
+    > div {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5em;
+    }
   }
 }

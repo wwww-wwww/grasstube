@@ -200,7 +200,7 @@ class Window {
   }
 
   create_tab(title) {
-    const tab = document.createElement("div")
+    const tab = create_element(null, "div")
     tab.style.overflow = "hidden"
 
     tab.button = create_element(this.header, "button", "window-tab-button")

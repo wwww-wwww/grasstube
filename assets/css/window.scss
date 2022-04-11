@@ -16,7 +16,7 @@
 
 .window-top {
   button {
-    border-radius: 0.25em;
+    border-radius: var(--border-radius);
     height: 1.7em;
   }
 
@@ -25,17 +25,22 @@
   }
 }
 
-.window {
-  position: absolute;
+.window,
+.modal {
   display: flex;
   flex-direction: column;
   background-color: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 0.25em;
+  border-radius: var(--border-radius);
+  animation: fadein3 0.1s;
+}
+
+.window {
+  position: absolute;
+  display: flex;
   max-width: 100%;
   max-height: 100%;
   z-index: 100;
-  animation: fadein3 0.1s;
 
   .window-close {
     padding: 0;
@@ -48,13 +53,7 @@
   margin: 0.5em;
   max-width: calc(100% - 1em);
   max-height: calc(100% - 1em);
-  display: flex;
-  flex-direction: column;
-  background-color: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 0.25em;
   z-index: 101;
-  animation: fadein3 0.1s;
 }
 
 .modal-outer {
@@ -91,6 +90,7 @@
 .window-tab-button {
   height: 100%;
   border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
   border-right: 1px solid rgba(255, 255, 255, 0.4);
   color: rgba(220, 220, 220, 0.5);
 }
@@ -111,28 +111,16 @@
   max-width: 100%;
   max-height: 100%;
   flex: 1;
-}
-
-.window-row {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.5em;
 
-  >label {
-    flex: 1;
-    margin-right: 0.5em;
+  .row {
+    display: flex;
+    gap: 0.5em;
+    justify-content: flex-start;
+    align-items: center;
   }
-
-  :not(:last-child) {
-    margin-bottom: 0.5em;
-  }
-}
-
-.window-row-inline {
-  display: inline-flex;
-}
-
-.window-row-inline:not(:last-child) {
-  margin-right: 0.5em;
 }
 
 @keyframes fadein {

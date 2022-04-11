@@ -1,5 +1,6 @@
 import { create_window } from "./window"
 import { get_cookie, set_cookie } from "./cookies"
+import { create_element } from "./util"
 
 function init() {
   const settings_modal = make_settings()
@@ -10,29 +11,20 @@ function init() {
 
 function make_settings() {
   const modal = create_window("Settings", { title: "Settings", modal: true, show: false })
-  const modal_body = modal.get_body()
 
-  let row = document.createElement("div")
-  row.style.display = "block"
-  row.style.marginBottom = "0.5em"
-  modal_body.appendChild(row)
+  let row = create_element(modal, "div", "row")
 
-  let lbl = document.createElement("span")
+  let lbl = create_element(row, "span")
   lbl.textContent = "Height:"
-  lbl.style.marginRight = "0.5em"
-  row.appendChild(lbl)
 
-  let slider = document.createElement("input")
+  let slider = create_element(row, "input")
   slider.type = "range"
   slider.min = 80
   slider.max = 100
-  slider.style.marginRight = "0.5em"
-  row.appendChild(slider)
 
-  let slider_n = document.createElement("input")
+  let slider_n = create_element(row, "input")
   slider_n.type = "number"
   slider_n.style.width = "5em"
-  row.appendChild(slider_n)
 
   const h = get_cookie("drag_height")
   if (h) {
@@ -52,32 +44,13 @@ function make_settings() {
     set_height(`${slider_n.value}%`)
   })
 
-  let btn = null
+  row = create_element(modal, "div", "row")
 
-  if (document.getElementById("container_chat")) {
-    row = document.createElement("div")
-    row.style.display = "block"
-    row.style.marginBottom = "0.5em"
-    modal_body.appendChild(row)
-
-    btn = document.createElement("button")
-    btn.textContent = "Fit width (16:9)"
-    btn.addEventListener("click", () => { fit_width() })
-    row.appendChild(btn)
-  }
-
-  row = document.createElement("div")
-  row.style.display = "block"
-  modal_body.appendChild(row)
-
-  lbl = document.createElement("span")
+  lbl = create_element(row, "span")
   lbl.textContent = "Header:"
-  lbl.style.marginRight = "0.5em"
-  row.appendChild(lbl)
 
-  const toggle_header = document.createElement("button")
+  const toggle_header = create_element(row, "button")
   toggle_header.textContent = (get_cookie("room_hide_header") || 0) ? "Off" : "On"
-  row.appendChild(toggle_header)
 
   toggle_header.addEventListener("click", () => {
     const header_hide = (get_cookie("room_hide_header") || 0)
@@ -85,6 +58,7 @@ function make_settings() {
     toggle_header.textContent = !header_hide ? "Off" : "On"
     document.getElementsByTagName("header")[0].classList.toggle("hide", !header_hide)
   })
+
   return modal
 }
 
@@ -92,15 +66,6 @@ function set_height(size) {
   set_cookie("drag_height", size)
   maincontent.style.height = size
 
-  window.dispatchEvent(new Event("resize"))
-}
-
-function fit_width() {
-  const r_width = maincontent.getBoundingClientRect().height / 9 * 16 / window.innerWidth
-  const w = (maincontent.style.flexDirection == "row-reverse") ? r_width : (1 - r_width)
-  set_cookie("drag_width", w)
-  console.log(w)
-  container_chat.style.width = Math.round(w * window.innerWidth) + "px"
   window.dispatchEvent(new Event("resize"))
 }
 

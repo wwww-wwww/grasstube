@@ -20,12 +20,13 @@ main > .RoomsLive {
   .btn_room {
     font-family: "Google Sans", sans-serif;
     text-decoration: none;
-    padding: 0.25em 0.75em;
+    padding: 0.25em 0.5em;
     border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 1em;
+    border-radius: var(--border-radius);
     width: 12em;
     max-width: 100%;
     display: flex;
+    align-items: center;
     gap: 0.5em;
 
     > .room_name {
@@ -38,8 +39,14 @@ main > .RoomsLive {
   }
 
   .btn_room.password {
-    > span:first-child::before {
-      content: "🔒 ";
+    > .room_name {
+      display: flex;
+      align-items: center;
+      gap: 0.25em;
+    }
+
+    > .room_name::before {
+      content: "🔒";
     }
   }
 

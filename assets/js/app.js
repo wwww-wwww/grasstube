@@ -472,8 +472,8 @@ const hooks = {
       })
 
       const playlist_modal = create_window("playlist", { title: null, modal: true, show: false })
-      const tab1 = playlist_modal.create_tab("hosted")
-      const tab2 = playlist_modal.create_tab("youtube")
+      const tab1 = playlist_modal.create_tab("Hosted")
+      const tab2 = playlist_modal.create_tab("YouTube")
 
       tab1.appendChild(playlist_tab1)
       tab2.appendChild(playlist_tab2)

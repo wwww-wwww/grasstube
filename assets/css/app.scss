@@ -15,7 +15,11 @@
 @import "videoonly";
 @import "polls";
 
-@import "sign_in";
+@import "user";
+
+:root {
+  --border-radius: 0.3em;
+}
 
 *,
 *:before,
@@ -55,9 +59,9 @@ input,
 select,
 textarea,
 .button {
-  border-radius: 1em;
+  border-radius: var(--border-radius);
   text-decoration: none;
-  font-size: 1em;
+  font-size: 0.9em;
   padding: 0.25em 0.5em;
   border: 1px solid rgba(255, 255, 255, 0.4);
   background: none;
@@ -123,7 +127,6 @@ option {
 
 a {
   color: rgba(255, 255, 255, 0.75);
-  margin-bottom: 4px;
 }
 
 a:focus {

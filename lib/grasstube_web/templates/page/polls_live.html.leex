@@ -6,7 +6,7 @@
   <%= for {poll_id, %{title: title, choices: choices}} <- @polls_items do %>
   <div>
     <span class="title">
-      <%= title %>
+      <span><%= title %></span>
       <%= if @controls do %>
       <button phx-click="remove" value="<%= poll_id %>">×</button>
       <% end %>
