@@ -59,19 +59,7 @@ defmodule Grasstube.MixProject do
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.deploy": [
         "esbuild app --minify",
-        "esbuild room --minify",
-        "esbuild no_video --minify",
-        "esbuild video --minify",
-        "esbuild chat --minify",
-        "esbuild controls --minify",
         "sass app --no-source-map --style=compressed",
-        "sass index --no-source-map --style=compressed",
-        "sass room --no-source-map --style=compressed",
-        "sass sign_in --no-source-map --style=compressed",
-        "sass no_video --no-source-map --style=compressed",
-        "sass video --no-source-map --style=compressed",
-        "sass chat --no-source-map --style=compressed",
-        "sass controls --no-source-map --style=compressed",
         "phx.digest"
       ]
     ]
