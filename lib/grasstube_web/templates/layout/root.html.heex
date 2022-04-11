@@ -16,10 +16,10 @@
     <% end %>
     <%= if assigns[:room] do %>
       <meta name="room" content={@room}>
-    <% end%>
+    <% end %>
     <%= if assigns[:room_has_password] do %>
       <meta name="room_has_password" content="1">
-    <% end%>
+    <% end %>
   </head>
   <body id="body">
     <%= @inner_content %>
@@ -29,8 +29,8 @@
           <span style="float: left"><%= live_redirect("grasstube", to: Routes.live_path(@conn, GrasstubeWeb.RoomsLive)) %></span>
           <span style="float: right">
             <%= live_redirect("google drive", to: Routes.page_path(@conn, :gdrive), id: "userscript_google_drive") %>
-            <%= if Guardian.Plug.authenticated?(@conn) and Guardian.Plug.current_resource(@conn) != nil do %>
-              <% user = Guardian.Plug.current_resource(@conn) %>
+            <% user = Guardian.Plug.current_resource(@conn) %>
+            <%= if user != nil do %>
               <%= live_redirect(user.name, to: Routes.live_path(@conn, GrasstubeWeb.UserLive, user.username)) %>
               <%= live_redirect("Sign out", to: Routes.user_path(@conn, :sign_out)) %>
             <% else %>

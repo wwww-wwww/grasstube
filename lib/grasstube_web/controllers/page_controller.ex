@@ -28,10 +28,4 @@ defmodule GrasstubeWeb.PageController do
   def gdrive(conn, _) do
     render(conn, "userscript.html")
   end
-
-  def password_required?(conn, chat) do
-    not (Guardian.Plug.authenticated?(conn) and
-           Grasstube.ChatAgent.mod?(chat, Guardian.Plug.current_resource(conn))) and
-      ChatAgent.password?(chat)
-  end
 end

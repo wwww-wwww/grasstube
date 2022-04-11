@@ -1,5 +1,6 @@
 defmodule GrasstubeWeb.RoomsLive do
   use GrasstubeWeb, :live_view
+  on_mount GrasstubeWeb.LiveAuth
 
   alias Grasstube.ProcessRegistry
 
@@ -25,11 +26,11 @@ defmodule GrasstubeWeb.RoomsLive do
     |> Enum.sort_by(&{-elem(&1, 1), elem(&1, 0)})
   end
 
-  def mount(_, session, socket) do
+  def mount(_, _session, socket) do
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(@topic)
 
     can_make_room =
-      Grasstube.Guardian.user(session)
+      socket.assigns.current_user
       |> ProcessRegistry.rooms_of()
       |> length()
       |> Kernel.==(0)

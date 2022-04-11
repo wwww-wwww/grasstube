@@ -24,6 +24,7 @@ end
 
 defmodule GrasstubeWeb.UserLive do
   use GrasstubeWeb, :live_view
+  on_mount GrasstubeWeb.LiveAuth
 
   alias Grasstube.{Emote, User, Repo}
 
@@ -31,7 +32,7 @@ defmodule GrasstubeWeb.UserLive do
     GrasstubeWeb.UserView.render("profile.html", assigns)
   end
 
-  def mount(%{"username" => username}, session, socket) do
+  def mount(%{"username" => username}, _session, socket) do
     socket =
       case Repo.get(User, username) do
         nil ->
@@ -40,13 +41,14 @@ defmodule GrasstubeWeb.UserLive do
           |> push_redirect(to: Routes.live_path(socket, GrasstubeWeb.RoomsLive))
 
         user ->
-          current_user = Grasstube.Guardian.user(session)
-
           socket
           |> assign(page_title: user.username)
           |> assign(user: user)
-          |> assign(current_user: current_user)
-          |> assign(is_current_user: current_user.username == user.username)
+          |> assign(
+            is_current_user:
+              socket.assigns.current_user != nil and
+                socket.assigns.current_user.username == user.username
+          )
           |> assign(rooms: Grasstube.ProcessRegistry.rooms_of(user))
           |> assign(emotes: Repo.preload(user, :emotes).emotes |> Enum.sort_by(& &1.emote))
       end
@@ -121,6 +123,7 @@ end
 
 defmodule GrasstubeWeb.CreateRoomLive do
   use GrasstubeWeb, :live_view
+  on_mount GrasstubeWeb.LiveAuth
 
   def render(assigns) do
     GrasstubeWeb.UserView.render("create_room.html", assigns)
@@ -130,13 +133,12 @@ defmodule GrasstubeWeb.CreateRoomLive do
     socket =
       socket
       |> assign(page_title: "Create a room")
-      |> assign(user: Grasstube.Guardian.user(session))
 
     {:ok, socket}
   end
 
   def handle_event("create", %{"name" => name, "password" => password}, socket) do
-    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.user)
+    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user)
 
     socket =
       cond do
@@ -147,7 +149,11 @@ defmodule GrasstubeWeb.CreateRoomLive do
           put_flash(socket, :room, "Room name is too short")
 
         true ->
-          case Grasstube.ProcessRegistry.create_room(name, socket.assigns.user.username, password) do
+          case Grasstube.ProcessRegistry.create_room(
+                 name,
+                 socket.assigns.current_user.username,
+                 password
+               ) do
             {:ok, _} ->
               GrasstubeWeb.RoomsLive.update()
               push_redirect(socket, to: Routes.live_path(socket, GrasstubeWeb.RoomLive, name))
