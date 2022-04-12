@@ -19,7 +19,7 @@
   </div>
 </div>
 
-<div id="chat_emotes" class="chat_emotes" phx-update="ignore">
+<div id="chat_emotes" phx-update="ignore" style="display: none">
   <%= for %{emote: emote, url: url} <- @emotes do %>
   <img src="<%= url %>" alt="<%= emote %>" title="<%= emote %>">
   <% end %>
