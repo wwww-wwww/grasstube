@@ -4,6 +4,16 @@ defmodule GrasstubeWeb.Plug.RoomExists do
 
   def init(options), do: options
 
+  def call(
+        %{
+          params: %{"room" => "null"},
+          adapter: {_, %{headers: %{"referer" => referer}}}
+        } = conn,
+        _opts
+      ) do
+    redirect(conn, to: URI.parse(referer).path)
+  end
+
   def call(%{params: %{"room" => room}} = conn, _opts) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
