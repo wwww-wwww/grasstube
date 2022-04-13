@@ -8,7 +8,7 @@ defmodule Grasstube.DefaultRooms do
   end
 
   def run() do
-    Grasstube.ProcessRegistry.create_room("jade room", "w", "")
+    Grasstube.ProcessRegistry.create_room("w", "jade room", "")
 
     playlist2 = Grasstube.ProcessRegistry.lookup("jade room", :playlist)
     Enum.each(@default_videos, &Grasstube.PlaylistAgent.add_queue(playlist2, "", &1, "", %{}))

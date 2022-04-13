@@ -129,44 +129,19 @@ defmodule GrasstubeWeb.CreateRoomLive do
     GrasstubeWeb.UserView.render("create_room.html", assigns)
   end
 
-  def mount(_, session, socket) do
-    socket =
-      socket
-      |> assign(page_title: "Create a room")
-
-    {:ok, socket}
+  def mount(_, _session, socket) do
+    {:ok, assign(socket, page_title: "Create a room")}
   end
 
   def handle_event("create", %{"name" => name, "password" => password}, socket) do
-    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user)
-
     socket =
-      cond do
-        length(rooms) > 0 ->
-          put_flash(socket, :error, "You already have a room")
+      Grasstube.ProcessRegistry.create_room(socket.assigns.current_user, name, password)
+      |> case do
+        {:ok, room} ->
+          push_redirect(socket, to: Routes.live_path(socket, GrasstubeWeb.RoomLive, room))
 
-        String.length(name) == 0 ->
-          put_flash(socket, :room, "Room name is too short")
-
-        true ->
-          case Grasstube.ProcessRegistry.create_room(
-                 name,
-                 socket.assigns.current_user.username,
-                 password
-               ) do
-            {:ok, _} ->
-              GrasstubeWeb.RoomsLive.update()
-              push_redirect(socket, to: Routes.live_path(socket, GrasstubeWeb.RoomLive, name))
-
-            {:error, {reason, _}} ->
-              case reason do
-                :already_started ->
-                  put_flash(socket, :error, "A room already exists with this name")
-
-                _ ->
-                  put_flash(socket, :error, "Error creating room #{inspect(reason)}")
-              end
-          end
+        {:error, reason} ->
+          put_flash(socket, :error, reason)
       end
 
     {:noreply, socket}

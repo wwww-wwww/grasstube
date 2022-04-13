@@ -71,7 +71,7 @@ defmodule GrasstubeWeb.LiveAuth do
     end)
   end
 
-  def check_room(socket, session, room, fun) do
+  def check_room(socket, room, fun) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->
         socket =
@@ -93,7 +93,7 @@ defmodule GrasstubeWeb.LiveAuth do
         %{assigns: %{flash: %{"password" => password}}} = socket
       ) do
     assign_user(socket, session)
-    |> check_room(session, room, fn socket, chat ->
+    |> check_room(room, fn socket, chat ->
       if ChatAgent.password?(chat) and ChatAgent.check_password(chat, password) do
         {:cont, assign(socket, :chat, chat)}
       else
@@ -111,7 +111,7 @@ defmodule GrasstubeWeb.LiveAuth do
 
   def on_mount(:default, %{"room" => room}, session, socket) do
     assign_user(socket, session)
-    |> check_room(session, room, fn socket, chat ->
+    |> check_room(room, fn socket, chat ->
       if ChatAgent.password?(chat) and
            not ChatAgent.mod?(chat, socket.assigns.current_user) do
         socket =
@@ -127,7 +127,7 @@ defmodule GrasstubeWeb.LiveAuth do
     end)
   end
 
-  def on_mount(:default, map, session, socket) do
+  def on_mount(:default, _map, session, socket) do
     {:cont, assign_user(socket, session)}
   end
 end

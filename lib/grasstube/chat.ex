@@ -33,6 +33,11 @@ defmodule Grasstube.ChatAgent do
             motd: "",
             public_controls: false
 
+  defmodule ChatMessage do
+    @derive Jason.Encoder
+    defstruct sender: "sys", name: "System", content: ""
+  end
+
   @max_message_size 250
   @max_history_size 20
   @max_name_length 24
@@ -50,13 +55,9 @@ defmodule Grasstube.ChatAgent do
 
   def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :chat})
 
-  def push({_socket, pid}, event, payload) do
-    send(pid, %{event: event, payload: payload})
-  end
+  def push({_socket, pid}, event, payload), do: send(pid, %{event: event, payload: payload})
 
-  def push(socket, event, payload) do
-    Phoenix.Channel.push(socket, event, payload)
-  end
+  def push(socket, event, payload), do: Phoenix.Channel.push(socket, event, payload)
 
   def topic({socket, _pid}), do: socket.assigns.topic
 
@@ -84,22 +85,14 @@ defmodule Grasstube.ChatAgent do
           if get_admin(channel) == socket_username(socket) do
             command(channel, socket, command)
           else
-            push(socket, "chat", %{
-              sender: "sys",
-              name: "System",
-              content: "You can't do this!"
-            })
+            push(socket, "chat", %ChatMessage{content: "You can't do this!"})
           end
 
         command_name in @mod_commands ->
           if mod?(channel, get_socket(socket).assigns.user) do
             command(channel, socket, command)
           else
-            push(socket, "chat", %{
-              sender: "sys",
-              name: "System",
-              content: "You can't do this!"
-            })
+            push(socket, "chat", %ChatMessage{content: "You can't do this!"})
           end
 
         true ->
@@ -107,9 +100,7 @@ defmodule Grasstube.ChatAgent do
       end
     else
       if String.length(msg) > @max_message_size do
-        push(socket, "chat", %{
-          sender: "sys",
-          name: "System",
+        push(socket, "chat", %ChatMessage{
           content: "message must be #{@max_message_size} characters or less"
         })
       else
@@ -127,7 +118,7 @@ defmodule Grasstube.ChatAgent do
 
         add_to_history(channel, nickname, new_msg)
 
-        Endpoint.broadcast(topic(socket), "chat", %{
+        Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
           sender: id,
           name: nickname,
           content: new_msg
@@ -158,19 +149,14 @@ defmodule Grasstube.ChatAgent do
           @public_commands
       end
       |> Enum.map(&("/" <> &1))
+      |> Enum.join(" ")
 
-    push(socket, "chat", %{
-      sender: "sys",
-      name: "System",
-      content: "Available commands: " <> Enum.join(commands, " ")
-    })
+    push(socket, "chat", %ChatMessage{content: "Available commands: #{commands}"})
   end
 
   defp command(_channel, socket, "nick " <> nick) do
     if String.length(nick) > @max_name_length do
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
+      push(socket, "chat", %ChatMessage{
         content: "Nickname must be #{@max_name_length} characters or less"
       })
     else
@@ -185,97 +171,69 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "op " <> username) do
-    username_lower = username |> String.downcase()
+    username = String.downcase(username)
 
-    if mod_username?(channel, username_lower) or get_admin(channel) == username_lower do
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: username_lower <> " is already an op"
-      })
+    if mod_username?(channel, username) or get_admin(channel) == username do
+      push(socket, "chat", %ChatMessage{content: "#{username} is already an op"})
     else
-      add_mod(channel, username_lower)
+      add_mod(channel, username)
 
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: "opped " <> username_lower
-      })
+      push(socket, "chat", %ChatMessage{content: "opped #{username}"})
 
-      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username_lower}", "presence", %{
+      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "presence", %{
         mod: true
       })
 
-      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username_lower}", "controls", %{})
+      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "controls", %{})
     end
   end
 
   defp command(channel, socket, "deop " <> username) do
-    username_lower = username |> String.downcase()
+    username = String.downcase(username)
 
-    if not mod_username?(channel, username_lower) do
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: username_lower <> " is already not an op"
-      })
+    if not mod_username?(channel, username) do
+      push(socket, "chat", %ChatMessage{content: "#{username} is already not an op"})
     else
-      remove_mod(channel, username_lower)
+      remove_mod(channel, username)
 
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: "de-opped " <> username_lower
-      })
+      push(socket, "chat", %ChatMessage{content: "de-opped #{username}"})
 
-      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username_lower}", "presence", %{
+      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "presence", %{
         mod: false
       })
 
-      Endpoint.broadcast(
-        "user:#{get_room_name(channel)}:#{username_lower}",
-        "revoke_controls",
-        %{}
-      )
+      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "revoke_controls", %{})
     end
   end
 
   defp command(channel, socket, "add_emotelist " <> username) do
-    username_lower = username |> String.downcase()
+    username = String.downcase(username)
 
-    if get_emotelists(channel) |> Enum.member?(username_lower) do
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: username_lower <> " is already in emotelists"
+    if get_emotelists(channel) |> Enum.member?(username) do
+      push(socket, "chat", %ChatMessage{
+        content: "#{username} is already in emotelists"
       })
     else
-      add_emotelist(channel, username_lower)
+      add_emotelist(channel, username)
 
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: "added " <> username_lower <> " to emote lists"
+      push(socket, "chat", %ChatMessage{
+        content: "added #{username} to emote lists"
       })
     end
   end
 
   defp command(channel, socket, "remove_emotelist " <> username) do
-    username_lower = username |> String.downcase()
+    username = username |> String.downcase()
 
-    if not (get_emotelists(channel) |> Enum.member?(username_lower)) do
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: username_lower <> " is already not in emotelists"
+    if not (get_emotelists(channel) |> Enum.member?(username)) do
+      push(socket, "chat", %ChatMessage{
+        content: "#{username} is already not in emotelists"
       })
     else
-      remove_emotelist(channel, username_lower)
+      remove_emotelist(channel, username)
 
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: "removed " <> username_lower <> " from emotelists"
+      push(socket, "chat", %ChatMessage{
+        content: "removed #{username} from emotelists"
       })
     end
   end
@@ -287,17 +245,13 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "emotelists") do
-    push(socket, "chat", %{
-      sender: "sys",
-      name: "System",
+    push(socket, "chat", %ChatMessage{
       content: "emotelists: " <> (get_emotelists(channel) |> Enum.join(", "))
     })
   end
 
   defp command(channel, socket, "ops") do
-    push(socket, "chat", %{
-      sender: "sys",
-      name: "System",
+    push(socket, "chat", %ChatMessage{
       content: "ops: " <> ((get_mods(channel) ++ [get_admin(channel)]) |> Enum.join(", "))
     })
   end
@@ -305,46 +259,28 @@ defmodule Grasstube.ChatAgent do
   defp command(channel, socket, "controls") do
     Agent.update(channel, &%{&1 | public_controls: !&1.public_controls})
 
-    controls = public_controls?(channel)
-
     Endpoint.broadcast("video:#{get_room_name(channel)}", "controls", %{})
     Endpoint.broadcast("playlist:#{get_room_name(channel)}", "controls", %{})
     Endpoint.broadcast("polls:#{get_room_name(channel)}", "controls", %{})
 
-    if controls do
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: "Controls are now public"
-      })
+    if public_controls?(channel) do
+      push(socket, "chat", %ChatMessage{content: "Controls are now public"})
     else
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: "Controls are now operators-only"
-      })
+      push(socket, "chat", %ChatMessage{content: "Controls are now operators-only"})
     end
   end
 
   defp command(channel, socket, "motd") do
-    motd = get_motd(channel)
-
-    if String.length(motd) > 0 do
-      push(socket, "chat", %{sender: "sys", name: "System", content: motd})
-    else
-      push(socket, "chat", %{
-        sender: "sys",
-        name: "System",
-        content: "No motd is set"
-      })
+    case get_motd(channel) do
+      "" -> push(socket, "chat", %ChatMessage{content: "No motd is set"})
+      motd -> push(socket, "chat", %ChatMessage{content: motd})
     end
   end
 
   defp command(channel, socket, "motd " <> motd) do
     Agent.update(channel, &%{&1 | motd: motd})
 
-    push(socket, "chat", %{
-      sender: "sys",
+    push(socket, "chat", %ChatMessage{
       name: get_room_name(channel),
       content: "Motd set to \"" <> motd <> "\""
     })
@@ -353,19 +289,14 @@ defmodule Grasstube.ChatAgent do
   defp command(channel, socket, "clear_motd") do
     Agent.update(channel, &%{&1 | motd: ""})
 
-    push(socket, "chat", %{
-      sender: "sys",
+    push(socket, "chat", %ChatMessage{
       name: get_room_name(channel),
       content: "Motd cleared"
     })
   end
 
   defp command(_channel, socket, cmd) do
-    push(socket, "chat", %{
-      sender: "sys",
-      name: "System",
-      content: "No command " <> cmd
-    })
+    push(socket, "chat", %ChatMessage{content: "No command #{cmd}"})
   end
 
   def get_room_name(pid), do: Agent.get(pid, & &1.room_name)
@@ -443,8 +374,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp do_emote(pid, msg) do
-    emotes = get_emotes(pid)
-    parse_emote(msg, "", emotes)
+    parse_emote(msg, "", get_emotes(pid))
   end
 
   defp split_emote(msg), do: Regex.split(~r{(:[^:]+:)}, msg, include_captures: true, parts: 2)

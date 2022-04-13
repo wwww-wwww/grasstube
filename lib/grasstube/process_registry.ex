@@ -34,12 +34,40 @@ defmodule Grasstube.ProcessRegistry do
     Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", :"$4"}}, [], [:"$3"]}])
   end
 
-  def create_room(room_name, admin, password) do
+  def create_room(%Grasstube.User{} = user, room_name, password) do
+    cond do
+      length(rooms_of(user)) > 0 ->
+        {:error, "User already has a room"}
+
+      String.length(room_name) == 0 ->
+        {:error, "Room name is too short"}
+
+      true ->
+        case create_room(user.username, room_name, password) do
+          {:ok, _} ->
+            GrasstubeWeb.RoomsLive.update()
+            {:ok, room_name}
+
+          {:error, {reason, _}} ->
+            case reason do
+              :already_started ->
+                {:error, "A room already exists with this name"}
+
+              _ ->
+                {:error, "Error creating room #{inspect(reason)}"}
+            end
+        end
+    end
+  end
+
+  def create_room(admin, room_name, password) when is_bitstring(admin) do
     DynamicSupervisor.start_child(
       Grasstube.DynamicSupervisor,
-      {Grasstube.RoomSupervisor, room_name: room_name, admin: admin, password: password}
+      {Grasstube.RoomSupervisor, admin: admin, room_name: room_name, password: password}
     )
   end
+
+  def create_room(_, _, _), do: {:error, "Admin must be provided"}
 
   def close_room(room_name) do
     DynamicSupervisor.stop(lookup(room_name, :supervisor))

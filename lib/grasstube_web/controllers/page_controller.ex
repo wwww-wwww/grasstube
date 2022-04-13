@@ -1,9 +1,6 @@
 defmodule GrasstubeWeb.PageController do
   use GrasstubeWeb, :controller
 
-  alias Grasstube.Guardian
-  alias Grasstube.ChatAgent
-
   def emotes(conn, %{"room" => room}) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
       :not_found ->

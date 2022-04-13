@@ -1,10 +1,7 @@
 defmodule GrasstubeWeb.UserController do
   use GrasstubeWeb, :controller
 
-  alias Grasstube.Guardian
-  alias Grasstube.Repo
-  alias Grasstube.User
-  alias Grasstube.Emote
+  alias Grasstube.{Emote, Guardian, ProcessRegistry, Repo, User}
 
   def sign_in(conn, %{"username" => username, "password" => password}) do
     case Repo.get_by(User, username: username |> to_string() |> String.downcase()) do
@@ -145,7 +142,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def emotes_json(conn, %{"username" => username}) do
-    case Repo.get(Grasstube.User, username |> to_string() |> String.downcase()) do
+    case Repo.get(User, username |> to_string() |> String.downcase()) do
       nil ->
         json(conn, %{success: false, message: "user not found"})
 
@@ -159,49 +156,28 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def create_room(conn, %{"room_name" => room_name, "room_password" => room_password}) do
-    user = Guardian.Plug.current_resource(conn)
-    rooms = Grasstube.ProcessRegistry.rooms_of(user)
+    case Guardian.Plug.current_resource(conn) do
+      nil ->
+        put_flash(conn, :error, "You must be logged in to do this.")
 
-    cond do
-      length(rooms) > 0 ->
-        conn
-        |> put_flash("error", "you already have a room")
-        |> redirect(to: "/")
+      user ->
+        ProcessRegistry.create_room(user, room_name, room_password)
+        |> case do
+          {:ok, room} ->
+            redirect(conn, to: Routes.live_path(conn, GrasstubeWeb.RoomLive, room))
 
-      String.length(room_name) == 0 ->
-        conn
-        |> put_flash("error", "room name is too short")
-        |> redirect(to: "/")
-
-      true ->
-        case Grasstube.ProcessRegistry.create_room(room_name, user.username, room_password) do
-          {:ok, _} ->
-            GrasstubeWeb.RoomsLive.update()
-            redirect(conn, to: Routes.page_path(conn, :room, room_name))
-
-          {:error, {reason, _}} ->
-            case reason do
-              :already_started ->
-                conn
-                |> put_flash("error", "room already exists with this name")
-                |> redirect(to: "/")
-
-              _ ->
-                conn
-                |> put_flash("error", "error creating room")
-                |> redirect(to: "/")
-            end
+          {:error, reason} ->
+            put_flash(conn, :error, reason)
         end
     end
   end
 
   def close_room(conn, %{"room_name" => room_name}) do
     user = Guardian.Plug.current_resource(conn)
-    rooms = Grasstube.ProcessRegistry.rooms_of(user)
     room_id = room_name |> to_string() |> String.downcase()
 
-    if room_id in rooms do
-      Grasstube.ProcessRegistry.close_room(room_id)
+    if room_id in ProcessRegistry.rooms_of(user) do
+      ProcessRegistry.close_room(room_id)
       redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
     else
       conn
