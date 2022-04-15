@@ -27,7 +27,10 @@
     <span><%= @current_index %> / <%= length(@playlist_items) %></span>
     <span>
       Repeat:
-      <span class="clickable" phx-click="cycle_playlist_mode" phx-value-mode="<%= @repeat_mode %>">
+      <span
+        <%= if @controls do %>
+          class="clickable" phx-click="cycle_playlist_mode" phx-value-mode="<%= @repeat_mode %>"
+        <% end %>>
         <%= text_repeat_mode(@repeat_mode) %>
       </span>
     </span>
