@@ -84,7 +84,13 @@ const player_state = {
 const hooks = {
   chat: {
     focus: null,
+    send(message) {
+      this.pushEvent("chat", { message: message })
+    },
     mounted() {
+      window.__chat = this
+      chat_state.chat = this
+
       const room_name = document.querySelector("meta[name='room']").getAttribute("content")
 
       document.title = room_name
@@ -139,25 +145,6 @@ const hooks = {
         }
       })
 
-      if (chat_state.on_load) {
-        chat_state.on_load()
-        chat_state.on_load = null
-      }
-    },
-    destroyed() {
-      chat_state.on_message = []
-      chat_state.chat = null
-      window.removeEventListener("focus", this.focus)
-    }
-  },
-
-  chat_submit: {
-    send(message) {
-      this.pushEvent("chat", { message: message })
-    },
-    mounted() {
-      chat_state.chat = this
-
       chat_state.emotes_modal = create_window("chat_emotes", {
         title: null,
         root: this.root,
@@ -174,9 +161,9 @@ const hooks = {
         const new_emote = emote.cloneNode(true)
         chat_state.emotes_modal.appendChild(new_emote)
         new_emote.addEventListener("click", _ => {
-          this.el.value += `:${emote.title}: `
+          chat_input.value += `:${emote.title}: `
           chat_state.emotes_modal.close()
-          this.el.focus()
+          chat_input.focus()
         })
       }
 
@@ -186,22 +173,30 @@ const hooks = {
         if (!chat_state.emotes_modal.moved) {
           chat_state.emotes_modal.moved = true
           const rect = maincontent.getBoundingClientRect()
-          chat_state.emotes_modal.move_to(0, rect.height - this.el.offsetTop)
+          chat_state.emotes_modal.move_to(0, rect.height - chat_input.offsetTop)
           chat_state.emotes_modal.moved = false
         }
       })
 
-      this.el.addEventListener("keydown", e => enter(e, () => {
-        this.send(this.el.value)
-        this.el.value = ""
+      chat_input.addEventListener("keydown", e => enter(e, () => {
+        this.send(chat_input.value)
+        chat_input.value = ""
         chat_state.emotes_modal.close()
         if (document.getElementById("player")) {
           player.focus()
         }
       }))
+
+      if (chat_state.on_load) {
+        chat_state.on_load()
+        chat_state.on_load = null
+      }
     },
     destroyed() {
       delete document.windows["chat_emotes"]
+      chat_state.on_message = []
+      chat_state.chat = null
+      window.removeEventListener("focus", this.focus)
     }
   },
 
@@ -445,6 +440,7 @@ const hooks = {
     },
     yt_search_timeout: null,
     mounted() {
+      window.__playlist = this
       playlist_add.addEventListener("click", () => {
         this.pushEvent("add", {
           title: playlist_add_title.value,
