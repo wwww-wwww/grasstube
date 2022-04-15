@@ -498,10 +498,12 @@ const hooks = {
         for (const msg of chat_messages.children) {
           msg.hide()
         }
+        btn_open_chat.textContent = "Open chat"
       } else {
         for (const msg of chat_messages.children) {
           msg.show()
         }
+        btn_open_chat.textContent = "Close chat"
       }
     },
     load() {
@@ -523,6 +525,10 @@ const hooks = {
           chat_state.emotes_modal.close()
           player.focus()
         }
+      })
+
+      btn_open_chat.addEventListener("click", () => {
+        this.toggle_chat()
       })
 
       this.extra_emotes = create_window("chat_emotes2", {
