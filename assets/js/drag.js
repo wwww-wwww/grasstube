@@ -1,9 +1,7 @@
 import { get_cookie, set_cookie } from "./cookies"
 
-let dragging_h = false
 let dragging_v = false
 
-let r_width = undefined
 let r_height = undefined
 
 function mouseup() {
@@ -12,13 +10,7 @@ function mouseup() {
     maincontent.style.height = r_height + "px"
   }
 
-  if (document.getElementById("container_chat") && dragging_h) {
-    const w = (maincontent.style.flexDirection == "row-reverse") ? (1 - r_width) : r_width
-    set_cookie("drag_width", w)
-    container_chat.style.width = Math.round(w * window.innerWidth) + "px"
-  }
-
-  if (dragging_h || dragging_v) {
+  if (dragging_v) {
     document.removeEventListener("mousemove", drag_v)
 
     dragging_v = false
@@ -34,10 +26,7 @@ function mouseup() {
 function hide_scrollbar() {
   const top = (window.container2 || main)
   const scrollbar = top.offsetWidth - top.clientWidth
-  top.style.paddingRight = scrollbar + "px"
   top.style.width = `calc(100% + ${scrollbar}px)`
-  maincontent.style.width = `calc(100% + ${scrollbar}px)`
-  bottom.style.width = `calc(100% + ${scrollbar}px)`
 
   if (document.getElementById("dragbar_v")) {
     dragbar_v.style.top = `${maincontent.getBoundingClientRect().bottom - maincontent.getBoundingClientRect().top - 2}px`
