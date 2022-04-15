@@ -50,6 +50,7 @@ defmodule GrasstubeWeb.PlaylistLive do
       |> assign(duration: duration)
       |> assign(current: current_video)
       |> assign(current_index: current_index)
+      |> assign(repeat_mode: PlaylistAgent.get_repeat_mode(playlist))
 
     {:ok, socket}
   end
@@ -105,6 +106,21 @@ defmodule GrasstubeWeb.PlaylistLive do
     {:reply, GrasstubeWeb.YTController.search(query), socket}
   end
 
+  def handle_event("cycle_playlist_mode", %{"mode" => mode}, socket) do
+    if ChatAgent.controls?(socket.assigns.chat, socket) do
+      new_mode =
+        case mode do
+          "none" -> :playlist
+          "playlist" -> :track
+          "track" -> :none
+        end
+
+      PlaylistAgent.set_repeat_mode(socket.assigns.playlist, new_mode)
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_info(%{event: "current", payload: %{id: id}}, socket) do
     current_index =
       Enum.with_index(socket.assigns.playlist_items, 1)
@@ -141,6 +157,10 @@ defmodule GrasstubeWeb.PlaylistLive do
       |> assign(current_index: current_index)
 
     {:noreply, socket}
+  end
+
+  def handle_info(%{event: "repeat", payload: %{repeat: repeat_mode}}, socket) do
+    {:noreply, assign(socket, repeat_mode: repeat_mode)}
   end
 
   def handle_info(%{event: "controls"}, socket) do

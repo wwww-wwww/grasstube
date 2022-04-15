@@ -42,4 +42,12 @@ defmodule GrasstubeWeb.PageView do
     |> to_string()
     |> String.slice(-9..-2)
   end
+
+  def text_repeat_mode(repeat_mode) do
+    case repeat_mode do
+      :playlist -> gettext("playlist")
+      :track -> gettext("track")
+      :none -> gettext("none")
+    end
+  end
 end

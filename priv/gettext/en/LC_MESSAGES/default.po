@@ -1,0 +1,8 @@
+msgid "playlist"
+msgstr "Playlist"
+
+msgid "track"
+msgstr "Track"
+
+msgid "none"
+msgstr "None"

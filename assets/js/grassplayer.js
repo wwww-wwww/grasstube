@@ -566,7 +566,7 @@ class GrassPlayer {
     this.current_video.yt = new YT.Player(this.video2, {
       height: "100%",
       width: "100%",
-      playerVars: { "controls": 0 },
+      playerVars: { controls: 0 },
       videoId: video_id,
       events: {
         "onStateChange": e => {

@@ -96,6 +96,10 @@ button:hover,
   cursor: pointer;
 }
 
+.clickable {
+  cursor: pointer;
+}
+
 button:disabled,
 .button:disabled {
   cursor: default;

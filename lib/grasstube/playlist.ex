@@ -8,7 +8,8 @@ defmodule Grasstube.PlaylistAgent do
   defstruct videos: %{},
             queue: [],
             current_qid: 0,
-            room_name: ""
+            room_name: "",
+            repeat_mode: :none
 
   @yt_domains ["youtube.com", "www.youtube.com", "youtu.be", "www.youtu.be"]
   @gdrive_domains [
@@ -31,12 +32,7 @@ defmodule Grasstube.PlaylistAgent do
   def get_videos(pid), do: Agent.get(pid, & &1.videos)
 
   def get_video(pid, id) when is_integer(id) do
-    Agent.get(pid, fn val ->
-      case val.videos[id] do
-        nil -> :nothing
-        _ -> val.videos[id]
-      end
-    end)
+    Agent.get(pid, &Map.get(&1.videos, id, :nothing))
   end
 
   def get_video(pid, id) do
@@ -66,6 +62,20 @@ defmodule Grasstube.PlaylistAgent do
 
       %{id: id, title: vid.title, url: url, duration: vid.duration}
     end)
+  end
+
+  def get_index(pid, id) do
+    Agent.get(pid, fn state -> Enum.find_index(state.queue, &(&1 == id)) end) || 0
+  end
+
+  def get_repeat_mode(pid), do: Agent.get(pid, & &1.repeat_mode)
+
+  def set_repeat_mode(pid, mode) do
+    Agent.update(pid, &%{&1 | repeat_mode: mode})
+
+    Endpoint.broadcast("playlist:" <> get_room_name(pid), "repeat", %{
+      repeat: mode
+    })
   end
 
   def add_queue(pid, title, url, sub, alts) do
@@ -362,13 +372,16 @@ defmodule Grasstube.PlaylistAgent do
     next =
       case VideoAgent.get_current_video(video) do
         :nothing ->
-          case queue |> Enum.at(0) do
+          case Enum.at(queue, 0) do
             nil -> :nothing
             id -> get_video(pid, id)
           end
 
         current ->
-          get_next_video(pid, queue, current.id)
+          case get_next_video(pid, get_index(pid, current.id)) do
+            :current -> current
+            new_video -> new_video
+          end
       end
 
     if next != :nothing do
@@ -391,19 +404,32 @@ defmodule Grasstube.PlaylistAgent do
     end
   end
 
-  def get_next_video(pid, queue, id) do
-    case queue |> Enum.at(Enum.find_index(queue, &(&1 == id)) + 1) do
-      nil ->
-        :nothing
+  def get_next_video(
+        state,
+        index
+      )
+      when is_map(state) do
+    case state.repeat_mode do
+      :track ->
+        :current
 
-      id ->
-        video = get_video(pid, id)
+      repeat_mode ->
+        case Enum.at(state.queue, index + 1) do
+          nil ->
+            if repeat_mode == :playlist,
+              do: Map.get(state.videos, Enum.at(state.queue, 0), :nothing),
+              else: :nothing
 
-        if video.ready == :failed do
-          get_next_video(pid, queue, video.id)
-        else
-          video
+          id ->
+            case Map.get(state.videos, id, :nothing) do
+              %{ready: :failed} -> get_next_video(state, index + 1)
+              video -> video
+            end
         end
     end
+  end
+
+  def get_next_video(pid, current_id) do
+    Agent.get(pid, &get_next_video(&1, current_id))
   end
 end

@@ -19,11 +19,19 @@
 </div>
 
 <div class="playlist_header">
-  <span class="playlist_count"><%= @current_index %> / <%= length(@playlist_items) %></span>
-  <span class="playlist_header_right">
-    <span class="playlist_duration"><%= seconds_to_string(@duration) %></span>
+  <div>
+    <span><%= @current_index %> / <%= length(@playlist_items) %></span>
+    <span>
+      Repeat:
+      <span class="clickable" phx-click="cycle_playlist_mode" phx-value-mode="<%= @repeat_mode %>">
+        <%= text_repeat_mode(@repeat_mode) %>
+      </span>
+    </span>
+  </div>
+  <div>
+    <span><%= seconds_to_string(@duration) %></span>
     <button id="playlist_btn_show" class="square" <%= if not @controls do %>style="display: none;"<% end %>>＋</button>
-  </span>
+  </div>
 </div>
 
 <div id="playlist_container" phx-hook="playlist">
