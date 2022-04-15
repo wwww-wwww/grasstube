@@ -311,7 +311,7 @@ const hooks = {
         }
       })
 
-      fetch("https://res.cloudinary.com/grass/raw/upload/v1648173707/fonts.json")
+      fetch("https://res.cloudinary.com/grass/raw/upload/v1649923139/fonts.json")
         .then(res => res.json())
         .then(fonts => {
           player_state.player.set_fonts(fonts)
