@@ -31,7 +31,8 @@ defmodule Grasstube.ChatAgent do
             room_name: "",
             emotelists: [],
             motd: "",
-            public_controls: false
+            public_controls: false,
+            scripts: %{}
 
   defmodule ChatMessage do
     @derive Jason.Encoder
@@ -43,9 +44,9 @@ defmodule Grasstube.ChatAgent do
   @max_name_length 24
 
   def start_link(opts) do
-    room_name = opts |> Keyword.get(:room_name)
-    admin = opts |> Keyword.get(:admin)
-    password = opts |> Keyword.get(:password)
+    room_name = Keyword.get(opts, :room_name)
+    admin = Keyword.get(opts, :admin)
+    password = Keyword.get(opts, :password)
 
     Agent.start_link(
       fn -> %__MODULE__{room_name: room_name, admin: admin, password: password} end,
@@ -351,13 +352,9 @@ defmodule Grasstube.ChatAgent do
     socket_username(socket)
   end
 
-  def socket_username(socket) do
-    if socket.assigns.user != nil do
-      socket.assigns.user.username
-    else
-      nil
-    end
-  end
+  def socket_username(%{assigns: %{user: nil}}), do: nil
+
+  def socket_username(%{assigns: %{user: %{username: username}}}), do: username
 
   defp get_emotelists(pid), do: Agent.get(pid, & &1.emotelists)
 
@@ -373,9 +370,7 @@ defmodule Grasstube.ChatAgent do
     |> Enum.sort_by(&Map.get(&1, :emote))
   end
 
-  defp do_emote(pid, msg) do
-    parse_emote(msg, "", get_emotes(pid))
-  end
+  defp do_emote(pid, msg), do: parse_emote(msg, "", get_emotes(pid))
 
   defp split_emote(msg), do: Regex.split(~r{(:[^:]+:)}, msg, include_captures: true, parts: 2)
 
@@ -435,4 +430,9 @@ defmodule Grasstube.ChatAgent do
         end
     end
   end
+
+  def get_script(pid, key), do: Agent.get(pid, & &1.scripts[key])
+
+  def set_script(pid, key, value),
+    do: Agent.update(pid, &%{&1 | scripts: Map.put(&1.scripts, key, value)})
 end

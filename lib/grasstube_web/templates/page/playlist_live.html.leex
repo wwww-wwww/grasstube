@@ -18,6 +18,10 @@
   </div>
 </div>
 
+<%= if @script do %>
+<meta name="playlist_script" content="<%= @script %>">
+<% end %>
+
 <div class="playlist_header">
   <div>
     <span><%= @current_index %> / <%= length(@playlist_items) %></span>

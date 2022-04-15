@@ -7,6 +7,11 @@ defmodule GrasstubeWeb.RoomLive do
   end
 
   def mount(%{"room" => room}, _session, socket) do
-    {:ok, assign(socket, room: room)}
+    socket =
+      socket
+      |> assign(room: room)
+      |> assign(script: Grasstube.ChatAgent.get_script(socket.assigns.chat, :room))
+
+    {:ok, socket}
   end
 end

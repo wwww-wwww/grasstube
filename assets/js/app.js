@@ -1,13 +1,13 @@
 import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
-import { create_element, enter, pad, seconds_to_hms } from "./util"
+import { create_element, enter, get_meta, pad, seconds_to_hms } from "./util"
 import { create_window } from "./window"
 import GrassPlayer from "./grassplayer"
 import Text from "./danmaku"
 import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
 
-const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+const csrfToken = get_meta("csrf-token")
 
 function autohide(msg) {
   msg.expire = null
@@ -91,7 +91,7 @@ const hooks = {
       window.__chat = this
       chat_state.chat = this
 
-      const room_name = document.querySelector("meta[name='room']").getAttribute("content")
+      const room_name = get_meta("room")
 
       document.title = room_name
 
@@ -196,6 +196,7 @@ const hooks = {
       delete document.windows["chat_emotes"]
       chat_state.on_message = []
       chat_state.chat = null
+      window.__chat = null
       window.removeEventListener("focus", this.focus)
     }
   },
@@ -222,7 +223,7 @@ const hooks = {
       player_state.player = new GrassPlayer(
         this.el,
         [],
-        document.querySelector("meta[name='controls']").getAttribute("content") == "true"
+        get_meta("controls") == "true"
       )
 
       if (player_state.fullscreen_element) {
@@ -439,8 +440,18 @@ const hooks = {
       })
     },
     yt_search_timeout: null,
+    unload: null,
     mounted() {
       window.__playlist = this
+
+      const script = get_meta("playlist_script")
+
+      if (script) {
+        const scripts = new Function(script)()
+        scripts.load(this)
+        this.unload = scripts.unload
+      }
+
       playlist_add.addEventListener("click", () => {
         this.pushEvent("add", {
           title: playlist_add_title.value,
@@ -482,6 +493,11 @@ const hooks = {
       this.el.addEventListener("touchstart", e => this.start_drag(e))
     },
     destroyed() {
+      if (this.unload) {
+        this.unload()
+        this.unload = null
+      }
+      window.__playlist = null
       delete document.windows["playlist"]
     }
   },
@@ -550,9 +566,18 @@ const hooks = {
       }
     },
     on_keydown: null,
+    unload: null,
     mounted() {
       init_settings()
       init_drag()
+
+      const script = get_meta("room_script")
+
+      if (script) {
+        const scripts = new Function(script)()
+        scripts.load(this)
+        this.unload = scripts.unload
+      }
 
       if (player_state.player) {
         player_state.player.fullscreen_element = this.el
@@ -598,6 +623,10 @@ const hooks = {
       document.addEventListener("keydown", this.on_keydown)
     },
     destroyed() {
+      if (this.unload) {
+        this.unload()
+        this.unload = null
+      }
       destroy_drag()
       delete document.windows["Settings"]
       delete document.windows["chat_emotes2"]
@@ -682,4 +711,5 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: hooks,
   params: { _csrf_token: csrfToken }
 })
+window.liveSocket = liveSocket
 liveSocket.connect()
