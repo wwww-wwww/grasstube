@@ -677,26 +677,13 @@ class GrassPlayer {
   }
 
   create_mute_overlay() {
-    const e = create_element(this.root, "div")
-    e.style.position = "absolute"
-    e.style.width = "100%"
-    e.style.height = "100%"
-    e.style.display = "flex"
-    e.style.alignItems = "center"
-    e.style.backgroundColor = "rgba(0, 0, 0, 0.2)"
-    e.style.cursor = "pointer"
-    e.style.zIndex = "2"
+    const e = create_element(this.root, "div", "mute_overlay")
     e.addEventListener("click", () => {
       this.video.muted = false
       this.root.removeChild(e)
     })
 
     let text = create_element(e, "span")
-    text.style.textAlign = "center"
-    text.style.flex = "1"
-    text.style.color = "white"
-    text.style.textShadow = "0.1em 0.1em 0.2em black"
-    text.style.pointerEvents = "none"
     text.textContent = "Click to unmute"
   }
 
@@ -980,13 +967,8 @@ class GrassPlayer {
 
     seekbar.buffers = []
 
-    seekbar.current = create_element(seekbar.graphic, "div")
-    seekbar.current.style.position = "absolute"
+    seekbar.current = create_element(seekbar.graphic, "div", "current")
     seekbar.current.style.width = "0%"
-    seekbar.current.style.height = "100%"
-    seekbar.current.style.background = "rgba(0, 70, 255, 0.6)"
-    seekbar.current.style.pointerEvents = "none"
-    seekbar.current.style.zIndex = "1"
 
     seekbar.dial = create_element(seekbar, "div", "seekbar_dial")
 
@@ -1040,12 +1022,7 @@ class GrassPlayer {
     seekbar.set_buffers = (buffers, duration) => {
       while (seekbar.buffers.length < buffers.length) {
         const buffer = create_element(seekbar.graphic, "div")
-        buffer.style.position = "absolute"
         buffer.style.width = "0%"
-        buffer.style.height = "100%"
-        buffer.style.background = "rgba(255, 255, 255, 0.3)"
-        buffer.style.pointerEvents = "none"
-        buffer.style.zIndex = "0"
         seekbar.buffers.push(buffer)
       }
       while (seekbar.buffers.length > buffers.length) {
