@@ -30,10 +30,11 @@ defmodule GrasstubeWeb.RoomsLive do
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(@topic)
 
     can_make_room =
-      socket.assigns.current_user
-      |> ProcessRegistry.rooms_of()
-      |> length()
-      |> Kernel.==(0)
+      not is_nil(socket.assigns.current_user) and
+        socket.assigns.current_user
+        |> ProcessRegistry.rooms_of()
+        |> length()
+        |> Kernel.==(0)
 
     socket =
       socket
