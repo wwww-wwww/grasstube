@@ -645,8 +645,8 @@ const hooks = {
 
       choice.e = create_element(choices_list, "div")
       choice.name = create_element(choice.e, "input")
-      choice.del = create_element(choice.e, "button", "square")
-      choice.del.textContent = "×"
+      choice.del = create_element(choice.e, "button", "square icon")
+      choice.del.textContent = "clear"
 
       choice.del.addEventListener("click", () => {
         choices.forEach(c => {

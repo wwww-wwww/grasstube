@@ -1,0 +1,20 @@
+.EditRoomLive {
+  main {
+    align-items: center;
+
+    div {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+    }
+
+    > div {
+      width: 1000px;
+      margin-bottom: 1em;
+    }
+  }
+
+  li > *:not(:last-child) {
+    margin-right: 0.5em;
+  }
+}

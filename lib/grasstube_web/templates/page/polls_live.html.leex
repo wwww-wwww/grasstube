@@ -8,7 +8,7 @@
     <span class="title">
       <span><%= title %></span>
       <%= if @controls do %>
-      <button phx-click="remove" value="<%= poll_id %>">×</button>
+      <button class="icon" phx-click="remove" value="<%= poll_id %>">clear</button>
       <% end %>
     </span>
     <%= for %{name: name, users: users} <- choices do %>

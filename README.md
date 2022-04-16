@@ -17,7 +17,8 @@ Includes soft subtitle rendering using [SubtitlesOctopus](https://github.com/Dad
     - [x] Public controls
     - [x] Adding users' emote lists
     - [x] Granting operator controls to users
-    - [ ] Editing rooms
+    - [x] Editing rooms
+    - [x] Room userscripts
   - [x] User provided list of emotes
 - [x] Integrated youtube search
 

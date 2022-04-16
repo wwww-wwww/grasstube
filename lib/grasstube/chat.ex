@@ -56,23 +56,25 @@ defmodule Grasstube.ChatAgent do
 
   def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :chat})
 
-  def push({_socket, pid}, event, payload), do: send(pid, %{event: event, payload: payload})
+  def get(pid), do: Agent.get(pid, & &1)
 
-  def push(socket, event, payload), do: Phoenix.Channel.push(socket, event, payload)
+  defp push({_socket, pid}, event, payload), do: send(pid, %{event: event, payload: payload})
 
-  def topic({socket, _pid}), do: socket.assigns.topic
+  defp push(socket, event, payload), do: Phoenix.Channel.push(socket, event, payload)
 
-  def topic(socket), do: socket.topic
+  defp topic({socket, _pid}), do: socket.assigns.topic
 
-  def get_socket({socket, _}), do: socket
+  defp topic(socket), do: socket.topic
 
-  def get_socket(socket), do: socket
+  defp get_socket({socket, _}), do: socket
 
-  def update_presence({socket, pid}, meta) do
+  defp get_socket(socket), do: socket
+
+  defp update_presence({socket, pid}, meta) do
     Grasstube.Presence.update(pid, socket.assigns.topic, socket.assigns.user_id, meta)
   end
 
-  def update_presence(socket, meta) do
+  defp update_presence(socket, meta) do
     Grasstube.Presence.update(socket, socket.assigns.user_id, meta)
   end
 
@@ -174,36 +176,24 @@ defmodule Grasstube.ChatAgent do
   defp command(channel, socket, "op " <> username) do
     username = String.downcase(username)
 
-    if mod_username?(channel, username) or get_admin(channel) == username do
+    if mod?(channel, username) or get_admin(channel) == username do
       push(socket, "chat", %ChatMessage{content: "#{username} is already an op"})
     else
       add_mod(channel, username)
 
       push(socket, "chat", %ChatMessage{content: "opped #{username}"})
-
-      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "presence", %{
-        mod: true
-      })
-
-      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "controls", %{})
     end
   end
 
   defp command(channel, socket, "deop " <> username) do
     username = String.downcase(username)
 
-    if not mod_username?(channel, username) do
+    if not mod?(channel, username) do
       push(socket, "chat", %ChatMessage{content: "#{username} is already not an op"})
     else
       remove_mod(channel, username)
 
       push(socket, "chat", %ChatMessage{content: "de-opped #{username}"})
-
-      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "presence", %{
-        mod: false
-      })
-
-      Endpoint.broadcast("user:#{get_room_name(channel)}:#{username}", "revoke_controls", %{})
     end
   end
 
@@ -258,11 +248,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "controls") do
-    Agent.update(channel, &%{&1 | public_controls: !&1.public_controls})
-
-    Endpoint.broadcast("video:#{get_room_name(channel)}", "controls", %{})
-    Endpoint.broadcast("playlist:#{get_room_name(channel)}", "controls", %{})
-    Endpoint.broadcast("polls:#{get_room_name(channel)}", "controls", %{})
+    set_public_controls(channel, !public_controls?(channel))
 
     if public_controls?(channel) do
       push(socket, "chat", %ChatMessage{content: "Controls are now public"})
@@ -279,7 +265,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "motd " <> motd) do
-    Agent.update(channel, &%{&1 | motd: motd})
+    set_motd(channel, motd)
 
     push(socket, "chat", %ChatMessage{
       name: get_room_name(channel),
@@ -288,7 +274,7 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command(channel, socket, "clear_motd") do
-    Agent.update(channel, &%{&1 | motd: ""})
+    set_motd(channel, "")
 
     push(socket, "chat", %ChatMessage{
       name: get_room_name(channel),
@@ -303,6 +289,17 @@ defmodule Grasstube.ChatAgent do
   def get_room_name(pid), do: Agent.get(pid, & &1.room_name)
 
   def get_motd(pid), do: Agent.get(pid, & &1.motd)
+
+  def set_motd(pid, motd), do: Agent.update(pid, &%{&1 | motd: motd})
+
+  def set_public_controls(pid, public_controls) do
+    Agent.update(pid, &%{&1 | public_controls: public_controls})
+
+    Endpoint.broadcast("video:#{get_room_name(pid)}", "controls", %{})
+    Endpoint.broadcast("playlist:#{get_room_name(pid)}", "controls", %{})
+    Endpoint.broadcast("polls:#{get_room_name(pid)}", "controls", %{})
+    Endpoint.broadcast(inspect(pid), "details", %{})
+  end
 
   def public_controls?(pid), do: Agent.get(pid, & &1.public_controls)
 
@@ -330,16 +327,41 @@ defmodule Grasstube.ChatAgent do
 
   def get_mods(pid), do: Agent.get(pid, & &1.mods)
 
-  def add_emotelist(pid, user), do: Agent.update(pid, &%{&1 | emotelists: [user | &1.emotelists]})
+  def add_emotelist(pid, user) do
+    Agent.update(pid, &%{&1 | emotelists: [user | &1.emotelists]})
+    Endpoint.broadcast(inspect(pid), "details", %{})
+  end
 
-  def remove_emotelist(pid, user),
-    do: Agent.update(pid, &%{&1 | emotelists: List.delete(&1.emotelists, user)})
+  def remove_emotelist(pid, user) do
+    Agent.update(pid, &%{&1 | emotelists: List.delete(&1.emotelists, user)})
+    Endpoint.broadcast(inspect(pid), "details", %{})
+  end
 
-  def add_mod(pid, user), do: Agent.update(pid, &%{&1 | mods: [user | &1.mods]})
+  def broadcast_mod(pid, user) do
+    is_mod = mod?(pid, user)
+    room_name = get_room_name(pid)
 
-  def remove_mod(pid, user), do: Agent.update(pid, &%{&1 | mods: List.delete(&1.mods, user)})
+    Endpoint.broadcast("user:#{room_name}:#{user}", "presence", %{
+      mod: is_mod
+    })
 
-  def mod_username?(pid, user), do: get_mods(pid) |> Enum.any?(&(&1 == user))
+    controls = if is_mod, do: "controls", else: "revoke_controls"
+    Endpoint.broadcast("user:#{room_name}:#{user}", controls, %{})
+
+    Endpoint.broadcast(inspect(pid), "details", %{})
+  end
+
+  def add_mod(pid, user) do
+    Agent.update(pid, &%{&1 | mods: [user | &1.mods]})
+    broadcast_mod(pid, user)
+  end
+
+  def remove_mod(pid, user) do
+    Agent.update(pid, &%{&1 | mods: List.delete(&1.mods, user)})
+    broadcast_mod(pid, user)
+  end
+
+  def mod?(pid, user) when is_bitstring(user), do: get_mods(pid) |> Enum.any?(&(&1 == user))
 
   def mod?(pid, user) when not is_nil(user),
     do:
@@ -405,6 +427,12 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
+  def set_password(pid, password) do
+    Agent.update(pid, &%{&1 | password: password})
+    Endpoint.broadcast(inspect(pid), "details", %{})
+    GrasstubeWeb.RoomsLive.update()
+  end
+
   def password?(pid) do
     Agent.get(pid, & &1.password)
     |> String.length()
@@ -435,4 +463,7 @@ defmodule Grasstube.ChatAgent do
 
   def set_script(pid, key, value),
     do: Agent.update(pid, &%{&1 | scripts: Map.put(&1.scripts, key, value)})
+
+  def remove_script(pid, key),
+    do: Agent.update(pid, &%{&1 | scripts: Map.delete(&1.scripts, key)})
 end

@@ -1,0 +1,107 @@
+<div>
+
+<div>
+  <h2>Password</h2>
+  <div>
+    <span>There is <%= if @chat_state.password != "" do %>a<% else %>no<% end %> password.</span>
+    <form phx-submit="password">
+    <%= tag(:input, type: "password", name: "password", placeholder: "Password") %>
+    <%= submit("Change") %>
+    </form>
+  </div>
+</div>
+
+<div>
+  <h2>Public Controls</h2>
+  <span>
+    <input type="checkbox" phx-click="public_controls" <%= if @chat_state.public_controls do %>checked<% end %>>
+  </span>
+</div>
+
+<div>
+  <h2>Operators</h2>
+  <ul>
+    <%= for username <- @chat_state.mods do %>
+    <li>
+      <%= username %>
+      <button class="icon square" phx-click="op_remove" value="<%= username %>">clear</button>
+    </li>
+    <% end %>
+
+    <form phx-submit="op_add">
+    <%= tag(:input, name: "username", placeholder: "Username") %>
+    <%= submit("add", class: "icon square") %>
+    </form>
+  </ul>
+</div>
+
+<div>
+  <h2>MOTD</h2>
+  <form phx-submit="motd_set">
+    <div>
+      <textarea name="motd" placeholder="MOTD"><%= @chat_state.motd %></textarea>
+      <span>
+      <%= submit("save", class: "icon square") %>
+      </span>
+    </div>
+  </form>
+</div>
+
+<div>
+  <h2>Emotelists</h2>
+  <ul>
+    <%= for username <- @chat_state.emotelists do %>
+    <li>
+      <%= username %>
+      <button class="icon square" phx-click="emotelist_remove" value="<%= username %>">clear</button>
+    </li>
+    <% end %>
+
+    <form phx-submit="emotelist_add">
+    <%= tag(:input, name: "username", placeholder: "Username") %>
+    <%= submit("add", class: "icon square") %>
+    </form>
+  </ul>
+</div>
+
+<div>
+  <h2>Userscripts</h2>
+  <%= for {key, script} <- @chat_state.scripts do %>
+  <div>
+    <h3><%= key %></h3>
+    <form phx-submit="script_set">
+      <div>
+        <%= tag(:input, type: "hidden", name: "key", value: key) %>
+        <textarea name="script"><%= script %></textarea>
+        <span>
+          <%= submit("save", class: "icon square") %>
+          <button form="" class="icon square" phx-click="script_remove" value="<%= key %>">clear</button>
+        </span>
+      </div>
+    </form>
+  </div>
+  <% end %>
+
+  <div>
+    <h3>New Script</h3>
+    <form phx-submit="script_set">
+      <div>
+        <%= tag(:input, name: "key", placeholder: "Key") %>
+        <textarea name="script"></textarea>
+        <span>
+          <%= submit("add", class: "icon square") %>
+        </span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div>
+  <h2>Close Room</h2>
+  <form phx-submit="close_room">
+    <%= tag(:input, name: "room", placeholder: "Room name") %>
+    <%= submit("Close") %>
+  </form>
+</div>
+
+</div>

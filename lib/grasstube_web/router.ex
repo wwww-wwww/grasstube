@@ -68,6 +68,11 @@ defmodule GrasstubeWeb.Router do
       pipe_through :logged_in
       live "/create_room", CreateRoomLive
 
+      scope "/" do
+        pipe_through [:room_exists, :room_auth]
+        live "/r/:room/edit", EditRoomLive
+      end
+
       post "/add_emote", UserController, :add_emote
       post "/import_emotes", UserController, :import_emotes
       post "/delete_emote", UserController, :delete_emote

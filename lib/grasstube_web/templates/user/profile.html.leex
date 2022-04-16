@@ -7,7 +7,7 @@
 		<%= for room_name <- @rooms do %>
 			<div>
 				<%= live_redirect(room_name, to: Routes.live_path(@socket, GrasstubeWeb.RoomLive, room_name)) %>
-        <button phx-click="room_delete" phx-value-name="<%= room_name %>">Close</button>
+				<%= live_redirect("Edit", to: Routes.live_path(@socket, GrasstubeWeb.EditRoomLive, room_name)) %>
 			</div>
 		<% end %>
 	<% else %>

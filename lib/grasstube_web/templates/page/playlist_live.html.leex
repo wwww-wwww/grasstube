@@ -37,7 +37,7 @@
   </div>
   <div>
     <span><%= seconds_to_string(@duration) %></span>
-    <button id="playlist_btn_show" class="square" <%= if not @controls do %>style="display: none;"<% end %>>＋</button>
+    <button id="playlist_btn_show" class="icon square" <%= if not @controls do %>style="display: none;"<% end %>>add</button>
   </div>
 </div>
 
@@ -45,18 +45,18 @@
   <%= for item <- @playlist_items do %>
   <div <%= if item.id == @current do %>class="selected"<% end %> data-id="<%= item.id %>">
     <%= if @controls do %>
-    <button class="playlist_remove square" value="<%= item.id %>" phx-click="remove">×</button>
+    <button class="icon square" value="<%= item.id %>" phx-click="remove">clear</button>
     <% end %>
 
     <a class="title" <%= if String.length(item.url) > 0 do %> href="<%= item.url %>" <% end %>><%= item.title %></a>
 
     <%= if item.duration != :unset do %>
-    <span class="duration"><%= seconds_to_string(item.duration) %></span>
+    <span><%= seconds_to_string(item.duration) %></span>
     <% end %>
 
     <%= if @controls do %>
-    <button class="playlist_set" value="<%= item.id %>" phx-click="set">Set</button>
-    <button class="playlist_drag">☰</button>
+    <button value="<%= item.id %>" phx-click="set">Set</button>
+    <button class="playlist_drag icon">menu</button>
     <% end %>
   </div>
   <% end %>
