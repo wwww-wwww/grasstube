@@ -1,8 +1,10 @@
 defmodule Grasstube.AuthErrorHandler do
   import Plug.Conn
+  import Phoenix.Controller
 
   def auth_error(conn, {type, _reason}, _opts) do
-    body = Jason.encode!(%{error: to_string(type)})
-    send_resp(conn, 401, body)
+    conn
+    |> put_flash(:error, to_string(type))
+    |> redirect(to: "/")
   end
 end
