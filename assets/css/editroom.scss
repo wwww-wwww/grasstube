@@ -10,6 +10,7 @@
 
     > div {
       width: 1000px;
+      max-width: calc(100% - 1em);
       margin-bottom: 1em;
     }
   }
