@@ -54,11 +54,6 @@ class GrassPlayer {
     this.cc = this.settings.cc || true
     this.on_toggle_cc = []
 
-    this.octopusInstance = null
-
-    this.resize = () => this._resize()
-    new ResizeObserver(this.resize).observe(root)
-    window.addEventListener("resize", this.resize)
 
     this.video = create_element(root, "video")
     this.video.id = "video"
@@ -71,6 +66,8 @@ class GrassPlayer {
     this.video.addEventListener("abort", () => {
       this.stats.video.textContent = "not loaded"
     })
+
+    this.octopusInstance = null
 
     this.video2 = create_element(root, "div", "video")
     this.video2.id = "video2"
@@ -175,23 +172,6 @@ class GrassPlayer {
     this.settings.video_fullscreen_f = get_cookie("video_fullscreen_f", true)
   }
 
-  _resize() {
-    clearTimeout(this.resize_finished)
-    if (this.octopusInstance) {
-      this.octopusInstance.setCurrentTime(0)
-    }
-
-    this.resize_finished = setTimeout(() => {
-      if (this.octopusInstance) {
-        if (this.octopusInstance.renderAhead) {
-          this.octopusInstance.resetRenderAheadCache()
-        } else {
-          this.octopusInstance.setCurrentTime(this.current_time())
-        }
-      }
-    }, 400)
-  }
-
   get_volume() {
     return (Math.pow(10, (this.settings.video_volume) / 100) - 1) / 9
   }
@@ -233,15 +213,6 @@ class GrassPlayer {
         }
       } else {
         if (this.octopusInstance) this.octopusInstance.freeTrack()
-      }
-    }
-
-    if (this.octopusInstance) {
-      if (this.octopusInstance.renderAhead) {
-        this.octopusInstance.resetRenderAheadCache()
-      } else {
-        this.octopusInstance.setCurrentTime(0)
-        this.octopusInstance.setCurrentTime(this.current_time())
       }
     }
   }
@@ -312,8 +283,7 @@ class GrassPlayer {
     this.lbl_time.textContent = "00:00 / 00:00"
 
     if (this.octopusInstance) {
-      this.octopusInstance.freeTrack()
-      this.octopusInstance.dispose()
+      this.octopusInstance.destroy()
       this.octopusInstance = null
       this.stats.subs.textContent = "not loaded"
 
@@ -384,8 +354,7 @@ class GrassPlayer {
     this.current_video.subs = subs
 
     if (this.octopusInstance) {
-      this.octopusInstance.freeTrack()
-      this.octopusInstance.dispose()
+      this.octopusInstance.destroy()
       this.octopusInstance = null
       this.stats.subs.textContent = "not loaded"
 
@@ -403,23 +372,19 @@ class GrassPlayer {
       subUrl: subs,
       fallbackFont: "https://res.cloudinary.com/grass/raw/upload/v1612694597/fonts/arialbd.ttf",
       availableFonts: this.availableFonts,
-      workerUrl: "/includes/subtitles-octopus-worker.js",
-      renderMode: "fast"
+      workerUrl: "/includes/subtitles-octopus-worker.js"
     })
 
-    this.octopusInstance.worker.addEventListener("message", e => {
-      if (e.data.target == "get-styles") {
-        while (this.stats.styles.firstChild) {
-          this.stats.styles.removeChild(this.stats.styles.firstChild)
-        }
-        for (const style of e.data.styles) {
-          const e = create_element(this.stats.styles, "div")
-          e.textContent = `${style.Name}: ${style.FontName}`
-        }
+    this.octopusInstance.getStyles((err, styles) => {
+      if (!styles) {
+        console.log(err)
+        return
+      }
+      for (const style of styles) {
+        const e = create_element(this.stats.styles, "div")
+        e.textContent = `${style.Name}: ${style.FontName}`
       }
     })
-
-    this.octopusInstance.getStyles()
 
     if (playing) this.play()
   }

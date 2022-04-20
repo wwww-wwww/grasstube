@@ -1,924 +1,617 @@
-var SubtitlesOctopus = function (options) {
-    var self = this;
-    self.canvas = options.canvas; // HTML canvas element (optional if video specified)
-    self.renderMode = options.renderMode || (options.lossyRender ? 'fast' : (options.blendRender ? 'blend' : 'normal'));
-    if(self.renderMode === "fast" && typeof createImageBitmap === 'undefined'){
-        //Fallback for browsers not supporting fast renderMode (Safari)
-        self.renderMode = "normal";
+// test ImageData constructor
+; (() => {
+  if (typeof ImageData.prototype.constructor === 'function') {
+    try {
+      // try actually calling ImageData, as on some browsers it's reported
+      // as existing but calling it errors out as "TypeError: Illegal constructor"
+      return new ImageData(new Uint8ClampedArray([0, 0, 0, 0]), 1, 1)
+    } catch (e) {
+      console.log('detected that ImageData is not constructable despite browser saying so')
+    }
+  }
+
+  const ctx = document.createElement('canvas').getContext('2d')
+
+  window.ImageData = (data, width, height) => {
+    const imageData = ctx.createImageData(width, height)
+    if (data) imageData.data.set(data)
+    return imageData
+  }
+})()
+/**
+ * New SubtitlesOctopus instance.
+ * @class
+ */
+export default class SubtitlesOctopus extends EventTarget {
+  /**
+   * @param {Object} options Settings object.
+   * @param {HTMLVideoElement} options.video Video to use as target for event listeners. Optional if canvas is specified instead.
+   * @param {HTMLCanvasElement} [options.canvas=HTMLCanvasElement] Canvas to use for manual handling. Not required if video is specified.
+   * @param {'js'|'wasm'} [options.blendMode='wasm'] Which color blending mode to use. WASM will perform better on lower end devices, JS can perform better if the device and browser supports hardware acceleration.
+   * @param {Boolean} [options.asyncRender=true] Whether or not to use async rendering, which can skip rendering frames when resources aren't available.
+   * @param {Boolean} [options.offscreenRender=true] Whether or not to render things fully on the worker, greatly reduces CPU usage.
+   * @param {Boolean} [options.onDemandRender=true] Whether or not to render subtitles as the video player decodes frames, rather than predicting which frame the player is on using events.
+   * @param {Number} [options.targetFps=24] Target FPS to render subtitles at.
+   * @param {Number} [options.timeOffset=0] Subtitle time offset in seconds.
+   * @param {Boolean} [options.debug=false] Whether or not to print debug information.
+   * @param {Number} [options.prescaleFactor=1.0] Scale down (< 1.0) the subtitles canvas to improve performance at the expense of quality, or scale it up (> 1.0).
+   * @param {Number} [options.prescaleHeightLimit=1080] The height in pixels beyond which the subtitles canvas won't be prescaled.
+   * @param {Number} [options.prescaleHeightLimit=0] The maximum rendering height in pixels of the subtitles canvas. Beyond this subtitles will be upscaled by the browser.
+   * @param {String} [options.workerUrl='subtitles-octopus-worker.js'] The URL of the worker.
+   * @param {String} [options.subUrl=options.subContent] The URL of the subtitle file to play.
+   * @param {String} [options.subContent=options.subUrl] The content of the subtitle file to play.
+   * @param {String[]} [options.fonts] An array of links to the fonts used in the subtitle.
+   * @param {Object} [options.availableFonts] Object with all available fonts - Key is font name in lower case, value is link: { arial: '/font1.ttf' }.
+   * @param {Number} [options.libassMemoryLimit] libass bitmap cache memory limit in MiB (approximate).
+   * @param {Number} [options.libassGlyphLimit] libass glyph cache memory limit in MiB (approximate).
+   */
+  constructor(options = {}) {
+    super()
+    if (!window.Worker) {
+      this.destroy('Worker not supported')
+    }
+    const _blendMode = options.blendMode || 'wasm'
+    const _asyncRender = typeof createImageBitmap !== 'undefined' && (options.asyncRender ?? true)
+    const _offscreenRender = typeof OffscreenCanvas !== 'undefined' && (options.offscreenRender ?? true)
+    this._onDemandRender = 'requestVideoFrameCallback' in HTMLVideoElement.prototype && (options.onDemandRender ?? true)
+
+    this.timeOffset = options.timeOffset || 0
+    this._video = options.video
+    this._canvasParent = null
+    if (this._video) {
+      this._canvasParent = document.createElement('div')
+      this._canvasParent.className = 'subtitles-octopus'
+      this._canvasParent.style.position = 'relative'
+
+      if (this._video.nextSibling) {
+        this._video.parentNode.insertBefore(this._canvasParent, this._video.nextSibling)
+      } else {
+        this._video.parentNode.appendChild(this._canvasParent)
+      }
+    } else if (!this._canvas) {
+      this.destroy('Don\'t know where to render: you should give video or canvas in options.')
     }
 
-    // play with those when you need some speed, e.g. for slow devices
-    self.dropAllAnimations = options.dropAllAnimations || false;
-    self.libassMemoryLimit = options.libassMemoryLimit || 0; // set libass bitmap cache memory limit in MiB (approximate)
-    self.libassGlyphLimit = options.libassGlyphLimit || 0; // set libass glyph cache memory limit in MiB (approximate)
-    self.targetFps = options.targetFps || 30;
-    self.prescaleTradeoff = options.prescaleTradeoff || null; // render subtitles less than viewport when less than 1.0 to improve speed, render to more than 1.0 to improve quality; set to null to disable scaling
-    self.softHeightLimit = options.softHeightLimit || 1080; // don't apply prescaleTradeoff < 1 when viewport height is less that this limit
-    self.hardHeightLimit = options.hardHeightLimit || 2160; // don't ever go above this limit
-    self.resizeVariation = options.resizeVariation || 0.2; // by how many a size can vary before it would cause clearance of prerendered buffer
+    this._canvas = options.canvas || document.createElement('canvas')
+    this._canvas.style.display = 'block'
+    this._canvas.style.position = 'absolute'
+    this._canvas.style.pointerEvents = 'none'
+    this._canvasParent.appendChild(this._canvas)
 
-    self.renderAhead = options.renderAhead || 0; // how many MiB to render ahead and store; 0 to disable (approximate)
-    self.isOurCanvas = false; // (internal) we created canvas and manage it
-    self.video = options.video; // HTML video element (optional if canvas specified)
-    self.canvasParent = null; // (internal) HTML canvas parent element
-    self.fallbackFont = options.fallbackFont || null; // Override fallback font, for example, with a CJK one. Default fallback font is Liberation Sans
-    self.lazyFontLoading = options.lazyFontLoading || false; // Load fonts in a lazy way. Requires Access-Control-Expose-Headers for Accept-Ranges, Content-Length, and Content-Encoding. If Content-Encoding is compressed, file will be fully fetched instead of just a HEAD request.
-    self.fonts = options.fonts || []; // Array with links to fonts used in sub (optional)
-    self.availableFonts = options.availableFonts || []; // Object with all available fonts (optional). Key is font name in lower case, value is link: {"arial": "/font1.ttf"}
-    self.onReadyEvent = options.onReady; // Function called when SubtitlesOctopus is ready (optional)
-    self.workerUrl = options.workerUrl || 'subtitles-octopus-worker.js'; // Link to WebAssembly worker
-    self.subUrl = options.subUrl; // Link to sub file (optional if subContent specified)
-    self.subContent = options.subContent || null; // Sub content (optional if subUrl specified)
-    self.onErrorEvent = options.onError; // Function called in case of critical error meaning sub wouldn't be shown and you should use alternative method (for instance it occurs if browser doesn't support web workers).
-    self.debug = options.debug || false; // When debug enabled, some performance info printed in console.
-    self.lastRenderTime = 0; // (internal) Last time we got some frame from worker
-    self.pixelRatio = window.devicePixelRatio || 1; // (internal) Device pixel ratio (for high dpi devices)
+    this._bufferCanvas = document.createElement('canvas')
+    this._bufferCtx = this._bufferCanvas.getContext('2d')
 
-    self.timeOffset = options.timeOffset || 0; // Time offset would be applied to currentTime from video (option)
+    this._canvasctrl = _offscreenRender ? this._canvas.transferControlToOffscreen() : this._canvas
+    this._ctx = !_offscreenRender && this._canvasctrl.getContext('2d')
 
-    self.renderedItems = []; // used to store items rendered ahead when renderAhead > 0
-    self.renderAhead = self.renderAhead * 1024 * 1024 * 0.9 /* try to eat less than requested */;
-    self.oneshotState = {
-        eventStart: null,
-        eventOver: false,
-        iteration: 0,
-        renderRequested: false,
-        requestNextTimestamp: -1,
-        prevWidth: null,
-        prevHeight: null
+    this._lastRenderTime = 0
+    this.debug = !!options.debug
+
+    this.prescaleFactor = options.prescaleFactor || 1.0
+    this.prescaleHeightLimit = options.prescaleHeightLimit || 1080
+    this.maxRenderHeight = options.maxRenderHeight || 0 // 0 - no limit.
+
+    this._worker = new Worker(options.workerUrl || 'subtitles-octopus-worker.js')
+    this._worker.onmessage = e => this._onmessage(e)
+    this._worker.onerror = e => this._error(e)
+
+    const canvas2 = document.createElement('canvas')
+    const ctx2 = canvas2.getContext('2d')
+
+    // Test for alpha bug, where e.g. WebKit can render a transparent pixel
+    // (with alpha == 0) as non-black which then leads to visual artifacts.
+    this._bufferCanvas.width = 1
+    this._bufferCanvas.height = 1
+    this._bufferCtx.clearRect(0, 0, 1, 1)
+    ctx2.clearRect(0, 0, 1, 1)
+    const prePut = ctx2.getImageData(0, 0, 1, 1).data
+    this._bufferCtx.putImageData(new ImageData(new Uint8ClampedArray([0, 255, 0, 0]), 1, 1), 0, 0)
+    ctx2.drawImage(this._bufferCanvas, 0, 0)
+    const postPut = ctx2.getImageData(0, 0, 1, 1).data
+    this.hasAlphaBug = prePut[1] !== postPut[1]
+    if (this.hasAlphaBug) console.log('Detected a browser having issue with transparent pixels, applying workaround')
+
+    this._worker.postMessage({
+      target: 'init',
+      asyncRender: _asyncRender,
+      width: this._canvas.width,
+      height: this._canvas.height,
+      URL: document.URL,
+      currentScript: options.workerUrl || 'subtitles-octopus-worker.js',
+      preMain: true,
+      blendMode: _blendMode,
+      subUrl: options.subUrl,
+      subContent: options.subContent || null,
+      fonts: options.fonts || [],
+      availableFonts: options.availableFonts || [],
+      debug: this.debug,
+      targetFps: options.targetFps,
+      libassMemoryLimit: options.libassMemoryLimit || 0,
+      libassGlyphLimit: options.libassGlyphLimit || 0,
+      hasAlphaBug: this.hasAlphaBug
+    })
+    if (_offscreenRender === true) this.sendMessage('offscreenCanvas', null, [this._canvasctrl])
+    this.setVideo(options.video)
+    if (this._onDemandRender) this._video.requestVideoFrameCallback(this._demandRender.bind(this))
+  }
+
+  /**
+   * Resize the canvas to given parameters. Auto-generated if values are ommited.
+   * @param  {Number} [width=0]
+   * @param  {Number} [height=0]
+   * @param  {Number} [top=0]
+   * @param  {Number} [left=0]
+   */
+  resize(width = 0, height = 0, top = 0, left = 0) {
+    let videoSize = null
+    if ((!width || !height) && this._video) {
+      videoSize = this._getVideoPosition()
+      const newsize = this._computeCanvasSize(videoSize.width || 0 * (window.devicePixelRatio || 1), videoSize.height || 0 * (window.devicePixelRatio || 1))
+      width = newsize.width
+      height = newsize.height
+      top = videoSize.y - (this._canvasParent.getBoundingClientRect().top - this._video.getBoundingClientRect().top)
+      left = videoSize.x
     }
 
-    self.hasAlphaBug = false;
-
-    (function() {
-        if (typeof ImageData.prototype.constructor === 'function') {
-            try {
-                // try actually calling ImageData, as on some browsers it's reported
-                // as existing but calling it errors out as "TypeError: Illegal constructor"
-                new window.ImageData(new Uint8ClampedArray([0, 0, 0, 0]), 1, 1);
-                return;
-            } catch (e) {
-                console.log("detected that ImageData is not constructable despite browser saying so");
-            }
+    if (this._canvas.style.top !== top || this._canvas.style.left !== left) {
+      if (videoSize != null) {
+        this._canvas.style.top = top + 'px'
+        this._canvas.style.left = left + 'px'
+        this._canvas.style.width = videoSize.width + 'px'
+        this._canvas.style.height = videoSize.height + 'px'
+      }
+      if (!(this._canvasctrl.width === width && this._canvasctrl.height === height)) {
+        // only re-paint if dimensions actually changed
+        // dont spam re-paints like crazy when re-sizing with animations, but still update instantly without them
+        if (this._resizeTimeoutBuffer) {
+          clearTimeout(this._resizeTimeoutBuffer)
+          this._resizeTimeoutBuffer = setTimeout(() => {
+            this._resizeTimeoutBuffer = undefined
+            this._canvasctrl.width = width
+            this._canvasctrl.height = height
+            this.sendMessage('canvas', { width, height })
+          }, 50)
+        } else {
+          this._canvasctrl.width = width
+          this._canvasctrl.height = height
+          this.sendMessage('canvas', { width, height })
+          this._resizeTimeoutBuffer = setTimeout(() => {
+            this._resizeTimeoutBuffer = undefined
+          }, 50)
         }
+      }
+    }
+  }
 
-        var canvas = document.createElement('canvas');
-        var ctx = canvas.getContext('2d');
-
-        window.ImageData = function () {
-            var i = 0;
-            if (arguments[0] instanceof Uint8ClampedArray) {
-                var data = arguments[i++];
-            }
-            var width = arguments[i++];
-            var height = arguments[i];
-
-            var imageData = ctx.createImageData(width, height);
-            if (data) imageData.data.set(data);
-            return imageData;
-        }
-    })();
-
-    self.workerError = function (error) {
-        console.error('Worker error: ', error);
-        if (self.onErrorEvent) {
-            self.onErrorEvent(error);
-        }
-        if (!self.debug) {
-            self.dispose();
-            throw new Error('Worker error: ' + error);
-        }
-    };
-
-    // Not tested for repeated usage yet
-    self.init = function () {
-        if (!window.Worker) {
-            self.workerError('worker not supported');
-            return;
-        }
-        // Worker
-        if (!self.worker) {
-            self.worker = new Worker(self.workerUrl);
-            self.worker.onmessage = self.onWorkerMessage;
-            self.worker.onerror = self.workerError;
-        }
-        self.workerActive = false;
-        self.createCanvas();
-        self.setVideo(options.video);
-        self.setSubUrl(options.subUrl);
-        self.worker.postMessage({
-            target: 'worker-init',
-            width: self.canvas.width,
-            height: self.canvas.height,
-            URL: document.URL,
-            currentScript: self.workerUrl,
-            preMain: true,
-            renderMode: self.renderMode,
-            subUrl: self.subUrl,
-            subContent: self.subContent,
-            fallbackFont: self.fallbackFont,
-            lazyFontLoading: self.lazyFontLoading,
-            fonts: self.fonts,
-            availableFonts: self.availableFonts,
-            debug: self.debug,
-            targetFps: self.targetFps,
-            libassMemoryLimit: self.libassMemoryLimit,
-            libassGlyphLimit: self.libassGlyphLimit,
-            renderOnDemand: self.renderAhead > 0,
-            dropAllAnimations: self.dropAllAnimations
-        });
-    };
-
-    self.createCanvas = function () {
-        if (!self.canvas) {
-            if (self.video) {
-                self.isOurCanvas = true;
-                self.canvas = document.createElement('canvas');
-                self.canvas.className = 'libassjs-canvas';
-                self.canvas.style.display = 'none';
-
-                self.canvasParent = document.createElement('div');
-                self.canvasParent.className = 'libassjs-canvas-parent';
-                self.canvasParent.appendChild(self.canvas);
-
-                if (self.video.nextSibling) {
-                    self.video.parentNode.insertBefore(self.canvasParent, self.video.nextSibling);
-                }
-                else {
-                    self.video.parentNode.appendChild(self.canvasParent);
-                }
-            }
-            else {
-                if (!self.canvas) {
-                    self.workerError('Don\'t know where to render: you should give video or canvas in options.');
-                }
-            }
-        }
-        self.ctx = self.canvas.getContext('2d');
-        self.bufferCanvas = document.createElement('canvas');
-        self.bufferCanvasCtx = self.bufferCanvas.getContext('2d');
-
-        // test for alpha bug, where e.g. WebKit can render a transparent pixel
-        // (with alpha == 0) as non-black which then leads to visual artifacts
-        self.bufferCanvas.width = 1;
-        self.bufferCanvas.height = 1;
-        var testBuf = new Uint8ClampedArray([0, 255, 0, 0]);
-        var testImage = new ImageData(testBuf, 1, 1);
-        self.bufferCanvasCtx.clearRect(0, 0, 1, 1);
-        self.ctx.clearRect(0, 0, 1, 1);
-        var prePut = self.ctx.getImageData(0, 0, 1, 1).data;
-        self.bufferCanvasCtx.putImageData(testImage, 0, 0);
-        self.ctx.drawImage(self.bufferCanvas, 0, 0);
-        var postPut = self.ctx.getImageData(0, 0, 1, 1).data;
-        self.hasAlphaBug = prePut[1] != postPut[1];
-        if (self.hasAlphaBug) {
-            console.log("Detected a browser having issue with transparent pixels, applying workaround");
-        }
-    };
-
-    self.setVideo = function (video) {
-        self.video = video;
-        if (self.video) {
-            var timeupdate = function () {
-                self.setCurrentTime(video.currentTime + self.timeOffset);
-            }
-            self.video.addEventListener("timeupdate", timeupdate, false);
-            self.video.addEventListener("playing", function () {
-                self.setIsPaused(false, video.currentTime + self.timeOffset);
-            }, false);
-            self.video.addEventListener("pause", function () {
-                self.setIsPaused(true, video.currentTime + self.timeOffset);
-            }, false);
-            self.video.addEventListener("seeking", function () {
-                self.video.removeEventListener("timeupdate", timeupdate);
-            }, false);
-            self.video.addEventListener("seeked", function () {
-                self.video.addEventListener("timeupdate", timeupdate, false);
-                self.setCurrentTime(video.currentTime + self.timeOffset);
-                if (self.renderAhead > 0) {
-                    _cleanPastRendered(video.currentTime + self.timeOffset, true);
-                }
-            }, false);
-            self.video.addEventListener("ratechange", function () {
-                self.setRate(video.playbackRate);
-            }, false);
-            self.video.addEventListener("timeupdate", function () {
-                self.setCurrentTime(video.currentTime + self.timeOffset);
-            }, false);
-            self.video.addEventListener("waiting", function () {
-                self.setIsPaused(true, video.currentTime + self.timeOffset);
-            }, false);
-
-            document.addEventListener("fullscreenchange", self.resizeWithTimeout, false);
-            document.addEventListener("mozfullscreenchange", self.resizeWithTimeout, false);
-            document.addEventListener("webkitfullscreenchange", self.resizeWithTimeout, false);
-            document.addEventListener("msfullscreenchange", self.resizeWithTimeout, false);
-            window.addEventListener("resize", self.resizeWithTimeout, false);
-
-            // Support Element Resize Observer
-            if (typeof ResizeObserver !== "undefined") {
-                self.ro = new ResizeObserver(self.resizeWithTimeout);
-                self.ro.observe(self.video);
-            }
-
-            if (self.video.videoWidth > 0) {
-                self.resize();
-            }
-            else {
-                self.video.addEventListener("loadedmetadata", function listener(e) {
-                    e.target.removeEventListener(e.type, listener);
-                    self.resize();
-                }, false);
-            }
-        }
-    };
-
-    self.getVideoPosition = function () {
-        var videoRatio = self.video.videoWidth / self.video.videoHeight;
-        var width = self.video.offsetWidth, height = self.video.offsetHeight;
-        var elementRatio = width / height;
-        var realWidth = width, realHeight = height;
-        if (elementRatio > videoRatio) realWidth = Math.floor(height * videoRatio);
-        else realHeight = Math.floor(width / videoRatio);
-
-        var x = (width - realWidth) / 2;
-        var y = (height - realHeight) / 2;
-
-        return {
-            width: realWidth,
-            height: realHeight,
-            x: x,
-            y: y
-        };
-    };
-
-    self.setSubUrl = function (subUrl) {
-        self.subUrl = subUrl;
-    };
-
-    function _cleanPastRendered(currentTime, seekClean) {
-        var retainedItems = [];
-        for (var i = 0, len = self.renderedItems.length; i < len; i++) {
-            var item = self.renderedItems[i];
-            if (item.emptyFinish < 0 || item.emptyFinish >= currentTime) {
-                // item is not yet finished, retain it
-                retainedItems.push(item);
-            }
-        }
-
-        if (seekClean && retainedItems.length > 0) {
-            // items are ordered by event start time when we push to self.renderedItems,
-            // so first item is the earliest
-            if (currentTime < retainedItems[0].eventStart) {
-                if (retainedItems[0].eventStart - currentTime > 60) {
-                    console.info("seeked back too far, cleaning prerender buffer");
-                    retainedItems = [];
-                } else {
-                    console.info("seeked backwards, need to free up some buffer");
-                    var size = 0, limit = self.renderAhead * 0.3 /* try to take no more than 1/3 of buffer */;
-                    var retain = [];
-                    for (var i = 0, len = retainedItems.length; i < len; i++) {
-                        var item = retainedItems[i];
-                        size += item.size;
-                        if (size >= limit) break;
-                        retain.push(item);
-                    }
-                    retainedItems = retain;
-                }
-            }
-        }
-
-        var removed = retainedItems.length < self.renderedItems;
-        self.renderedItems = retainedItems;
-        return removed;
+  _getVideoPosition() {
+    const videoRatio = this._video.videoWidth / this._video.videoHeight
+    const { offsetWidth, offsetHeight } = this._video
+    const elementRatio = offsetWidth / offsetHeight
+    let width = offsetWidth
+    let height = offsetHeight
+    if (elementRatio > videoRatio) {
+      width = Math.floor(offsetHeight * videoRatio)
+    } else {
+      height = Math.floor(offsetWidth / videoRatio)
     }
 
-    function tryRequestOneshot(currentTime, renderNow) {
-        if (!self.renderAhead || self.renderAhead <= 0) return;
-        if (self.oneshotState.renderRequested && !renderNow) return;
+    const x = (offsetWidth - width) / 2
+    const y = (offsetHeight - height) / 2
 
-        if (typeof currentTime === 'undefined') {
-            if (!self.video) return;
-            currentTime = self.video.currentTime + self.timeOffset;
-        }
+    return { width, height, x, y }
+  }
 
-        var size = 0;
-        for (var i = 0, len = self.renderedItems.length; i < len; i++) {
-            var item = self.renderedItems[i];
-            if (item.emptyFinish < 0) {
-                console.info('oneshot already reached end-of-events');
-                return;
-            }
-            if (currentTime >= item.eventStart && currentTime < item.emptyFinish) {
-                // an event for requested time already exists
-                console.debug('not requesting a render for ' + currentTime +
-                    ' as event already covering it exists (start=' +
-                    item.eventStart + ', empty=' + item.emptyFinish + ')');
-                return;
-            }
-            size += item.size;
-        }
+  _computeCanvasSize(width = 0, height = 0) {
+    const scalefactor = this.prescaleFactor <= 0 ? 1.0 : this.prescaleFactor
 
-        if (size <= self.renderAhead) {
-            lastRendered = currentTime - (renderNow ? 0 : 0.001);
-            if (!self.oneshotState.renderRequested) {
-                self.oneshotState.renderRequested = true;
-                self.worker.postMessage({
-                    target: 'oneshot-render',
-                    lastRendered: lastRendered,
-                    renderNow: renderNow,
-                    iteration: self.oneshotState.iteration
-                });
-            } else {
-                if (self.workerActive) {
-                    console.info('worker busy, requesting to seek');
-                }
-                self.oneshotState.requestNextTimestamp = lastRendered;
-            }
-        }
+    if (height <= 0 || width <= 0) {
+      width = 0
+      height = 0
+    } else {
+      const sgn = scalefactor < 1 ? -1 : 1
+      let newH = height
+      if (sgn * newH * scalefactor <= sgn * this.prescaleHeightLimit) {
+        newH *= scalefactor
+      } else if (sgn * newH < sgn * this.prescaleHeightLimit) {
+        newH = this.prescaleHeightLimit
+      }
+
+      if (this.maxRenderHeight > 0 && newH > this.maxRenderHeight) newH = this.maxRenderHeight
+
+      width *= newH / height
+      height = newH
     }
 
-    function _renderSubtitleEvent(event, currentTime) {
-        var eventOver = event.eventFinish < currentTime;
-        if (self.oneshotState.eventStart == event.eventStart && self.oneshotState.eventOver == eventOver) return;
-        self.oneshotState.eventStart = event.eventStart;
-        self.oneshotState.eventOver = eventOver;
+    return { width, height }
+  }
 
-        var beforeDrawTime = performance.now();
-        if (event.viewport.width != self.canvas.width || event.viewport.height != self.canvas.height) {
-            self.canvas.width = event.viewport.width;
-            self.canvas.height = event.viewport.height;
-        }
-        self.ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
-        if (!eventOver) {
-            for (var i = 0; i < event.items.length; i++) {
-                var image = event.items[i];
-                self.bufferCanvas.width = image.w;
-                self.bufferCanvas.height = image.h;
-                self.bufferCanvasCtx.putImageData(image.image, 0, 0);
-                self.ctx.drawImage(self.bufferCanvas, image.x, image.y);
-            }
-        }
-        if (self.debug) {
-            var drawTime = Math.round(performance.now() - beforeDrawTime);
-            console.log('render: ' + Math.round(event.spentTime - event.blendTime) + ' ms, blend: ' + Math.round(event.blendTime) + ' ms, draw: ' + drawTime + ' ms');
-        }
+  _timeupdate({ type }) {
+    const eventmap = {
+      seeking: true,
+      waiting: true,
+      playing: false
     }
+    const playing = eventmap[type]
+    if (playing != null) this._playstate = playing
+    this.setCurrentTime(this._video.paused || this._playstate, this._video.currentTime + this.timeOffset)
+  }
 
-    function oneshotRender() {
-        window.requestAnimationFrame(oneshotRender);
-        if (!self.video) return;
+  /**
+   * Change the video to use as target for event listeners.
+   * @param  {HTMLVideoElement} video
+   */
+  setVideo(video) {
+    if (video instanceof HTMLVideoElement) {
+      this._removeListeners()
+      this._video = video
+      if (this._onDemandRender !== true) {
+        this._playstate = video.paused
 
-        var currentTime = self.video.currentTime + self.timeOffset;
-        var finishTime = -1, eventShown = false, animated = false;
-        for (var i = 0, len = self.renderedItems.length; i < len; i++) {
-            var item = self.renderedItems[i];
-            if (!eventShown && item.eventStart <= currentTime && (item.emptyFinish < 0 || item.emptyFinish > currentTime)) {
-                _renderSubtitleEvent(item, currentTime);
-                eventShown = true;
-                finishTime = item.emptyFinish;
-            } else if (finishTime >= 0) {
-                // we've already found a known event, now find
-                // the farthest point of consequent events
-                // NOTE: self.renderedItems may have gaps due to seeking
-                if (item.eventStart - finishTime < 0.01) {
-                    finishTime = item.emptyFinish;
-                    animated = item.animated;
-                } else {
-                    break;
-                }
-            }
-        }
-
-        if (!eventShown) {
-            if (Math.abs(self.oneshotState.requestNextTimestamp - currentTime) > 0.01) {
-                _cleanPastRendered(currentTime);
-                tryRequestOneshot(currentTime, true);
-            }
-        } else if (_cleanPastRendered(currentTime) && finishTime >= 0) {
-            tryRequestOneshot(finishTime, animated);
-        }
+        video.addEventListener('timeupdate', e => this._timeupdate(e), false)
+        video.addEventListener('progress', e => this._timeupdate(e), false)
+        video.addEventListener('waiting', e => this._timeupdate(e), false)
+        video.addEventListener('seeking', e => this._timeupdate(e), false)
+        video.addEventListener('playing', e => this._timeupdate(e), false)
+        video.addEventListener('ratechange', e => this.setRate(e), false)
+      }
+      if (video.videoWidth > 0) {
+        this.resize()
+      } else {
+        video.addEventListener('loadedmetadata', () => this.resize(0, 0, 0, 0), false)
+      }
+      // Support Element Resize Observer
+      if (typeof ResizeObserver !== 'undefined') {
+        if (!this._ro) this._ro = new ResizeObserver(() => this.resize(0, 0, 0, 0))
+        this._ro.observe(video)
+      }
+    } else {
+      this._error('Video element invalid!')
     }
+  }
 
-    self.resetRenderAheadCache = function (isResizing) {
-        if (self.renderAhead > 0) {
-            var newCache = [];
-            if (isResizing && self.oneshotState.prevHeight && self.oneshotState.prevWidth) {
-                if (self.oneshotState.prevHeight == self.canvas.height &&
-                    self.oneshotState.prevWidth == self.canvas.width) return;
-                var timeLimit = 10, sizeLimit = self.renderAhead * 0.3;
-                if (self.canvas.height >= self.oneshotState.prevHeight * (1.0 - self.resizeVariation) &&
-                    self.canvas.height <= self.oneshotState.prevHeight * (1.0 + self.resizeVariation) &&
-                    self.canvas.width >= self.oneshotState.prevWidth * (1.0 - self.resizeVariation) &&
-                    self.canvas.width <= self.oneshotState.prevWidth * (1.0 + self.resizeVariation)) {
-                    console.debug('viewport changes are small, leaving more of prerendered buffer');
-                    timeLimit = 30;
-                    sizeLimit = self.renderAhead * 0.5;
-                }
-                var stopTime = self.video.currentTime + self.timeOffset + timeLimit;
-                var size = 0;
-                for (var i = 0; i < self.renderedItems.length; i++) {
-                    var item = self.renderedItems[i];
-                    if (item.emptyFinish < 0 || item.emptyFinish >= stopTime) break;
-                    size += item.size;
-                    if (size >= sizeLimit) break;
-                    newCache.push(item);
-                }
-            }
+  runBenchmark() {
+    this.sendMessage('runBenchmark')
+  }
 
-            console.info('resetting prerender cache');
-            self.renderedItems = newCache;
-            self.oneshotState.eventStart = null;
-            self.oneshotState.iteration++;
-            self.oneshotState.renderRequested = false;
-            self.oneshotState.prevHeight = self.canvas.height;
-            self.oneshotState.prevWidth = self.canvas.width;
+  /**
+   * Overwrites the current subtitle content.
+   * @param  {String} url URL to load subtitles from.
+   */
+  setTrackByUrl(url) {
+    this.sendMessage('setTrackByUrl', { url })
+  }
 
-            window.requestAnimationFrame(oneshotRender);
-            tryRequestOneshot(undefined, true);
+  /**
+   * Overwrites the current subtitle content.
+   * @param  {String} content Content of the ASS file.
+   */
+  setTrack(content) {
+    this.sendMessage('setTrack', { content })
+  }
+
+  freeTrack() {
+    this.sendMessage('freeTrack')
+  }
+
+  /**
+   * Sets the playback state of the media.
+   * @param  {Boolean} isPaused Pause/Play subtitle playback.
+   */
+  setIsPaused(isPaused) {
+    this.sendMessage('video', { isPaused })
+  }
+
+  /**
+   * Sets the playback rate of the media [speed multiplier].
+   * @param  {Number} rate Playback rate.
+   */
+  setRate(rate) {
+    this.sendMessage('video', { rate })
+  }
+
+  /**
+   * Sets the current time, playback state and rate of the subtitles.
+   * @param  {Boolean} [isPaused] Pause/Play subtitle playback.
+   * @param  {Number} [currentTime] Time in seconds.
+   * @param  {Number} [rate] Playback rate.
+   */
+  setCurrentTime(isPaused, currentTime, rate) {
+    this.sendMessage('video', { isPaused, currentTime, rate })
+  }
+
+  /**
+   * @typedef {Object} ASS_Event
+   * @property {Number} Start Start Time of the Event, in 0:00:00:00 format ie. Hrs:Mins:Secs:hundredths. This is the time elapsed during script playback at which the text will appear onscreen. Note that there is a single digit for the hours!
+   * @property {Number} Duration End Time of the Event, in 0:00:00:00 format ie. Hrs:Mins:Secs:hundredths. This is the time elapsed during script playback at which the text will disappear offscreen. Note that there is a single digit for the hours!
+   * @property {String} Style Style name. If it is "Default", then your own *Default style will be subtituted.
+   * @property {String} Name Character name. This is the name of the character who speaks the dialogue. It is for information only, to make the script is easier to follow when editing/timing.
+   * @property {Number} MarginL 4-figure Left Margin override. The values are in pixels. All zeroes means the default margins defined by the style are used.
+   * @property {Number} MarginR 4-figure Right Margin override. The values are in pixels. All zeroes means the default margins defined by the style are used.
+   * @property {Number} MarginV 4-figure Bottom Margin override. The values are in pixels. All zeroes means the default margins defined by the style are used.
+   * @property {String} Effect Transition Effect. This is either empty, or contains information for one of the three transition effects implemented in SSA v4.x
+   * @property {String} Text Subtitle Text. This is the actual text which will be displayed as a subtitle onscreen. Everything after the 9th comma is treated as the subtitle text, so it can include commas.
+   * @property {Number} ReadOrder Number in order of which to read this event.
+   * @property {Number} Layer Z-index overlap in which to render this event.
+   * @property {Number} _index (Internal) index of the event.
+  */
+
+  /**
+   * Create a new ASS event directly.
+   * @param  {ASS_Event} event
+   */
+  createEvent(event) {
+    this.sendMessage('createEvent', { event })
+  }
+
+  /**
+   * Overwrite the data of the event with the specified index.
+   * @param  {ASS_Event} event
+   * @param  {Number} index
+   */
+  setEvent(event, index) {
+    this.sendMessage('setEvent', { event, index })
+  }
+
+  /**
+   * Remove the event with the specified index.
+   * @param  {Number} index
+   */
+  removeEvent(index) {
+    this.sendMessage('removeEvent', { index })
+  }
+
+  /**
+   * Get all ASS events.
+   * @param  {function(Error|null, ASS_Event)} callback Function to callback when worker returns the events.
+   */
+  getEvents(callback) {
+    this._fetchFromWorker({
+      target: 'getEvents'
+    }, (err, { events }) => {
+      callback(err, events)
+    })
+  }
+
+  /**
+   * @typedef {Object} ASS_Style
+   * @property {String} Name The name of the Style. Case sensitive. Cannot include commas.
+   * @property {String} FontName The fontname as used by Windows. Case-sensitive.
+   * @property {Number} FontSize Font size.
+   * @property {Number} PrimaryColour A long integer BGR (blue-green-red)  value. ie. the byte order in the hexadecimal equivelent of this number is BBGGRR
+   * @property {Number} SecondaryColour A long integer BGR (blue-green-red)  value. ie. the byte order in the hexadecimal equivelent of this number is BBGGRR
+   * @property {Number} OutlineColour A long integer BGR (blue-green-red)  value. ie. the byte order in the hexadecimal equivelent of this number is BBGGRR
+   * @property {Number} BackColour This is the colour of the subtitle outline or shadow, if these are used. A long integer BGR (blue-green-red)  value. ie. the byte order in the hexadecimal equivelent of this number is BBGGRR.
+   * @property {Number} Bold This defines whether text is bold (true) or not (false). -1 is True, 0 is False. This is independant of the Italic attribute - you can have have text which is both bold and italic.
+   * @property {Number} Italic  Italic. This defines whether text is italic (true) or not (false). -1 is True, 0 is False. This is independant of the bold attribute - you can have have text which is both bold and italic.
+   * @property {Number} Underline -1 or 0
+   * @property {Number} StrikeOut -1 or 0
+   * @property {Number} ScaleX Modifies the width of the font. [percent]
+   * @property {Number} ScaleY Modifies the height of the font. [percent]
+   * @property {Number} Spacing Extra space between characters. [pixels]
+   * @property {Number} Angle The origin of the rotation is defined by the alignment. Can be a floating point number. [degrees]
+   * @property {Number} BorderStyle 1=Outline + drop shadow, 3=Opaque box
+   * @property {Number} Outline If BorderStyle is 1,  then this specifies the width of the outline around the text, in pixels. Values may be 0, 1, 2, 3 or 4.
+   * @property {Number} Shadow If BorderStyle is 1,  then this specifies the depth of the drop shadow behind the text, in pixels. Values may be 0, 1, 2, 3 or 4. Drop shadow is always used in addition to an outline - SSA will force an outline of 1 pixel if no outline width is given.
+   * @property {Number} Alignment This sets how text is "justified" within the Left/Right onscreen margins, and also the vertical placing. Values may be 1=Left, 2=Centered, 3=Right. Add 4 to the value for a "Toptitle". Add 8 to the value for a "Midtitle". eg. 5 = left-justified toptitle
+   * @property {Number} MarginL This defines the Left Margin in pixels. It is the distance from the left-hand edge of the screen.The three onscreen margins (MarginL, MarginR, MarginV) define areas in which the subtitle text will be displayed.
+   * @property {Number} MarginR This defines the Right Margin in pixels. It is the distance from the right-hand edge of the screen. The three onscreen margins (MarginL, MarginR, MarginV) define areas in which the subtitle text will be displayed.
+   * @property {Number} MarginV This defines the vertical Left Margin in pixels. For a subtitle, it is the distance from the bottom of the screen. For a toptitle, it is the distance from the top of the screen. For a midtitle, the value is ignored - the text will be vertically centred.
+   * @property {Number} Encoding This specifies the font character set or encoding and on multi-lingual Windows installations it provides access to characters used in multiple than one languages. It is usually 0 (zero) for English (Western, ANSI) Windows.
+   * @property {Number} treat_fontname_as_pattern
+   * @property {Number} Blur
+   * @property {Number} Justify
+  */
+
+  /**
+   * Create a new ASS style directly.
+   * @param  {ASS_Style} event
+   */
+  createStyle(style) {
+    this.sendMessage('createStyle', { style })
+  }
+
+  /**
+   * Overwrite the data of the style with the specified index.
+   * @param  {ASS_Style} event
+   * @param  {Number} index
+   */
+  setStyle(event, index) {
+    this.sendMessage('setStyle', { event, index })
+  }
+
+  /**
+   * Remove the style with the specified index.
+   * @param  {Number} index
+   */
+  removeStyle(index) {
+    this.sendMessage('removeStyle', { index })
+  }
+
+  getfonts(callback) {
+    this._fetchFromWorker({
+      target: 'getfonts'
+    }, (err, { fonts }) => {
+      callback(err, fonts)
+    })
+  }
+  /**
+   * Get all ASS styles.
+   * @param  {function(Error|null, ASS_Style)} callback Function to callback when worker returns the styles.
+   */
+  getStyles(callback) {
+    this._fetchFromWorker({
+      target: 'getStyles'
+    }, (err, { styles }) => {
+      callback(err, styles)
+    })
+  }
+
+  _demandRender(now, metadata) {
+    if (this._destroyed) return null
+    this.sendMessage('demand', { time: metadata.mediaTime + this.timeOffset })
+    this._video.requestVideoFrameCallback(this._demandRender.bind(this))
+  }
+
+  _render(data) {
+    this._ctx.clearRect(0, 0, this._canvasctrl.width, this._canvasctrl.height)
+    for (const image of data.images) {
+      if (image.buffer) {
+        if (data.async) {
+          this._ctx.drawImage(image.buffer, image.x, image.y)
+          image.buffer.close()
+        } else {
+          this._bufferCanvas.width = image.w
+          this._bufferCanvas.height = image.h
+          this._bufferCtx.putImageData(new ImageData(this._fixAlpha(new Uint8ClampedArray(image.buffer)), image.w, image.h), 0, 0)
+          this._ctx.drawImage(this._bufferCanvas, image.x, image.y)
         }
+      }
     }
+  }
 
-    self.renderFrameData = null;
-    function renderFrames() {
-        var data = self.renderFramesData;
-        var beforeDrawTime = performance.now();
-        self.ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
-        for (var i = 0; i < data.canvases.length; i++) {
-            var image = data.canvases[i];
-            self.bufferCanvas.width = image.w;
-            self.bufferCanvas.height = image.h;
-            var imageBuffer = new Uint8ClampedArray(image.buffer);
-            if (self.hasAlphaBug) {
-                for (var j = 3; j < imageBuffer.length; j = j + 4) {
-                    imageBuffer[j] = (imageBuffer[j] >= 1) ? imageBuffer[j] : 1;
-                }
-            }
-            var imageData = new ImageData(imageBuffer, image.w, image.h);
-            self.bufferCanvasCtx.putImageData(imageData, 0, 0);
-            self.ctx.drawImage(self.bufferCanvas, image.x, image.y);
-        }
-        if (self.debug) {
-            var drawTime = Math.round(performance.now() - beforeDrawTime);
-            var blendTime = data.blendTime;
-            if (typeof blendTime !== 'undefined') {
-                console.log('render: ' + Math.round(data.spentTime - blendTime) + ' ms, blend: ' + Math.round(blendTime) + ' ms, draw: ' + drawTime + ' ms; TOTAL=' + Math.round(data.spentTime + drawTime) + ' ms');
-            } else {
-                console.log(Math.round(data.spentTime) + ' ms (+ ' + drawTime + ' ms draw)');
-            }
-            self.renderStart = performance.now();
-        }
+  _fixAlpha(uint8) {
+    if (this.hasAlphaBug) {
+      for (let j = 3; j < uint8.length; j += 4) {
+        uint8[j] = uint8[j] > 1 ? uint8[j] : 1
+      }
     }
+    return uint8
+  }
 
-    /**
-     * Lossy Render Mode
-     *
-     */
-    function renderFastFrames() {
-        var data = self.renderFramesData;
-        var beforeDrawTime = performance.now();
-        self.ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
-        for (var i = 0; i < data.bitmaps.length; i++) {
-            var image = data.bitmaps[i];
-            self.ctx.drawImage(image.bitmap, image.x, image.y);
-        }
-        if (self.debug) {
-            var drawTime = Math.round(performance.now() - beforeDrawTime);
-            console.log(data.bitmaps.length + ' bitmaps, libass: ' + Math.round(data.libassTime) + 'ms, decode: ' + Math.round(data.decodeTime) + 'ms, draw: ' + drawTime + 'ms');
-            self.renderStart = performance.now();
-        }
+  _ready() {
+    this.dispatchEvent(new CustomEvent('ready'))
+  }
+
+  /**
+   * Send data and execute function in the worker.
+   * @param  {String} target Target function.
+   * @param  {Object} [data] Data for function.
+   * @param  {Transferable[]} [transferable] Array of transferables.
+   */
+  sendMessage(target, data = {}, transferable) {
+    if (transferable) {
+      this._worker.postMessage({
+        target,
+        transferable,
+        ...data
+      }, [...transferable])
+    } else {
+      this._worker.postMessage({
+        target,
+        ...data
+      })
     }
+  }
 
-    self.workerActive = false;
-    self.frameId = 0;
-    self.onWorkerMessage = function (event) {
-        //dump('\nclient got ' + JSON.stringify(event.data).substr(0, 150) + '\n');
-        if (!self.workerActive) {
-            self.workerActive = true;
-            if (self.onReadyEvent) {
-                self.onReadyEvent();
-            }
+  _fetchFromWorker(workerOptions, callback) {
+    try {
+      const target = workerOptions.target
+
+      const timeout = setTimeout(() => {
+        reject(new Error('Error: Timeout while try to fetch ' + target))
+      }, 5000)
+
+      const resolve = ({ data }) => {
+        if (data.target === target) {
+          callback(null, data)
+          this._worker.removeEventListener('message', resolve)
+          this._worker.removeEventListener('error', reject)
+          clearTimeout(timeout)
         }
-        var data = event.data;
-        switch (data.target) {
-            case 'stdout': {
-                console.log(data.content);
-                break;
-            }
-            case 'console-log': {
-                console.log.apply(console, JSON.parse(data.content));
-                break;
-            }
-            case 'console-debug': {
-                console.debug.apply(console, JSON.parse(data.content));
-                break;
-            }
-            case 'console-info': {
-                console.info.apply(console, JSON.parse(data.content));
-                break;
-            }
-            case 'console-warn': {
-                console.warn.apply(console, JSON.parse(data.content));
-                break;
-            }
-            case 'console-error': {
-                console.error.apply(console, JSON.parse(data.content));
-                break;
-            }
-            case 'stderr': {
-                console.error(data.content);
-                break;
-            }
-            case 'window': {
-                window[data.method]();
-                break;
-            }
-            case 'canvas': {
-                switch (data.op) {
-                    case 'getContext': {
-                        self.ctx = self.canvas.getContext(data.type, data.attributes);
-                        break;
-                    }
-                    case 'resize': {
-                        self.resize(data.width, data.height);
-                        break;
-                    }
-                    case 'renderCanvas': {
-                        if (self.lastRenderTime < data.time) {
-                            self.lastRenderTime = data.time;
-                            self.renderFramesData = data;
-                            window.requestAnimationFrame(renderFrames);
-                        }
-                        break;
-                    }
-                    case 'renderFastCanvas': {
-                        if (self.lastRenderTime < data.time) {
-                            self.lastRenderTime = data.time;
-                            self.renderFramesData = data;
-                            window.requestAnimationFrame(renderFastFrames);
-                        }
-                        break;
-                    }
-                    case 'setObjectProperty': {
-                        self.canvas[data.object][data.property] = data.value;
-                        break;
-                    }
-                    case 'oneshot-result': {
-                        if (data.iteration != self.oneshotState.iteration) {
-                            console.debug('received stale prerender, ignoring');
-                            return;
-                        }
+      }
 
-                        if (self.debug) {
-                            console.info('oneshot received (start=' +
-                                    data.eventStart + ', empty=' + data.emptyFinish +
-                                    '), render: ' + Math.round(data.spentTime) + ' ms');
-                        }
-                        self.oneshotState.renderRequested = false;
-                        if (Math.abs(data.lastRenderedTime - self.oneshotState.requestNextTimestamp) < 0.01) {
-                            self.oneshotState.requestNextTimestamp = -1;
-                        }
-                        if (data.eventStart - data.lastRenderedTime > 0.01) {
-                            // generate bogus empty element, so all timeline is covered anyway
-                            self.renderedItems.push({
-                                eventStart: data.lastRenderedTime,
-                                eventFinish: data.lastRenderedTime - 0.001,
-                                emptyFinish: data.eventStart,
-                                viewport: data.viewport,
-                                spentTime: 0,
-                                blendTime: 0,
-                                items: [],
-                                animated: false,
-                                size: 0
-                            });
-                        }
+      const reject = event => {
+        callback(event)
+        this._worker.removeEventListener('message', resolve)
+        this._worker.removeEventListener('error', reject)
+        clearTimeout(timeout)
+      }
 
-                        var items = [];
-                        var size = 0;
-                        for (var i = 0, len = data.canvases.length; i < len; i++) {
-                            var item = data.canvases[i];
-                            items.push({
-                                w: item.w,
-                                h: item.h,
-                                x: item.x,
-                                y: item.y,
-                                image: new ImageData(new Uint8ClampedArray(item.buffer), item.w, item.h)
-                            });
-                            size += item.buffer.byteLength;
-                        }
+      this._worker.addEventListener('message', resolve)
+      this._worker.addEventListener('error', reject)
 
-                        var eventSplitted = false;
-                        if ((data.emptyFinish > 0 && data.emptyFinish - data.eventStart < 1.0 / self.targetFps) || data.animated) {
-                            var newFinish = data.eventStart + 1.0 / self.targetFps;
-                            data.emptyFinish = newFinish;
-                            data.eventFinish = newFinish;
-                            eventSplitted = true;
-                        }
-                        self.renderedItems.push({
-                            eventStart: data.eventStart,
-                            eventFinish: data.eventFinish,
-                            emptyFinish: data.emptyFinish,
-                            spentTime: data.spentTime,
-                            blendTime: data.blendTime,
-                            viewport: data.viewport,
-                            items: items,
-                            animated: data.animated,
-                            size: size
-                        });
-
-                        self.renderedItems.sort(function (a, b) {
-                            return a.eventStart - b.eventStart;
-                        });
-
-                        if (self.oneshotState.requestNextTimestamp >= 0) {
-                            // requesting an out of order event render
-                            tryRequestOneshot(self.oneshotState.requestNextTimestamp, true);
-                        } else if (data.eventStart < 0) {
-                            console.info('oneshot received "end of frames" event');
-                        } else if (data.emptyFinish >= 0) {
-                            // there's some more event to render, try requesting next event
-                            tryRequestOneshot(data.emptyFinish, eventSplitted);
-                        } else {
-                            console.info('there are no more events to prerender');
-                        }
-                        break;
-                    }
-                    default:
-                        throw 'eh?';
-                }
-                break;
-            }
-            case 'tick': {
-                self.frameId = data.id;
-                self.worker.postMessage({
-                    target: 'tock',
-                    id: self.frameId
-                });
-                break;
-            }
-            case 'custom': {
-                if (self['onCustomMessage']) {
-                    self['onCustomMessage'](event);
-                } else {
-                    throw 'Custom message received but client onCustomMessage not implemented.';
-                }
-                break;
-            }
-            case 'setimmediate': {
-                self.worker.postMessage({
-                    target: 'setimmediate'
-                });
-                break;
-            }
-            case 'get-events': {
-                console.log(data.target);
-                console.log(data.events);
-                break;
-            }
-            case 'get-styles': {
-                console.log(data.target);
-                console.log(data.styles);
-                break;
-            }
-            case 'ready': {
-                break;
-            }
-            default:
-                throw 'what? ' + data.target;
-        }
-    };
-
-    function _computeCanvasSize(width, height) {
-        if (self.prescaleTradeoff === null) {
-            if (height > self.hardHeightLimit) {
-                width = width * self.hardHeightLimit / height;
-                height = self.hardHeightLimit;
-            }
-        } else if (self.prescaleTradeoff > 1) {
-            if (height * self.prescaleTradeoff <= self.softHeightLimit) {
-                width *= self.prescaleTradeoff;
-                height *= self.prescaleTradeoff;
-            } else if (height < self.softHeightLimit) {
-                width = width * self.softHeightLimit / height;
-                height = self.softHeightLimit;
-            } else if (height >= self.hardHeightLimit) {
-                width = width * self.hardHeightLimit / height;
-                height = self.hardHeightLimit;
-            }
-        } else if (height >= self.softHeightLimit) {
-            if (height * self.prescaleTradeoff <= self.softHeightLimit) {
-                width = width * self.softHeightLimit / height;
-                height = self.softHeightLimit;
-            } else if (height * self.prescaleTradeoff <= self.hardHeightLimit) {
-                width *= self.prescaleTradeoff;
-                height *= self.prescaleTradeoff;
-            } else {
-                width = width * self.hardHeightLimit / height;
-                height = self.hardHeightLimit;
-            }
-        }
-
-        return {'width': width, 'height': height};
+      this._worker.postMessage(workerOptions)
+    } catch (error) {
+      this._error(error)
     }
+  }
 
-    self.resize = function (width, height, top, left) {
-        var videoSize = null;
-        top = top || 0;
-        left = left || 0;
-        if ((!width || !height) && self.video) {
-            videoSize = self.getVideoPosition();
-            var newsize = _computeCanvasSize(videoSize.width * self.pixelRatio, videoSize.height * self.pixelRatio);
-            width = newsize.width;
-            height = newsize.height;
-            var offset = self.canvasParent.getBoundingClientRect().top - self.video.getBoundingClientRect().top;
-            top = videoSize.y - offset;
-            left = videoSize.x;
-        }
-        if (!width || !height) {
-            if (!self.video) {
-                console.error('width or height is 0. You should specify width & height for resize.');
-            }
-            return;
-        }
+  _console({ content, command }) {
+    console[command].apply(console, JSON.parse(content))
+  }
 
+  _onmessage({ data }) {
+    if (this['_' + data.target]) this['_' + data.target](data)
+  }
 
-        if (
-          self.canvas.width != width ||
-          self.canvas.height != height ||
-          self.canvas.style.top != top ||
-          self.canvas.style.left != left
-        ) {
-            self.canvas.width = width;
-            self.canvas.height = height;
+  _error(err) {
+    this.dispatchEvent(new CustomEvent('error', { detail: err }))
+    throw new Error(err)
+  }
 
-            if (videoSize != null) {
-                self.canvasParent.style.position = 'relative';
-                self.canvas.style.display = 'block';
-                self.canvas.style.position = 'absolute';
-                self.canvas.style.width = videoSize.width + 'px';
-                self.canvas.style.height = videoSize.height + 'px';
-                self.canvas.style.top = top + 'px';
-                self.canvas.style.left = left + 'px';
-                self.canvas.style.pointerEvents = 'none';
-            }
+  _removeListeners() {
+    if (this._video) {
+      if (this._ro) this._ro.unobserve(this._video)
+      this._video.removeEventListener('timeupdate', this._timeupdate)
+      this._video.removeEventListener('progress', this._timeupdate)
+      this._video.removeEventListener('waiting', this._timeupdate)
+      this._video.removeEventListener('seeking', this._timeupdate)
+      this._video.removeEventListener('playing', this._timeupdate)
+      this._video.removeEventListener('ratechange', this.setRate)
+    }
+  }
 
-            self.worker.postMessage({
-                target: 'canvas',
-                width: self.canvas.width,
-                height: self.canvas.height
-            });
-            self.resetRenderAheadCache(true);
-        }
-    };
-
-    self.resizeWithTimeout = function () {
-        self.resize();
-        setTimeout(self.resize, 100);
-    };
-
-    self.runBenchmark = function () {
-        self.worker.postMessage({
-            target: 'runBenchmark'
-        });
-    };
-
-    self.customMessage = function (data, options) {
-        options = options || {};
-        self.worker.postMessage({
-            target: 'custom',
-            userData: data,
-            preMain: options.preMain
-        });
-    };
-
-    self.setCurrentTime = function (currentTime) {
-        self.worker.postMessage({
-            target: 'video',
-            currentTime: currentTime
-        });
-    };
-
-    self.setTrackByUrl = function (url) {
-        self.worker.postMessage({
-            target: 'set-track-by-url',
-            url: url
-        });
-        self.resetRenderAheadCache(false);
-    };
-
-    self.setTrack = function (content) {
-        self.worker.postMessage({
-            target: 'set-track',
-            content: content
-        });
-        self.resetRenderAheadCache(false);
-    };
-
-    self.freeTrack = function (content) {
-        self.worker.postMessage({
-            target: 'free-track'
-        });
-        self.resetRenderAheadCache(false);
-    };
-
-
-    self.render = self.setCurrentTime;
-
-    self.setIsPaused = function (isPaused, currentTime) {
-        self.worker.postMessage({
-            target: 'video',
-            isPaused: isPaused,
-            currentTime: currentTime
-        });
-    };
-
-    self.setRate = function (rate) {
-        self.worker.postMessage({
-            target: 'video',
-            rate: rate
-        });
-    };
-
-    self.dispose = function () {
-        self.worker.postMessage({
-            target: 'destroy'
-        });
-
-        self.worker.terminate();
-        self.workerActive = false;
-        // Remove the canvas element to remove residual subtitles rendered on player
-        if (self.video) {
-            self.video.parentNode.removeChild(self.canvasParent);
-        }
-    };
-
-    self.createEvent = function (event) {
-        self.worker.postMessage({
-            target: 'create-event',
-            event: event
-        });
-    };
-
-    self.getEvents = function () {
-        self.worker.postMessage({
-            target: 'get-events'
-        });
-    };
-
-    self.setEvent = function (event, index) {
-        self.worker.postMessage({
-            target: 'set-event',
-            event: event,
-            index: index
-        });
-    };
-
-    self.removeEvent = function (index) {
-        self.worker.postMessage({
-            target: 'remove-event',
-            index: index
-        });
-    };
-
-    self.createStyle = function (style) {
-        self.worker.postMessage({
-            target: 'create-style',
-            style: style
-        });
-    };
-
-    self.getStyles = function () {
-        self.worker.postMessage({
-            target: 'get-styles'
-        });
-    };
-
-    self.setStyle = function (style, index) {
-        self.worker.postMessage({
-            target: 'set-style',
-            style: style,
-            index: index
-        });
-    };
-
-    self.removeStyle = function (index) {
-        self.worker.postMessage({
-            target: 'remove-style',
-            index: index
-        });
-    };
-
-    self.init();
-};
-
-if (typeof SubtitlesOctopusOnLoad == 'function') {
-    SubtitlesOctopusOnLoad();
+  /**
+   * Destroy the object, worker, listeners and all data.
+   * @param  {String} [err] Error to throw when destroying.
+   */
+  destroy(err) {
+    if (err) this._error(err)
+    if (this._video) this._video.parentNode.removeChild(this._canvasParent)
+    this._destroyed = true
+    this._removeListeners()
+    this.sendMessage('destroy')
+    this._worker.terminate()
+  }
 }
 
-if (typeof exports !== 'undefined') {
-    exports = SubtitlesOctopus;
+if (typeof exports !== 'undefined' && typeof module !== 'undefined' && module.exports) {
+  exports = module.exports = SubtitlesOctopus
 }
 
-if (typeof module !== 'undefined') {
-    module.exports = SubtitlesOctopus
+if (!('requestVideoFrameCallback' in HTMLVideoElement.prototype) && 'getVideoPlaybackQuality' in HTMLVideoElement.prototype) {
+  HTMLVideoElement.prototype._rvfcpolyfillmap = {}
+  HTMLVideoElement.prototype.requestVideoFrameCallback = function (callback) {
+    const quality = this.getVideoPlaybackQuality()
+    const baseline = this.mozPaintedFrames || quality.totalVideoFrames - quality.droppedVideoFrames
+
+    const check = () => {
+      const newquality = this.getVideoPlaybackQuality()
+      const current = this.mozPaintedFrames || newquality.totalVideoFrames - newquality.droppedVideoFrames
+      if (current > baseline) {
+        const now = performance.now()
+        callback(now, {
+          presentationTime: now,
+          expectedDisplayTime: now + (this.mozFrameDelay / 1000 || 0),
+          width: this.videoWidth,
+          height: this.videoHeight,
+          mediaTime: this.currentTime,
+          presentedFrames: current,
+          processingDuration: this.mozFrameDelay || (newquality.totalFrameDelay - quality.totalFrameDelay) || 0
+        })
+        delete this._rvfcpolyfillmap[handle]
+      } else {
+        this._rvfcpolyfillmap[handle] = requestAnimationFrame(check)
+      }
+    }
+
+    const handle = Date.now()
+    this._rvfcpolyfillmap[handle] = requestAnimationFrame(check)
+    return handle
+  }
+
+  HTMLVideoElement.prototype.cancelVideoFrameCallback = function (handle) {
+    cancelAnimationFrame(this._rvfcpolyfillmap[handle])
+    delete this._rvfcpolyfillmap[handle]
+  }
 }
