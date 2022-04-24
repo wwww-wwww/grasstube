@@ -31,6 +31,7 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
   import Phoenix.Controller
 
   alias Grasstube.ChatAgent
+  alias GrasstubeWeb.Router.Helpers, as: Routes
 
   def init(options), do: options
 
@@ -45,7 +46,7 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
     if not ChatAgent.check_password(chat, password) do
       conn
       |> put_flash(:target, view)
-      |> redirect(to: GrasstubeWeb.Router.Helpers.live_path(conn, GrasstubeWeb.AuthLive, room))
+      |> redirect(to: Routes.live_path(conn, GrasstubeWeb.AuthLive, room))
     else
       conn
     end
@@ -53,17 +54,16 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
 
   def call(
         %{
-          assigns: %{chat: chat},
+          assigns: %{chat: chat, current_user: current_user},
           params: %{"room" => room},
           private: %{phoenix_live_view: {view, _, _}}
         } = conn,
         _opts
       ) do
-    if ChatAgent.password?(chat) and
-         not ChatAgent.mod?(chat, Guardian.Plug.current_resource(conn)) do
+    if ChatAgent.password?(chat) and not ChatAgent.mod?(chat, current_user) do
       conn
       |> put_flash(:target, view)
-      |> redirect(to: GrasstubeWeb.Router.Helpers.live_path(conn, GrasstubeWeb.AuthLive, room))
+      |> redirect(to: Routes.live_path(conn, GrasstubeWeb.AuthLive, room))
     else
       conn
     end
@@ -74,10 +74,11 @@ defmodule GrasstubeWeb.LiveAuth do
   import Phoenix.LiveView
 
   alias Grasstube.ChatAgent
+  alias GrasstubeWeb.Router.Helpers, as: Routes
 
   def assign_user(socket, session) do
     assign_new(socket, :current_user, fn ->
-      Grasstube.Guardian.user(session)
+      Map.get(session, "user")
     end)
   end
 
@@ -110,9 +111,7 @@ defmodule GrasstubeWeb.LiveAuth do
         socket =
           socket
           |> put_flash(:error, "Bad password")
-          |> push_redirect(
-            to: GrasstubeWeb.Router.Helpers.live_path(socket, GrasstubeWeb.AuthLive, room)
-          )
+          |> push_redirect(to: Routes.live_path(socket, GrasstubeWeb.AuthLive, room))
 
         {:halt, socket}
       end
@@ -126,9 +125,7 @@ defmodule GrasstubeWeb.LiveAuth do
            not ChatAgent.mod?(chat, socket.assigns.current_user) do
         socket =
           socket
-          |> push_redirect(
-            to: GrasstubeWeb.Router.Helpers.live_path(socket, GrasstubeWeb.AuthLive, room)
-          )
+          |> push_redirect(to: Routes.live_path(socket, GrasstubeWeb.AuthLive, room))
 
         {:halt, socket}
       else

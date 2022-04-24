@@ -1,6 +1,12 @@
 <%= form_tag(Routes.user_path(@socket, :sign_in)) do %>
 <%= tag(:input, type: "text", name: "username", placeholder: "Username") %>
 <%= tag(:input, type: "password", name: "password", placeholder: "Password") %>
+
+<div>
+<%= label("remember_me", "Keep me logged in for 60 days") %>
+<%= tag(:input, type: "checkbox", name: "remember_me") %>
+</div>
+
 <%= submit("Sign In") %>
 <% end %>
 

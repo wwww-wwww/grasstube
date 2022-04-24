@@ -1,6 +1,8 @@
 defmodule GrasstubeWeb.Router do
   use GrasstubeWeb, :router
 
+  import GrasstubeWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,22 +10,11 @@ defmodule GrasstubeWeb.Router do
     plug :put_root_layout, {GrasstubeWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_user
   end
 
   pipeline :api do
     plug :accepts, ["json"]
-  end
-
-  pipeline :auth do
-    plug Grasstube.Pipeline
-  end
-
-  pipeline :logged_in do
-    plug Guardian.Plug.EnsureAuthenticated
-  end
-
-  pipeline :logged_out do
-    plug Guardian.Plug.EnsureNotAuthenticated
   end
 
   pipeline :room_exists do
@@ -35,13 +26,14 @@ defmodule GrasstubeWeb.Router do
   end
 
   scope "/", GrasstubeWeb do
-    pipe_through [:browser, :auth]
+    pipe_through [:browser]
 
     live "/", RoomsLive
     get "/gdrive", PageController, :gdrive
 
     scope "/r" do
       pipe_through :room_exists
+
       live "/:room/auth", AuthLive
 
       scope "/" do
@@ -53,7 +45,8 @@ defmodule GrasstubeWeb.Router do
     end
 
     scope "/" do
-      pipe_through :logged_out
+      pipe_through :redirect_if_user_is_authenticated
+
       live "/sign_in", SignInLive
       post "/sign_in", UserController, :sign_in
 
@@ -65,11 +58,13 @@ defmodule GrasstubeWeb.Router do
     live "/u/:username", UserLive
 
     scope "/" do
-      pipe_through :logged_in
+      pipe_through :require_authenticated_user
+
       live "/create_room", CreateRoomLive
 
       scope "/" do
         pipe_through [:room_exists, :room_auth]
+
         live "/r/:room/edit", EditRoomLive
       end
 
@@ -82,7 +77,7 @@ defmodule GrasstubeWeb.Router do
 
     scope "/api" do
       pipe_through :api
-      post "/auth", UserController, :auth
+
       get "/list_rooms", PageController, :list_rooms
       get "/emotes/r/:room", PageController, :emotes
       get "/emotes/u/:username", UserController, :emotes_json

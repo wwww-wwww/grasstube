@@ -18,9 +18,11 @@ defmodule Grasstube.DefaultRooms do
     chat = Grasstube.ProcessRegistry.lookup("jade room", :chat)
     ChatAgent.add_mod(chat, "clara")
     ChatAgent.add_mod(chat, "mathguy2357")
+    ChatAgent.add_mod(chat, "cactus")
     ChatAgent.add_emotelist(chat, "w")
     ChatAgent.add_emotelist(chat, "clara")
     ChatAgent.add_emotelist(chat, "mathguy2357")
+    ChatAgent.add_emotelist(chat, "cactus")
 
     case File.read("scripts/room.js") do
       {:ok, script} -> ChatAgent.set_script(chat, :room, script)

@@ -47,24 +47,6 @@ defmodule GrasstubeWeb.UserSocket do
   channel("playlist:*", GrasstubeWeb.PlaylistChannel)
   channel("polls:*", GrasstubeWeb.PollsChannel)
 
-  def connect(%{"token" => token}, socket, _) do
-    case Guardian.Phoenix.Socket.authenticate(socket, Grasstube.Guardian, token) do
-      {:ok, authed_socket} ->
-        socket_id = new_id()
-
-        user = Guardian.Phoenix.Socket.current_resource(authed_socket)
-
-        {:ok,
-         authed_socket
-         |> assign(:socket_id, socket_id)
-         |> assign(:user_id, user.username)
-         |> assign(:user, user)}
-
-      _ ->
-        :error
-    end
-  end
-
   def connect(_, socket, _) do
     socket_id = new_id()
 

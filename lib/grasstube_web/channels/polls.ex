@@ -62,10 +62,8 @@ defmodule GrasstubeWeb.PollsChannel do
     if not Map.has_key?(presence, socket.assigns.user_id) do
       "polls:" <> room_name = socket.topic
 
-      if not Guardian.Phoenix.Socket.authenticated?(socket) do
-        ProcessRegistry.lookup(room_name, :polls)
-        |> PollsAgent.remove_vote(socket.id)
-      end
+      ProcessRegistry.lookup(room_name, :polls)
+      |> PollsAgent.remove_vote(socket.id)
     end
   end
 

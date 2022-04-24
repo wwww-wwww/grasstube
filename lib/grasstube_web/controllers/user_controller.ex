@@ -1,67 +1,31 @@
 defmodule GrasstubeWeb.UserController do
   use GrasstubeWeb, :controller
 
-  alias Grasstube.{Emote, Guardian, ProcessRegistry, Repo, User}
+  alias Grasstube.{Accounts, Emote, ProcessRegistry, Repo, User}
+  alias GrasstubeWeb.UserAuth
 
-  def sign_in(conn, %{"username" => username, "password" => password}) do
-    case Repo.get_by(User, username: username |> to_string() |> String.downcase()) do
-      nil ->
-        conn
-        |> put_flash(:error, "Incorrect username or password")
-        |> redirect(to: Routes.user_path(conn, :sign_in))
-
-      user ->
-        if Bcrypt.verify_pass(password |> to_string(), user.password) do
-          conn
-          |> Guardian.Plug.sign_in(user)
-          |> redirect(to: Routes.live_path(conn, GrasstubeWeb.RoomsLive))
-        else
-          conn
-          |> put_flash(:error, "Incorrect username or password")
-          |> redirect(to: Routes.user_path(conn, :sign_in))
-        end
-    end
-  end
-
-  def auth(conn, %{"username" => username, "password" => password}) do
-    case Repo.get_by(User, username: username |> to_string() |> String.downcase()) do
-      nil ->
-        conn
-        |> put_status(200)
-        |> json(%{success: false})
-
-      user ->
-        if Bcrypt.verify_pass(password |> to_string(), user.password) do
-          token =
-            conn
-            |> Guardian.Plug.sign_in(user)
-            |> Guardian.Plug.current_token()
-
-          conn
-          |> put_status(200)
-          |> json(%{success: true, token: token})
-        else
-          conn
-          |> put_status(200)
-          |> json(%{success: false})
-        end
+  def sign_in(conn, %{"username" => username, "password" => password} = user_params) do
+    if user = Accounts.get_user_by_username_and_password(username, password) do
+      UserAuth.log_in_user(conn, user, user_params)
+    else
+      conn
+      |> put_flash(:error, "Incorrect username or password")
+      |> redirect(to: Routes.user_path(conn, :sign_in))
     end
   end
 
   def sign_out(conn, _params) do
     conn
-    |> Guardian.Plug.sign_out()
-    |> redirect(to: Routes.live_path(conn, GrasstubeWeb.RoomsLive))
+    |> put_flash(:info, "Logged out successfully.")
+    |> UserAuth.log_out_user()
   end
 
   def sign_up(conn, %{"username" => username, "password" => password}) do
-    User.changeset(%User{}, %{username: username, password: password})
-    |> Repo.insert()
-    |> case do
+    case Accounts.register_user(%{username: username, password: password}) do
       {:ok, user} ->
         conn
-        |> Guardian.Plug.sign_in(user)
-        |> redirect(to: Routes.live_path(conn, GrasstubeWeb.RoomsLive))
+        |> put_flash(:info, "User created successfully.")
+        |> UserAuth.log_in_user(user)
 
       {:error, changeset} ->
         errors =
@@ -79,7 +43,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def add_emote(conn, %{"emote" => emote, "url" => url}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns.current_user
 
     new_emote =
       Ecto.build_assoc(user, :emotes,
@@ -98,7 +62,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def import_emotes(conn, %{"json" => json}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns.current_user
 
     case Jason.decode(json) do
       {:ok, emotes} ->
@@ -123,7 +87,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def delete_emote(conn, %{"id" => emote_id}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns.current_user
 
     case Repo.get(Emote, emote_id) do
       nil ->
@@ -156,7 +120,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def create_room(conn, %{"room_name" => room_name, "room_password" => room_password}) do
-    case Guardian.Plug.current_resource(conn) do
+    case conn.assigns.current_user do
       nil ->
         put_flash(conn, :error, "You must be logged in to do this.")
 
@@ -173,7 +137,7 @@ defmodule GrasstubeWeb.UserController do
   end
 
   def close_room(conn, %{"room_name" => room_name}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns.current_user
     room_id = room_name |> to_string() |> String.downcase()
 
     if room_id in ProcessRegistry.rooms_of(user) do

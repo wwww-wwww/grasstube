@@ -363,10 +363,10 @@ defmodule Grasstube.ChatAgent do
 
   def mod?(pid, user) when is_bitstring(user), do: get_mods(pid) |> Enum.any?(&(&1 == user))
 
-  def mod?(pid, user) when not is_nil(user),
+  def mod?(pid, %{username: username}) when is_bitstring(username),
     do:
-      get_admin(pid) == user.username or
-        get_mods(pid) |> Enum.any?(&(&1 == user.username))
+      get_admin(pid) == username or
+        get_mods(pid) |> Enum.any?(&(&1 == username))
 
   def mod?(_, _), do: false
 

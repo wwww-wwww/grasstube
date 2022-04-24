@@ -8,11 +8,6 @@ config :grasstube, Grasstube.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
-config :grasstube, Grasstube.Guardian,
-  issuer: "Grasstube",
-  secret_key: "02ndGhNBaZIwERN0NTB5HJb8yT56as",
-  ttl: {30, :days}
-
 config :grasstube,
   youtube_api_keys: []
 
