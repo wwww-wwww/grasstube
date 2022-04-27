@@ -12,7 +12,6 @@ defmodule GrasstubeWeb.Endpoint do
     store: :cookie,
     key: "_grasstube_key",
     signing_salt: "gvBU6+ko",
-    max_age: 604_800
   ]
 
   socket "/live",

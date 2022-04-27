@@ -5,7 +5,7 @@ defmodule Grasstube.UserToken do
 
   @rand_size 32
 
-  @session_validity_in_days 60
+  @session_validity_in_days 365
 
   schema "users_tokens" do
     field :token, :binary
