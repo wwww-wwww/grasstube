@@ -1,17 +1,27 @@
 <style>
   main {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+  }
+  main > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
   }
 </style>
 
-<div style="width: 1000px; max-width: calc(100% - 1em);text-align: center;margin-top: 1em;">
-  <div style="margin-bottom: 1em">Google Drive requires a userscript</div>
+<div style="width: 1000px; max-width: calc(100% - 1em);">
+  <h1>Google Drive Support</h1>
 
+  <p>Google Drive requires a userscript</p>
+
+  <p>
   Install <%= link("Violentmonkey", to: "https://violentmonkey.github.io/") %>
-  <br>
-  <br>
+  </p>
+
+  <p>
   Then install the
-  <br>
   <%= link("userscript", to: Routes.static_path(@conn, "/static/gdrive.user.js")) %>
+  </p>
 </div>
