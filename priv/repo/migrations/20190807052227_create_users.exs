@@ -3,9 +3,9 @@ defmodule Grasstube.Repo.Migrations.CreateUsers do
 
   def change do
     create table(:users, primary_key: false) do
-      add :username, :string, size: 24, primary_key: true
-      add :name, :string, size: 24
-      add :nickname, :string, size: 24
+      add :username, :string, primary_key: true
+      add :name, :string
+      add :nickname, :string
       add :password, :string
 
       timestamps()

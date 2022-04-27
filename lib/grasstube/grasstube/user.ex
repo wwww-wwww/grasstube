@@ -4,10 +4,10 @@ defmodule Grasstube.User do
 
   @primary_key false
   schema "users" do
-    field :username, :string, size: 24, primary_key: true
-    field :name, :string, size: 24
-    field :nickname, :string, size: 24
-    field :password, :string
+    field :username, :string, primary_key: true
+    field :name, :string
+    field :nickname, :string
+    field :password, :string, redact: true
 
     has_many :emotes, Grasstube.Emote, references: :username
 

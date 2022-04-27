@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :grasstube, Grasstube.Repo,
   username: "grasstube",
