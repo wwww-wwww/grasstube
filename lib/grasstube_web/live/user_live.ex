@@ -24,7 +24,6 @@ end
 
 defmodule GrasstubeWeb.UserLive do
   use GrasstubeWeb, :live_view
-  on_mount GrasstubeWeb.LiveAuth
 
   alias Grasstube.{Emote, User, Repo}
 
@@ -123,7 +122,6 @@ end
 
 defmodule GrasstubeWeb.CreateRoomLive do
   use GrasstubeWeb, :live_view
-  on_mount GrasstubeWeb.LiveAuth
 
   def render(assigns) do
     GrasstubeWeb.UserView.render("create_room.html", assigns)

@@ -1,6 +1,6 @@
 defmodule GrasstubeWeb.ChatOnlyLive do
   use GrasstubeWeb, :live_view
-  on_mount GrasstubeWeb.LiveAuth
+  on_mount GrasstubeWeb.RoomAuth
 
   def render(assigns) do
     ~L"""

@@ -1,6 +1,5 @@
 defmodule GrasstubeWeb.RoomsLive do
   use GrasstubeWeb, :live_view
-  on_mount GrasstubeWeb.LiveAuth
 
   alias Grasstube.ProcessRegistry
 

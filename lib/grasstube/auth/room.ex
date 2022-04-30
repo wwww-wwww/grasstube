@@ -37,12 +37,13 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
 
   def call(
         %{
-          assigns: %{chat: chat},
           params: %{"room" => room, "password" => password},
           private: %{phoenix_live_view: {view, _, _}}
         } = conn,
         _opts
       ) do
+    chat = Grasstube.ProcessRegistry.lookup(room, :chat)
+
     if not ChatAgent.check_password(chat, password) do
       conn
       |> put_flash(:target, view)
@@ -54,12 +55,14 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
 
   def call(
         %{
-          assigns: %{chat: chat, current_user: current_user},
+          assigns: %{current_user: current_user},
           params: %{"room" => room},
           private: %{phoenix_live_view: {view, _, _}}
         } = conn,
         _opts
       ) do
+    chat = Grasstube.ProcessRegistry.lookup(room, :chat)
+
     if ChatAgent.password?(chat) and not ChatAgent.mod?(chat, current_user) do
       conn
       |> put_flash(:target, view)
@@ -70,17 +73,11 @@ defmodule GrasstubeWeb.Plug.RoomAuth do
   end
 end
 
-defmodule GrasstubeWeb.LiveAuth do
+defmodule GrasstubeWeb.RoomAuth do
   import Phoenix.LiveView
 
   alias Grasstube.ChatAgent
   alias GrasstubeWeb.Router.Helpers, as: Routes
-
-  def assign_user(socket, session) do
-    assign_new(socket, :current_user, fn ->
-      Map.get(session, "user")
-    end)
-  end
 
   def check_room(socket, room, fun) do
     case Grasstube.ProcessRegistry.lookup(room, :chat) do
@@ -100,10 +97,10 @@ defmodule GrasstubeWeb.LiveAuth do
   def on_mount(
         :default,
         %{"room" => room},
-        session,
+        _session,
         %{assigns: %{flash: %{"password" => password}}} = socket
       ) do
-    assign_user(socket, session)
+    socket
     |> check_room(room, fn socket, chat ->
       if ChatAgent.password?(chat) and ChatAgent.check_password(chat, password) do
         {:cont, assign(socket, :chat, chat)}
@@ -118,8 +115,8 @@ defmodule GrasstubeWeb.LiveAuth do
     end)
   end
 
-  def on_mount(:default, %{"room" => room}, session, socket) do
-    assign_user(socket, session)
+  def on_mount(:default, %{"room" => room}, _session, socket) do
+    socket
     |> check_room(room, fn socket, chat ->
       if ChatAgent.password?(chat) and
            not ChatAgent.mod?(chat, socket.assigns.current_user) do
@@ -134,7 +131,7 @@ defmodule GrasstubeWeb.LiveAuth do
     end)
   end
 
-  def on_mount(:default, _map, session, socket) do
-    {:cont, assign_user(socket, session)}
+  def on_mount(:default, _map, _session, socket) do
+    {:cont, socket}
   end
 end

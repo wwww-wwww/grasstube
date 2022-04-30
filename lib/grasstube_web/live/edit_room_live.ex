@@ -1,6 +1,6 @@
 defmodule GrasstubeWeb.EditRoomLive do
   use GrasstubeWeb, :live_view
-  on_mount GrasstubeWeb.LiveAuth
+  on_mount GrasstubeWeb.RoomAuth
 
   alias Grasstube.ChatAgent
 

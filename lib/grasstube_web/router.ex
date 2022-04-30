@@ -26,54 +26,56 @@ defmodule GrasstubeWeb.Router do
   end
 
   scope "/", GrasstubeWeb do
-    pipe_through [:browser]
+    pipe_through :browser
 
-    live "/", RoomsLive
-    get "/gdrive", PageController, :gdrive
+    live_session :default, on_mount: GrasstubeWeb.UserAuth do
+      live "/", RoomsLive
+      get "/gdrive", PageController, :gdrive
 
-    scope "/r" do
-      pipe_through :room_exists
+      scope "/r" do
+        live "/:room/auth", AuthLive
 
-      live "/:room/auth", AuthLive
+        scope "/" do
+          pipe_through :room_auth
+
+          live "/:room/chat", ChatOnlyLive
+          live "/:room/video", VideoOnlyLive
+          live "/:room", RoomLive
+        end
+
+        scope "/" do
+          pipe_through :require_authenticated_user
+
+          live "/:room/edit", EditRoomLive
+        end
+      end
 
       scope "/" do
-        pipe_through :room_auth
-        live "/:room/chat", ChatOnlyLive
-        live "/:room/video", VideoOnlyLive
-        live "/:room", RoomLive
+        pipe_through :redirect_if_user_is_authenticated
+
+        live "/sign_in", SignInLive
+        post "/sign_in", UserController, :sign_in
+
+        live "/sign_up", SignUpLive
+        post "/sign_up", UserController, :sign_up
       end
-    end
 
-    scope "/" do
-      pipe_through :redirect_if_user_is_authenticated
+      live "/u/:username", UserLive
 
-      live "/sign_in", SignInLive
-      post "/sign_in", UserController, :sign_in
+      scope "/" do
+        pipe_through :require_authenticated_user
 
-      live "/sign_up", SignUpLive
-      post "/sign_up", UserController, :sign_up
+        live "/create_room", CreateRoomLive
+
+        post "/add_emote", UserController, :add_emote
+        post "/import_emotes", UserController, :import_emotes
+        post "/delete_emote", UserController, :delete_emote
+        post "/create_room", UserController, :create_room
+        post "/close_room", UserController, :close_room
+      end
     end
 
     get "/sign_out", UserController, :sign_out
-    live "/u/:username", UserLive
-
-    scope "/" do
-      pipe_through :require_authenticated_user
-
-      live "/create_room", CreateRoomLive
-
-      scope "/" do
-        pipe_through [:room_exists, :room_auth]
-
-        live "/r/:room/edit", EditRoomLive
-      end
-
-      post "/add_emote", UserController, :add_emote
-      post "/import_emotes", UserController, :import_emotes
-      post "/delete_emote", UserController, :delete_emote
-      post "/create_room", UserController, :create_room
-      post "/close_room", UserController, :close_room
-    end
 
     scope "/api" do
       pipe_through :api

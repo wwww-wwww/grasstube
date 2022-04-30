@@ -12,6 +12,17 @@ defmodule GrasstubeWeb.UserAuth do
   @remember_me_cookie "_live_booru_web_user_remember_me"
   @remember_me_options [sign: true, max_age: @max_age, same_site: "Lax"]
 
+  def on_mount(:default, _, %{"user_token" => token}, socket) do
+    {:cont,
+     Phoenix.LiveView.assign_new(socket, :current_user, fn ->
+       Accounts.get_user_by_session_token(token)
+     end)}
+  end
+
+  def on_mount(:default, _, _, socket) do
+    {:cont, Phoenix.LiveView.assign(socket, :current_user, nil)}
+  end
+
   @doc """
   Logs the user in.
 
@@ -30,7 +41,6 @@ defmodule GrasstubeWeb.UserAuth do
 
     conn
     |> renew_session()
-    |> put_session(:user, user)
     |> put_session(:user_token, token)
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
     |> maybe_write_remember_me_cookie(token, params)
