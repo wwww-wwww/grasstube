@@ -8,8 +8,8 @@
 
     #chat_input,
     #chat_btn_emotes {
-      width: 2em;
-      height: 2em;
+      width: 2rem;
+      height: 2rem;
     }
 
     #chat_btn_emotes {
@@ -114,6 +114,7 @@
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
 
     img {
       padding: 4px;
