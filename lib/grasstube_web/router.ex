@@ -40,6 +40,7 @@ defmodule GrasstubeWeb.Router do
 
           live "/:room/chat", ChatOnlyLive
           live "/:room/video", VideoOnlyLive
+          live "/:room/no_video", NoVideoLive
           live "/:room", RoomLive
         end
 
