@@ -90,7 +90,7 @@ const hooks = {
       window.__chat = this
       chat_state.chat = this
 
-      const room_name = get_meta("room")
+      const room_name = get_meta("chat_room")
 
       document.title = room_name
 
@@ -231,7 +231,7 @@ const hooks = {
       }
 
       player_state.player.on_seek = t => {
-        this.pushEvent("seek", { time: Math.round(t) })
+        this.pushEvent("seek", { time: t })
       }
 
       player_state.player.on_toggle_playing = playing => {
@@ -273,9 +273,12 @@ const hooks = {
         } else {
           player_state.player.set_video(data.type, videos, data.sub)
         }
+
+        if (data.playing) this.on_playing(data)
+        if (data.t) this.on_seek(data)
       })
 
-      this.handleEvent("playing", data => {
+      this.on_playing = data => {
         if (player_state.player.playing != data.playing) {
           console.log("video:playing", data)
           player_state.player.show_osd(data.playing ? "Play" : "Pause")
@@ -288,7 +291,9 @@ const hooks = {
           }
         }
         player_state.player.set_playing(data.playing)
-      })
+      }
+
+      this.handleEvent("playing", data => this.on_playing(data))
 
       this.handleEvent("time", data => {
         if (player_state.player.playing) {
@@ -304,13 +309,15 @@ const hooks = {
         }
       })
 
-      this.handleEvent("seek", data => {
+      this.on_seek = data => {
         if (Math.abs(data.t - player_state.player.current_time()) > 0.1) {
           console.log("video:seek", data)
           player_state.player.show_osd(`${seconds_to_hms(data.t, true)}`)
           player_state.player.seek(data.t)
         }
-      })
+      }
+
+      this.handleEvent("seek", data => this.on_seek(data))
 
       fetch("https://res.cloudinary.com/grass/raw/upload/v1649923139/fonts.json")
         .then(res => res.json())

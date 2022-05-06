@@ -45,7 +45,11 @@ function unescape_html(unsafe) {
 }
 
 function get_meta(meta_name) {
-  return document.querySelector(`meta[name='${meta_name}']`).getAttribute("content")
+  try {
+    return document.querySelector(`meta[name='${meta_name}']`).getAttribute("content")
+  } catch {
+    return null
+  }
 }
 
 export { pad, enter, seconds_to_hms, unescape_html, get_meta, create_element }

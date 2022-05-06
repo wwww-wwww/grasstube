@@ -1,3 +1,3 @@
-<meta name="controls" content={@controls}>
+<meta name="controls" content={if @controls, do: "true", else: "false"}>
 
 <div id="player" phx-hook="video" phx-update="ignore"></div>

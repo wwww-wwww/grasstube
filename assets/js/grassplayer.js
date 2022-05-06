@@ -392,6 +392,7 @@ class GrassPlayer {
   play() {
     this.btn_play.textContent = "pause"
     if (this.current_video.yt) {
+      if (!this.current_video.yt.playVideo) return
       this.current_video.yt.playVideo()
     } else if (this.video.paused) {
       this.video.play()
@@ -401,6 +402,7 @@ class GrassPlayer {
   pause() {
     this.btn_play.textContent = "play_arrow"
     if (this.current_video.yt) {
+      if (!this.current_video.yt.pauseVideo) return
       this.current_video.yt.pauseVideo()
     } else if (!this.video.paused) {
       this.video.pause()
@@ -519,6 +521,8 @@ class GrassPlayer {
 
   set_controls(controls) {
     this.has_controls = controls
+    this.btn_play.disabled = controls
+    this.btn_next.disabled = controls
     this.btn_play.style.display = controls ? "" : "none"
     this.btn_next.style.display = controls ? "" : "none"
     this.seekbar.classList.toggle("seekbar_controls", controls)

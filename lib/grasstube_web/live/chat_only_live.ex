@@ -11,7 +11,7 @@ defmodule GrasstubeWeb.ChatOnlyLive do
     """
   end
 
-  def mount(%{"room" => room}, _session, socket) do
-    {:ok, assign(socket, room: room)}
+  def mount(_params, _session, socket) do
+    {:ok, socket}
   end
 end

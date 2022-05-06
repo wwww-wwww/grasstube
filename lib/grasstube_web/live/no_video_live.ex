@@ -6,11 +6,7 @@ defmodule GrasstubeWeb.NoVideoLive do
     GrasstubeWeb.PageView.render("no_video_live.html", assigns)
   end
 
-  def mount(%{"room" => room}, _session, socket) do
-    socket =
-      socket
-      |> assign(room: room)
-
+  def mount(_params, _session, socket) do
     {:ok, socket}
   end
 end

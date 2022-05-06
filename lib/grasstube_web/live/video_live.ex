@@ -42,12 +42,11 @@ defmodule GrasstubeWeb.VideoLive do
               url: video.url,
               sub: video.sub,
               alts: video.alts,
-              duration: video.duration
+              duration: video.duration,
+              playing: playing,
+              t: time
             }
           })
-
-          send(self(), %{event: "seek", payload: %{t: time}})
-          send(self(), %{event: "playing", payload: %{playing: playing}})
       end
     end
 

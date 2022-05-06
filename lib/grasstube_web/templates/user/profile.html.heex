@@ -33,7 +33,7 @@
 		<%= img_tag(url, alt: emote, title: emote, class: "emote") %>
     <span>:<%= emote %>:</span>
     <%= if @is_current_user do %>
-      <button phx-click="emote_delete" phx-value-id="<%= id %>">Delete</button>
+      <button phx-click="emote_delete" phx-value-id={id}>Delete</button>
 		<% end %>
 	</div>
 <% end %>

@@ -1,8 +1,8 @@
 <%= if @script do %>
-<meta name="room_script" content={@script}>
+<meta phx-update="ignore" id="room_script" name="room_script" content={@script}>
 <% end %>
 
-<div phx-update="ignore" phx-hook="room" id="maincontent">
+<div phx-hook="room" id="maincontent">
 
 <%= live_render(@socket, GrasstubeWeb.VideoLive,
   session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
@@ -15,7 +15,7 @@
   container: {:div, class: "ChatLive can_hide hidden"}
 ) %>
 
-<div id="chat_danmaku"></div>
+<div id="chat_danmaku" phx-update="ignore"></div>
 
 </div>
 
