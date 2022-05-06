@@ -14,7 +14,7 @@
 <div>
   <h2>Public Controls</h2>
   <span>
-    <input type="checkbox" phx-click="public_controls" <%= if @chat_state.public_controls do %>checked<% end %>>
+    <input type="checkbox" phx-click="public_controls" checked={@chat_state.public_controls}>
   </span>
 </div>
 
@@ -24,7 +24,7 @@
     <%= for username <- @chat_state.mods do %>
     <li>
       <%= username %>
-      <button class="icon square" phx-click="op_remove" value="<%= username %>">clear</button>
+      <button class="icon square" phx-click="op_remove" value={username}>clear</button>
     </li>
     <% end %>
 
@@ -53,7 +53,7 @@
     <%= for username <- @chat_state.emotelists do %>
     <li>
       <%= username %>
-      <button class="icon square" phx-click="emotelist_remove" value="<%= username %>">clear</button>
+      <button class="icon square" phx-click="emotelist_remove" value={username}>clear</button>
     </li>
     <% end %>
 
@@ -75,7 +75,7 @@
         <textarea name="script"><%= script %></textarea>
         <span>
           <%= submit("save", class: "icon square") %>
-          <button form="" class="icon square" phx-click="script_remove" value="<%= key %>">clear</button>
+          <button form="" class="icon square" phx-click="script_remove" value={key}>clear</button>
         </span>
       </div>
     </form>

@@ -1,6 +1,6 @@
 <div class="chat_container" id="chat_container" phx-hook="chat">
 
-<meta name="room" content="<%= @room %>">
+<meta name="room" content={@room}>
 
 <div class="top">
   <div id="chat_userlist">
@@ -21,7 +21,7 @@
 
 <div id="chat_emotes" phx-update="ignore" style="display: none">
   <%= for %{emote: emote, url: url} <- @emotes do %>
-  <img src="<%= url %>" alt="<%= emote %>" title="<%= emote %>">
+  <img src={url} alt={emote} title={emote}>
   <% end %>
 </div>
 

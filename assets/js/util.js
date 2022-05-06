@@ -45,15 +45,7 @@ function unescape_html(unsafe) {
 }
 
 function get_meta(meta_name) {
-  const metas = [...document.getElementsByTagName('meta')]
-
-  for (const meta of metas) {
-    if (meta.getAttribute("name") == meta_name) {
-      return meta.getAttribute("content")
-    }
-  }
-
-  return ""
+  return document.querySelector(`meta[name='${meta_name}']`).getAttribute("content")
 }
 
 export { pad, enter, seconds_to_hms, unescape_html, get_meta, create_element }

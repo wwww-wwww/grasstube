@@ -6,8 +6,7 @@ import GrassPlayer from "./grassplayer"
 import Text from "./danmaku"
 import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
-
-const csrfToken = get_meta("csrf-token")
+import topbar from "../vendor/topbar"
 
 function autohide(msg) {
   msg.expire = null
@@ -225,6 +224,7 @@ const hooks = {
         [],
         get_meta("controls") == "true"
       )
+      window.grassplayer = player_state.player
 
       if (player_state.fullscreen_element) {
         player_state.player.fullscreen_element = player_state.fullscreen_element
@@ -707,9 +707,23 @@ const hooks = {
   }
 }
 
+topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" })
+let topBarScheduled = undefined
+window.addEventListener("phx:page-loading-start", () => {
+  if (!topBarScheduled) {
+    topBarScheduled = setTimeout(() => topbar.show(), 120)
+  }
+})
+
+window.addEventListener("phx:page-loading-stop", () => {
+  clearTimeout(topBarScheduled)
+  topBarScheduled = undefined
+  topbar.hide()
+})
+
 const liveSocket = new LiveSocket("/live", Socket, {
   hooks: hooks,
-  params: { _csrf_token: csrfToken }
+  params: { _csrf_token: get_meta("csrf-token") }
 })
-window.liveSocket = liveSocket
 liveSocket.connect()
+window.liveSocket = liveSocket

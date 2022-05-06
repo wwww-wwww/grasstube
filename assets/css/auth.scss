@@ -1,7 +1,9 @@
-main > .AuthLive,
-main > .AuthLive form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1em;
+.AuthLive {
+  main > div,
+  main > div form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1em;
+  }
 }

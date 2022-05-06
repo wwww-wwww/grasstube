@@ -8,13 +8,13 @@
     <span class="title">
       <span><%= title %></span>
       <%= if @controls do %>
-      <button class="icon" phx-click="remove" value="<%= poll_id %>">clear</button>
+      <button class="icon" phx-click="remove" value={poll_id}>clear</button>
       <% end %>
     </span>
     <%= for %{name: name, users: users} <- choices do %>
       <div>
         <span><%= name %></span>
-        <button phx-value-id="<%= poll_id %>" value="<%= name %>" phx-click="vote" <%= if @user_id in users do %>disabled<% end %>>
+        <button phx-value-id={poll_id} value={name} phx-click="vote" disabled={@user_id in users}>
           <%= length(users) %>
         </button>
       </div>

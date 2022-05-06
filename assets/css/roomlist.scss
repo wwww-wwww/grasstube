@@ -1,61 +1,61 @@
 .RoomsLive > main {
   overflow-y: auto;
-}
 
-main > .RoomsLive {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5em;
-
-  .rooms {
+  > div {
+    height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 0.5em;
-    align-items: center;
-    flex: 1;
-  }
-
-  .btn_room {
-    font-family: "Google Sans", sans-serif;
-    text-decoration: none;
-    padding: 0.25em 0.5em;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: var(--border-radius);
-    width: 12em;
-    max-width: 100%;
-    display: flex;
     align-items: center;
     gap: 0.5em;
 
-    > .room_name {
+    .rooms {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+      align-items: center;
       flex: 1;
     }
 
-    > .user_count::after {
-      content: "🙍";
-    }
-  }
-
-  .btn_room.password {
-    > .room_name {
+    .btn_room {
+      font-family: "Google Sans", sans-serif;
+      text-decoration: none;
+      padding: 0.25em 0.5em;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: var(--border-radius);
+      width: 12em;
+      max-width: 100%;
       display: flex;
       align-items: center;
-      gap: 0.25em;
+      gap: 0.5em;
+
+      > .room_name {
+        flex: 1;
+      }
+
+      > .user_count::after {
+        content: "🙍";
+      }
     }
 
-    > .room_name::before {
-      content: "🔒";
+    .btn_room.password {
+      > .room_name {
+        display: flex;
+        align-items: center;
+        gap: 0.25em;
+      }
+
+      > .room_name::before {
+        content: "🔒";
+      }
     }
-  }
 
-  .footer {
-    font-size: 0.9em;
-    padding-bottom: 1em;
-  }
+    .footer {
+      font-size: 0.9em;
+      padding-bottom: 1em;
+    }
 
-  .footer a {
-    color: rgba(255, 255, 255, 0.6);
+    .footer a {
+      color: rgba(255, 255, 255, 0.6);
+    }
   }
 }

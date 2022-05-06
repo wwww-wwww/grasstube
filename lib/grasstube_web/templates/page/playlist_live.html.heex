@@ -1,4 +1,4 @@
-<div style="display: none;" phx-update="ignore">
+<div style="display: none;" phx-update="ignore" id="playlist_modal">
   <div id="playlist_tab1">
     <div>
       <input id="playlist_add_title" placeholder="Title (auto)"/>
@@ -19,7 +19,7 @@
 </div>
 
 <%= if @script do %>
-<meta name="playlist_script" content="<%= @script %>">
+<meta name="playlist_script" content={@script}>
 <% end %>
 
 <div class="playlist_header">
@@ -27,35 +27,36 @@
     <span><%= @current_index %> / <%= length(@playlist_items) %></span>
     <span>
       Repeat:
-      <span
         <%= if @controls do %>
-          class="clickable" phx-click="cycle_playlist_mode" phx-value-mode="<%= @repeat_mode %>"
-        <% end %>>
-        <%= text_repeat_mode(@repeat_mode) %>
-      </span>
+          <span class="clickable" phx-click="cycle_playlist_mode" phx-value-mode={@repeat_mode}>
+            <%= text_repeat_mode(@repeat_mode) %>
+          </span>
+        <% else %>
+          <span><%= text_repeat_mode(@repeat_mode) %></span>
+        <% end %>
     </span>
   </div>
   <div>
     <span><%= seconds_to_string(@duration) %></span>
-    <button id="playlist_btn_show" class="icon square" <%= if not @controls do %>style="display: none;"<% end %>>add</button>
+    <button id="playlist_btn_show" class="icon square" style={if not @controls, do: "display: none;", else: ""}>add</button>
   </div>
 </div>
 
 <div id="playlist_container" phx-hook="playlist">
   <%= for item <- @playlist_items do %>
-  <div <%= if item.id == @current do %>class="selected"<% end %> data-id="<%= item.id %>">
+  <div class={if item.id == @current, do: "selected", else: ""} data-id={item.id}>
     <%= if @controls do %>
-    <button class="icon square" value="<%= item.id %>" phx-click="remove">clear</button>
+    <button class="icon square" value={item.id} phx-click="remove">clear</button>
     <% end %>
 
-    <a class="title" <%= if String.length(item.url) > 0 do %> href="<%= item.url %>" <% end %>><%= item.title %></a>
+    <a class="title" href={if String.length(item.url) > 0, do: item.url, else: ""}><%= item.title %></a>
 
     <%= if item.duration != :unset do %>
     <span><%= seconds_to_string(item.duration) %></span>
     <% end %>
 
     <%= if @controls do %>
-    <button value="<%= item.id %>" phx-click="set">Set</button>
+    <button value={item.id} phx-click="set">Set</button>
     <button class="playlist_drag icon">menu</button>
     <% end %>
   </div>
