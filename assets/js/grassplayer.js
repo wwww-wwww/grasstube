@@ -521,8 +521,6 @@ class GrassPlayer {
 
   set_controls(controls) {
     this.has_controls = controls
-    this.btn_play.disabled = controls
-    this.btn_next.disabled = controls
     this.btn_play.style.display = controls ? "" : "none"
     this.btn_next.style.display = controls ? "" : "none"
     this.seekbar.classList.toggle("seekbar_controls", controls)
@@ -841,6 +839,7 @@ class GrassPlayer {
     this.btn_play.disabled = true
 
     this.btn_play.addEventListener("click", () => {
+      if (!this.has_controls) return
       const playing = this.btn_play.textContent == "play_arrow"
       if (playing) {
         this.btn_play.textContent = "pause"
