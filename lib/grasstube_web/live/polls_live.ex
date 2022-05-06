@@ -9,10 +9,13 @@ defmodule GrasstubeWeb.PollsLive do
 
   def mount(_params, %{"room" => room, "current_user" => current_user, "chat" => chat}, socket) do
     topic = "polls:#{room}"
-    if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
-    if current_user do
-      GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+    if connected?(socket) do
+      GrasstubeWeb.Endpoint.subscribe(topic)
+
+      if current_user do
+        GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+      end
     end
 
     user_id =

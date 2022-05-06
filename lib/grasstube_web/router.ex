@@ -17,14 +17,6 @@ defmodule GrasstubeWeb.Router do
     plug :accepts, ["json"]
   end
 
-  pipeline :room_exists do
-    plug GrasstubeWeb.Plug.RoomExists
-  end
-
-  pipeline :room_auth do
-    plug GrasstubeWeb.Plug.RoomAuth
-  end
-
   scope "/", GrasstubeWeb do
     pipe_through :browser
 
@@ -36,8 +28,6 @@ defmodule GrasstubeWeb.Router do
         live "/:room/auth", AuthLive
 
         scope "/" do
-          pipe_through :room_auth
-
           live "/:room/chat", ChatOnlyLive
           live "/:room/video", VideoOnlyLive
           live "/:room/no_video", NoVideoLive

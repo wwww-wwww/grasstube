@@ -13,21 +13,28 @@ defmodule GrasstubeWeb.ChatLive do
         socket
       ) do
     topic = "chat:#{room}"
-    if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
     user_id =
-      if is_nil(current_user) do
-        "$" <> GrasstubeWeb.UserSocket.new_id()
+      if connected?(socket) do
+        GrasstubeWeb.Endpoint.subscribe(topic)
+
+        user_id =
+          if is_nil(current_user) do
+            "$" <> GrasstubeWeb.UserSocket.new_id()
+          else
+            current_user.username
+          end
+
+        meta =
+          if not is_nil(current_user),
+            do: %{nickname: current_user.nickname, username: current_user.username},
+            else: %{nickname: "anon#{user_id |> String.slice(1..-1)}"}
+
+        Presence.track(self(), topic, user_id, meta)
+        user_id
       else
-        current_user.username
+        nil
       end
-
-    meta =
-      if not is_nil(current_user),
-        do: %{nickname: current_user.nickname, username: current_user.username},
-        else: %{nickname: "anon#{user_id |> String.slice(1..-1)}"}
-
-    Presence.track(self(), topic, user_id, meta)
 
     socket =
       socket

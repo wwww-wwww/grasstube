@@ -9,10 +9,13 @@ defmodule GrasstubeWeb.VideoLive do
 
   def mount(_params, %{"room" => room, "current_user" => current_user, "chat" => chat}, socket) do
     topic = "video:#{room}"
-    if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(topic)
 
-    if current_user do
-      GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+    if connected?(socket) do
+      GrasstubeWeb.Endpoint.subscribe(topic)
+
+      if current_user do
+        GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+      end
     end
 
     socket =
@@ -23,27 +26,29 @@ defmodule GrasstubeWeb.VideoLive do
       |> assign(video: ProcessRegistry.lookup(room, :video))
       |> assign(controls: ChatAgent.controls?(chat, current_user))
 
-    socket.assigns.video
-    |> VideoAgent.get_status()
-    |> case do
-      {:nothing, _, _} ->
-        nil
+    if connected?(socket) do
+      socket.assigns.video
+      |> VideoAgent.get_status()
+      |> case do
+        {:nothing, _, _} ->
+          nil
 
-      {video, time, playing} ->
-        send(self(), %{
-          event: "setvid",
-          payload: %{
-            id: video.id,
-            type: video.type,
-            url: video.url,
-            sub: video.sub,
-            alts: video.alts,
-            duration: video.duration
-          }
-        })
+        {video, time, playing} ->
+          send(self(), %{
+            event: "setvid",
+            payload: %{
+              id: video.id,
+              type: video.type,
+              url: video.url,
+              sub: video.sub,
+              alts: video.alts,
+              duration: video.duration
+            }
+          })
 
-        send(self(), %{event: "seek", payload: %{t: time}})
-        send(self(), %{event: "playing", payload: %{playing: playing}})
+          send(self(), %{event: "seek", payload: %{t: time}})
+          send(self(), %{event: "playing", payload: %{playing: playing}})
+      end
     end
 
     {:ok, socket}
