@@ -122,3 +122,11 @@
     }
   }
 }
+
+.ChatLive.hidden {
+  #chat_messages {
+    > div:not(.visible) {
+      display: none;
+    }
+  }
+}

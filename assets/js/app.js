@@ -8,30 +8,10 @@ import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
 import topbar from "../vendor/topbar"
 
-function autohide(msg) {
-  msg.expire = null
+function autohide(msg, duration) {
+  msg.classList.toggle("visible", true)
 
-  msg.show = n => {
-    msg.classList.toggle("hidden", false)
-    if (!n) return
-
-    if (msg.expire) clearTimeout(msg.expire)
-
-    msg.expire = setTimeout(() => {
-      msg.expire = null
-      if (view_chat.classList.contains("hidden")) {
-        msg.classList.toggle("hidden", true)
-      }
-    }, n)
-  }
-
-  msg.hide = () => {
-    if (!msg.expire) {
-      msg.classList.toggle("hidden", true)
-    }
-  }
-
-  return msg
+  setTimeout(() => msg.classList.toggle("visible", false), duration)
 }
 
 class Message {
@@ -193,7 +173,6 @@ const hooks = {
     },
     destroyed() {
       delete document.windows["chat_emotes"]
-      chat_state.on_message = []
       chat_state.chat = null
       window.__chat = null
       window.removeEventListener("focus", this.focus)
@@ -514,26 +493,20 @@ const hooks = {
     toggle_chat() {
       view_chat.classList.toggle("hidden")
       if (view_chat.classList.contains("hidden")) {
-        for (const msg of chat_messages.children) {
-          msg.hide()
-        }
         btn_open_chat.textContent = "Open chat"
       } else {
-        for (const msg of chat_messages.children) {
-          msg.show()
-        }
         btn_open_chat.textContent = "Close chat"
       }
     },
     load() {
       for (const msg of chat_messages.children) {
-        autohide(msg).show(5000)
+        autohide(msg, 5000)
       }
 
       chat_state.on_message.push((msg, notify) => {
         if (notify) new Text(chat_danmaku, msg)
 
-        autohide(msg.e).show(5000)
+        autohide(msg.e, 5000)
       })
 
       chat_input.addEventListener("keydown", e => {
@@ -634,6 +607,7 @@ const hooks = {
         this.unload()
         this.unload = null
       }
+      chat_state.on_message = []
       destroy_drag()
       delete document.windows["Settings"]
       delete document.windows["chat_emotes2"]
