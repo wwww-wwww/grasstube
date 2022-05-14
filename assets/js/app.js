@@ -258,8 +258,8 @@ const hooks = {
       })
 
       this.on_playing = data => {
+        if (data.playing == undefined) return
         if (player_state.player.playing != data.playing) {
-          console.log("video:playing", data)
           player_state.player.show_osd(data.playing ? "Play" : "Pause")
           if (data.playing) {
             const offset_time = data.t + this.latency_rtt / 1000
@@ -272,19 +272,30 @@ const hooks = {
         player_state.player.set_playing(data.playing)
       }
 
-      this.handleEvent("playing", data => this.on_playing(data))
+      this.handleEvent("sync", data => {
+        console.log("video:sync", data)
 
-      this.handleEvent("time", data => {
-        if (player_state.player.playing) {
-          const offset_time = data.t + this.latency_rtt / 1000
-          if (offset_time >= player_state.player.duration()) { return }
-          if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
-            console.log("video:time offset", this.latency_rtt / 1000)
-            player_state.player.seek(offset_time)
+        this.on_playing(data)
+
+        if (data.t) {
+          if (player_state.player.playing) {
+            const offset_time = data.t + this.latency_rtt / 1000
+            if (offset_time >= player_state.player.duration()) { return }
+            if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
+              console.log("video:time offset", this.latency_rtt / 1000)
+              player_state.player.seek(offset_time)
+            }
+          } else {
+            console.log("video:time", data)
+            player_state.player.seek(data.t)
           }
-        } else {
-          console.log("video:time", data)
-          player_state.player.seek(data.t)
+        }
+
+        if (data.speed) {
+          if (data.speed != player_state.player.speed) {
+            player_state.player.show_osd(`Speed: ${data.speed}`)
+          }
+          player_state.player.set_speed(data.speed)
         }
       })
 

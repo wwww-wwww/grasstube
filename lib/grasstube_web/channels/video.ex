@@ -37,10 +37,10 @@ defmodule GrasstubeWeb.VideoChannel do
     ProcessRegistry.lookup(room_name, :video)
     |> VideoAgent.get_status()
     |> case do
-      {:nothing, _, _} ->
+      %{video: :nothing} ->
         nil
 
-      {video, time, playing} ->
+      %{video: video, time: time, playing: playing} ->
         push(socket, "setvid", %{
           id: video.id,
           type: video.type,

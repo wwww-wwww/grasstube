@@ -30,10 +30,10 @@ defmodule GrasstubeWeb.VideoLive do
       socket.assigns.video
       |> VideoAgent.get_status()
       |> case do
-        {:nothing, _, _} ->
+        %{video: :nothing} ->
           nil
 
-        {video, time, playing} ->
+        %{video: video, time: time, playing: playing} ->
           send(self(), %{
             event: "setvid",
             payload: %{
@@ -122,12 +122,8 @@ defmodule GrasstubeWeb.VideoLive do
      })}
   end
 
-  def handle_info(%{event: "playing", payload: payload}, socket) do
-    {:noreply, push_event(socket, "playing", payload)}
-  end
-
-  def handle_info(%{event: "time", payload: payload}, socket) do
-    {:noreply, push_event(socket, "time", payload)}
+  def handle_info(%{event: "sync", payload: payload}, socket) do
+    {:noreply, push_event(socket, "sync", payload)}
   end
 
   def handle_info(%{event: "seek", payload: payload}, socket) do

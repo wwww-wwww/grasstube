@@ -54,6 +54,7 @@ class GrassPlayer {
     this.cc = this.settings.cc || true
     this.on_toggle_cc = []
 
+    this.speed = 1
 
     this.video = create_element(root, "video")
     this.video.id = "video"
@@ -325,6 +326,7 @@ class GrassPlayer {
             break
           }
         }
+
         if (Object.keys(videos).length > 1) {
           this.select_quality.style.display = ""
           for (const video in videos) {
@@ -335,9 +337,13 @@ class GrassPlayer {
             }
           }
         }
+
         if (this.cc && subs.length > 0) {
           this.set_subtitles(subs)
         }
+
+        this.video.playbackRate = this.speed
+
         break
     }
   }
@@ -538,6 +544,7 @@ class GrassPlayer {
       events: {
         "onStateChange": e => {
           e.target.setVolume(this.get_volume() * 100)
+          e.target.setPlaybackRate(this.speed)
           this.update_youtube_time()
         },
         "onApiChange": e => {
@@ -1071,6 +1078,17 @@ class GrassPlayer {
     this.overlay_hide = setTimeout(() => {
       this.overlay.classList.toggle("overlay_hidden", true)
     }, 2000)
+  }
+
+  set_speed(speed) {
+    this.speed = speed
+
+    if (this.current_video.yt) {
+      if (!this.current_video.yt.setPlaybackRate) return
+      this.current_video.yt.setPlaybackRate(speed)
+    } else {
+      this.video.playbackRate = speed
+    }
   }
 }
 

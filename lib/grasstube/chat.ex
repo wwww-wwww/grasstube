@@ -21,7 +21,8 @@ defmodule Grasstube.ChatAgent do
     "remove_emotelist",
     "clear",
     "ops",
-    "clear_motd"
+    "clear_motd",
+    "speed"
   ]
 
   defstruct admin: "",
@@ -176,7 +177,7 @@ defmodule Grasstube.ChatAgent do
   defp command(channel, socket, "op " <> username) do
     username = String.downcase(username)
 
-    if mod?(channel, username) or get_admin(channel) == username do
+    if mod?(channel, username) do
       push(socket, "chat", %ChatMessage{content: "#{username} is already an op"})
     else
       add_mod(channel, username)
@@ -282,6 +283,14 @@ defmodule Grasstube.ChatAgent do
     })
   end
 
+  defp command(channel, _socket, "speed " <> speed) do
+    {speed, _} = Float.parse(speed)
+
+    get_room_name(channel)
+    |> ProcessRegistry.lookup(:video)
+    |> Grasstube.VideoAgent.set_speed(speed)
+  end
+
   defp command(_channel, socket, cmd) do
     push(socket, "chat", %ChatMessage{content: "No command #{cmd}"})
   end
@@ -368,9 +377,7 @@ defmodule Grasstube.ChatAgent do
 
   def mod?(_, _), do: false
 
-  def socket_username({socket, _pid}) do
-    socket_username(socket)
-  end
+  def socket_username({socket, _pid}), do: socket_username(socket)
 
   def socket_username(%{assigns: %{user: nil}}), do: nil
 
@@ -440,7 +447,7 @@ defmodule Grasstube.ChatAgent do
   def check_password(pid, password), do: Agent.get(pid, & &1.password) == password
 
   def auth(socket, room_name, password) do
-    case Grasstube.ProcessRegistry.lookup(room_name, :chat) do
+    case ProcessRegistry.lookup(room_name, :chat) do
       :not_found ->
         {:error, "no room"}
 
