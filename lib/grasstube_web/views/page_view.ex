@@ -36,12 +36,14 @@ defmodule GrasstubeWeb.PageView do
     |> seconds_to_string()
   end
 
-  def seconds_to_string(seconds) do
+  def seconds_to_string(seconds) when is_number(seconds) do
     seconds
     |> DateTime.from_unix!(:second)
     |> to_string()
     |> String.slice(-9..-2)
   end
+
+  def seconds_to_string(_), do: "00:00:00"
 
   def text_repeat_mode(repeat_mode) do
     case repeat_mode do

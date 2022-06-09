@@ -32,8 +32,9 @@ defmodule GrasstubeWeb.PlaylistLive do
 
     duration =
       playlist_items
-      |> Enum.filter(&(&1.duration != :unset))
-      |> Enum.reduce(0, &(&2 + &1.duration))
+      |> Enum.map(& &1.duration)
+      |> Enum.filter(&is_number(&1))
+      |> Enum.sum()
 
     current_index =
       Enum.with_index(playlist_items, 1)

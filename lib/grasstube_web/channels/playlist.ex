@@ -37,6 +37,16 @@ defmodule GrasstubeWeb.PlaylistChannel do
     playlist =
       ProcessRegistry.lookup(room_name, :playlist)
       |> PlaylistAgent.get_playlist()
+      |> Enum.map(
+        &Map.put(
+          &1,
+          :url,
+          if(&1.type == "yt",
+            do: URI.merge(URI.parse("https://youtu.be/"), &1.url) |> to_string(),
+            else: ""
+          )
+        )
+      )
 
     push(socket, "playlist", %{playlist: playlist})
 

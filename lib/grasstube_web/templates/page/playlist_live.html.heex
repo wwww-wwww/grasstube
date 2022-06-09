@@ -49,7 +49,7 @@
     <button class="icon square" value={item.id} phx-click="remove">clear</button>
     <% end %>
 
-    <a class="title" href={if String.length(item.url) > 0, do: item.url, else: ""}><%= item.title %></a>
+    <a class="title" href={if item.type == "yt", do: URI.merge(URI.parse("https://youtu.be/"), item.url) |> to_string(), else: nil}><%= item.title %></a>
 
     <%= if item.duration != :unset do %>
     <span><%= seconds_to_string(item.duration) %></span>

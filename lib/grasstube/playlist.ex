@@ -51,16 +51,9 @@ defmodule Grasstube.PlaylistAgent do
   end
 
   def get_playlist(pid) do
-    get_queue(pid)
-    |> Enum.map(fn id ->
-      vid = get_video(pid, id)
-
-      url =
-        if vid.type == "yt",
-          do: URI.merge(URI.parse("https://youtu.be/"), vid.url) |> to_string(),
-          else: ""
-
-      %{id: id, title: vid.title, url: url, duration: vid.duration}
+    Agent.get(pid, fn state ->
+      state.queue
+      |> Enum.map(&Map.get(state.videos, &1, :nothing))
     end)
   end
 
