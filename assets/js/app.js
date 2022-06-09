@@ -328,7 +328,6 @@ const hooks = {
     destroyed() {
       clearInterval(this.ping_interval)
       player_state.player = null
-      player_state.fullscreen_element = null
     }
   },
 
