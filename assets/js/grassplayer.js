@@ -57,6 +57,7 @@ class GrassPlayer {
     this.speed = 1
 
     this.video = create_element(root, "video")
+    this.video.crossOrigin = "anonymous"
     this.video.id = "video"
     this.video.volume = this.get_volume()
 
@@ -109,6 +110,7 @@ class GrassPlayer {
     this.create_ctxmenu()
     this.create_settings()
     this.stats_panel = this.create_stats_panel()
+    this.create_capture()
     this.create_controls()
     this.create_seekbar(controls)
 
@@ -1089,6 +1091,39 @@ class GrassPlayer {
     } else {
       this.video.playbackRate = speed
     }
+  }
+
+  capture_frame(subtitles) {
+    const canvas = create_element(null, "canvas")
+    canvas.width = this.video.videoWidth
+    canvas.height = this.video.videoHeight
+
+    const ctx = canvas.getContext("2d")
+    ctx.drawImage(this.video, 0, 0)
+
+    if (subtitles) {
+      ctx.drawImage(this.octopusInstance._canvas, 0, 0, canvas.width, canvas.height)
+    }
+
+    const image = new Image()
+    image.src = canvas.toDataURL()
+
+    const w = window.open("")
+    w.document.write(image.outerHTML)
+  }
+
+  create_capture() {
+    const btn_capture = create_element(this.ctxmenu, "button")
+    btn_capture.textContent = "Capture Frame"
+    btn_capture.addEventListener("click", () => {
+      this.capture_frame(false)
+    })
+
+    const btn_capture2 = create_element(this.ctxmenu, "button")
+    btn_capture2.textContent = "Capture Frame (Captions)"
+    btn_capture2.addEventListener("click", () => {
+      this.capture_frame(true)
+    })
   }
 }
 
