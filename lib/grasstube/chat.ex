@@ -21,6 +21,7 @@ defmodule Grasstube.ChatAgent do
     "remove_emotelist",
     "clear",
     "ops",
+    "motd",
     "clear_motd",
     "speed"
   ]
@@ -40,6 +41,7 @@ defmodule Grasstube.ChatAgent do
     defstruct sender: "sys", name: "System", content: ""
   end
 
+  @command_prefix "/"
   @max_message_size 250
   @max_history_size 20
   @max_name_length 24
@@ -79,77 +81,61 @@ defmodule Grasstube.ChatAgent do
     Grasstube.Presence.update(socket, socket.assigns.user_id, meta)
   end
 
-  def chat(channel, socket, msg) do
-    if is_command?(String.trim(msg)) do
-      "/" <> command = String.trim(msg)
-      command_name = command |> String.split() |> Enum.at(0) |> String.downcase()
-
+  def chat(channel, socket, @command_prefix <> command) do
+    level =
       cond do
-        command_name in @admin_commands ->
-          if get_admin(channel) == socket_username(socket) do
-            command(channel, socket, command)
-          else
-            push(socket, "chat", %ChatMessage{content: "You can't do this!"})
-          end
-
-        command_name in @mod_commands ->
-          if mod?(channel, get_socket(socket).assigns.user) do
-            command(channel, socket, command)
-          else
-            push(socket, "chat", %ChatMessage{content: "You can't do this!"})
-          end
-
-        true ->
-          command(channel, socket, command)
+        get_admin(channel) == socket_username(socket) -> :admin
+        mod?(channel, get_socket(socket).assigns.user) -> :mod
+        true -> :user
       end
+
+    String.trim(command)
+    |> String.downcase()
+    |> command(level, channel, socket)
+
+    {:noreply}
+  end
+
+  def chat(channel, socket, msg) do
+    if String.length(msg) > @max_message_size do
+      push(socket, "chat", %ChatMessage{
+        content: "message must be #{@max_message_size} characters or less"
+      })
     else
-      if String.length(msg) > @max_message_size do
-        push(socket, "chat", %ChatMessage{
-          content: "message must be #{@max_message_size} characters or less"
-        })
-      else
-        escaped =
-          msg
-          |> HTML.html_escape()
-          |> HTML.safe_to_string()
+      escaped =
+        msg
+        |> HTML.html_escape()
+        |> HTML.safe_to_string()
 
-        new_msg = do_emote(channel, AutoLinker.link(escaped))
+      new_msg = do_emote(channel, AutoLinker.link(escaped))
 
-        sender = Grasstube.Presence.get_by_key(topic(socket), get_socket(socket).assigns.user_id)
+      sender = Grasstube.Presence.get_by_key(topic(socket), get_socket(socket).assigns.user_id)
 
-        id = if sender.member, do: sender.username, else: sender.id
-        nickname = if sender.member, do: sender.nickname, else: Enum.at(sender.metas, 0).nickname
+      id = if sender.member, do: sender.username, else: sender.id
+      nickname = if sender.member, do: sender.nickname, else: Enum.at(sender.metas, 0).nickname
 
-        add_to_history(channel, nickname, new_msg)
+      add_to_history(channel, nickname, new_msg)
 
-        Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
-          sender: id,
-          name: nickname,
-          content: new_msg
-        })
-      end
+      Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
+        sender: id,
+        name: nickname,
+        content: new_msg
+      })
     end
 
     {:noreply}
   end
 
-  defp is_command?(msg) do
-    case String.at(msg, 0) do
-      "/" -> true
-      _ -> false
-    end
-  end
-
-  defp command(channel, socket, "help") do
+  defp command("help", level, _channel, socket) do
     commands =
-      cond do
-        get_admin(channel) == socket_username(socket) ->
+      case level do
+        :admin ->
           @public_commands ++ @mod_commands ++ @admin_commands
 
-        mod?(channel, get_socket(socket).assigns.user) ->
+        :mod ->
           @public_commands ++ @mod_commands
 
-        true ->
+        :user ->
           @public_commands
       end
       |> Enum.map(&("/" <> &1))
@@ -158,7 +144,7 @@ defmodule Grasstube.ChatAgent do
     push(socket, "chat", %ChatMessage{content: "Available commands: #{commands}"})
   end
 
-  defp command(_channel, socket, "nick " <> nick) do
+  defp command("nick " <> nick, _level, _channel, socket) do
     if String.length(nick) > @max_name_length do
       push(socket, "chat", %ChatMessage{
         content: "Nickname must be #{@max_name_length} characters or less"
@@ -174,7 +160,7 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  defp command(channel, socket, "op " <> username) do
+  defp command("op " <> username, :admin, channel, socket) do
     username = String.downcase(username)
 
     if mod?(channel, username) do
@@ -186,7 +172,7 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  defp command(channel, socket, "deop " <> username) do
+  defp command("deop " <> username, :admin, channel, socket) do
     username = String.downcase(username)
 
     if not mod?(channel, username) do
@@ -198,7 +184,8 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  defp command(channel, socket, "add_emotelist " <> username) do
+  defp command("add_emotelist " <> username, level, channel, socket)
+       when level in [:mod, :admin] do
     username = String.downcase(username)
 
     if get_emotelists(channel) |> Enum.member?(username) do
@@ -214,7 +201,8 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  defp command(channel, socket, "remove_emotelist " <> username) do
+  defp command("remove_emotelist " <> username, level, channel, socket)
+       when level in [:mod, :admin] do
     username = username |> String.downcase()
 
     if not (get_emotelists(channel) |> Enum.member?(username)) do
@@ -230,25 +218,25 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  defp command(channel, socket, "clear") do
+  defp command("clear", level, channel, socket) when level in [:mod, :admin] do
     Agent.update(channel, &%{&1 | history: []})
 
     Endpoint.broadcast(topic(socket), "clear", %{})
   end
 
-  defp command(channel, socket, "emotelists") do
+  defp command("emotelists", _, channel, socket) do
     push(socket, "chat", %ChatMessage{
       content: "emotelists: " <> (get_emotelists(channel) |> Enum.join(", "))
     })
   end
 
-  defp command(channel, socket, "ops") do
+  defp command("ops", level, channel, socket) when level in [:mod, :admin] do
     push(socket, "chat", %ChatMessage{
       content: "ops: " <> ((get_mods(channel) ++ [get_admin(channel)]) |> Enum.join(", "))
     })
   end
 
-  defp command(channel, socket, "controls") do
+  defp command("controls", :admin, channel, socket) do
     set_public_controls(channel, !public_controls?(channel))
 
     if public_controls?(channel) do
@@ -258,14 +246,14 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  defp command(channel, socket, "motd") do
+  defp command("motd", _level, channel, socket) do
     case get_motd(channel) do
       "" -> push(socket, "chat", %ChatMessage{content: "No motd is set"})
       motd -> push(socket, "chat", %ChatMessage{content: motd})
     end
   end
 
-  defp command(channel, socket, "motd " <> motd) do
+  defp command("motd " <> motd, level, channel, socket) when level in [:mod, :admin] do
     set_motd(channel, motd)
 
     push(socket, "chat", %ChatMessage{
@@ -274,7 +262,7 @@ defmodule Grasstube.ChatAgent do
     })
   end
 
-  defp command(channel, socket, "clear_motd") do
+  defp command("clear_motd", level, channel, socket) when level in [:mod, :admin] do
     set_motd(channel, "")
 
     push(socket, "chat", %ChatMessage{
@@ -283,7 +271,7 @@ defmodule Grasstube.ChatAgent do
     })
   end
 
-  defp command(channel, _socket, "speed " <> speed) do
+  defp command("speed " <> speed, level, channel, _socket) when level in [:mod, :admin] do
     {speed, _} = Float.parse(speed)
 
     get_room_name(channel)
@@ -291,7 +279,7 @@ defmodule Grasstube.ChatAgent do
     |> Grasstube.VideoAgent.set_speed(speed)
   end
 
-  defp command(_channel, socket, cmd) do
+  defp command(cmd, _level, _channel, socket) do
     push(socket, "chat", %ChatMessage{content: "No command #{cmd}"})
   end
 
