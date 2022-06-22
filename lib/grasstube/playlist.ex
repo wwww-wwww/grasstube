@@ -51,10 +51,7 @@ defmodule Grasstube.PlaylistAgent do
   end
 
   def get_playlist(pid) do
-    Agent.get(pid, fn state ->
-      state.queue
-      |> Enum.map(&Map.get(state.videos, &1, :nothing))
-    end)
+    Agent.get(pid, fn state -> Enum.map(state.queue, &Map.get(state.videos, &1, :nothing)) end)
   end
 
   def get_index(pid, id) do
@@ -98,8 +95,7 @@ defmodule Grasstube.PlaylistAgent do
   def update_queue_item(pid, queue_id, opts) do
     Agent.update(pid, fn val ->
       new_videos =
-        Map.has_key?(val.videos, queue_id)
-        |> if do
+        if Map.has_key?(val.videos, queue_id) do
           Map.update(val.videos, queue_id, %Video{}, &Map.merge(&1, opts))
         else
           val.videos
@@ -162,7 +158,7 @@ defmodule Grasstube.PlaylistAgent do
   def get_yt_info(url) do
     case System.cmd(Application.get_env(:grasstube, :ytdl), ["-j", url]) do
       {output, 0} ->
-        case output |> Jason.decode() do
+        case Jason.decode(output) do
           {:ok, video} ->
             {:ok, %{id: video["id"], duration: video["duration"], title: video["title"]}}
 
