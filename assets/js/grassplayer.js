@@ -117,17 +117,22 @@ class GrassPlayer {
     this.stats.volume.textContent = `${Math.round(this.get_volume() * 100)}% / ${this.settings.video_volume}%`
 
     this.video.addEventListener("progress", () => {
-      this.seekbar.set_buffers((this.video.buffered), this.video.duration)
+      this.seekbar.set_buffers(this.video.buffered, this.video.duration)
     })
 
-    this.video.addEventListener("timeupdate", () => {
-      this.seekbar.set_time((this.video.currentTime || 0) / this.video.duration)
-      this.seekbar.set_buffers((this.video.buffered), this.video.duration)
+    const update_time = () => {
       if (this.video.duration > 0) {
         this.lbl_time.textContent = `${seconds_to_hms(this.video.currentTime, true)} / ${seconds_to_hms(this.video.duration, true)}`
       } else {
         this.lbl_time.textContent = "00:00 / 00:00"
       }
+    }
+
+    this.video.addEventListener("loadedmetadata", update_time)
+
+    this.video.addEventListener("timeupdate", () => {
+      this.seekbar.set_time((this.video.currentTime || 0) / this.video.duration)
+      update_time()
     })
 
     this.video.addEventListener("play", () => {
