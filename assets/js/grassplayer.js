@@ -334,6 +334,8 @@ class GrassPlayer {
           }
         }
 
+        this.video.currentTime = 0.01
+
         if (Object.keys(videos).length > 1) {
           this.select_quality.style.display = ""
           for (const video in videos) {
