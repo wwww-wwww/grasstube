@@ -196,7 +196,15 @@ defmodule Grasstube.VideoAgent do
   def autopause?(pid), do: Agent.get(pid, & &1.autopause)
 
   def toggle_autopause(pid) do
-    Agent.get_and_update(pid, &{not &1.autopause, %{&1 | autopause: not &1.autopause}})
+    {room_name, autopause} =
+      Agent.get_and_update(
+        pid,
+        &{{&1.room_name, not &1.autopause}, %{&1 | autopause: not &1.autopause}}
+      )
+
+    Endpoint.broadcast("video:#{room_name}", "autopause", autopause)
+
+    autopause
   end
 end
 

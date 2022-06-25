@@ -2,6 +2,13 @@
 
 <div id="player" phx-hook="video" phx-update="ignore"></div>
 <div class="users">
+  <div>
+    <%= if @autopause do %>
+      Autopausing enabled
+    <% else %>
+      Autopausing disabled
+    <% end %>
+  </div>
   <%= for {_id, user} <- @users do %>
   <div>
     <span class="name">

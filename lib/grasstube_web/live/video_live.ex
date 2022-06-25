@@ -30,6 +30,8 @@ defmodule GrasstubeWeb.VideoLive do
         nil
       end
 
+    video = ProcessRegistry.lookup(room, :video)
+
     socket =
       socket
       |> assign(room: room)
@@ -37,9 +39,10 @@ defmodule GrasstubeWeb.VideoLive do
       |> assign(user: current_user)
       |> assign(user_id: user_id)
       |> assign(chat: chat)
-      |> assign(video: ProcessRegistry.lookup(room, :video))
+      |> assign(video: video)
       |> assign(controls: ChatAgent.controls?(chat, current_user))
       |> assign(users: Presence.list(topic))
+      |> assign(autopause: VideoAgent.autopause?(video))
 
     if connected?(socket) do
       socket.assigns.video
@@ -176,6 +179,10 @@ defmodule GrasstubeWeb.VideoLive do
 
   def handle_info(%{event: "seek", payload: payload}, socket) do
     {:noreply, push_event(socket, "seek", payload)}
+  end
+
+  def handle_info(%{event: "autopause", payload: autopause}, socket) do
+    {:noreply, assign(socket, autopause: autopause)}
   end
 
   def handle_info(%{event: "presence"}, socket) do
