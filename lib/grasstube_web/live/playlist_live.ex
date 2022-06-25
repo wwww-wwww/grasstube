@@ -13,8 +13,12 @@ defmodule GrasstubeWeb.PlaylistLive do
     if connected?(socket) do
       GrasstubeWeb.Endpoint.subscribe(topic)
 
-      if current_user do
-        GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+      case current_user do
+        %{username: username} ->
+          GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+
+        _ ->
+          nil
       end
     end
 

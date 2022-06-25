@@ -45,7 +45,7 @@ defmodule GrasstubeWeb.UserLive do
           |> assign(user: user)
           |> assign(
             is_current_user:
-              socket.assigns.current_user != nil and
+              User.is(socket.assigns.current_user) and
                 socket.assigns.current_user.username == user.username
           )
           |> assign(rooms: Grasstube.ProcessRegistry.rooms_of(user))

@@ -10,22 +10,25 @@ defmodule GrasstubeWeb.PollsLive do
   def mount(_params, %{"room" => room, "current_user" => current_user, "chat" => chat}, socket) do
     topic = "polls:#{room}"
 
-    if connected?(socket) do
-      GrasstubeWeb.Endpoint.subscribe(topic)
-
-      if current_user do
-        GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
-      end
-    end
-
     user_id =
-      if is_nil(current_user) do
-        "$" <> GrasstubeWeb.UserSocket.new_id()
-      else
-        current_user.username
-      end
+      if connected?(socket) do
+        GrasstubeWeb.Endpoint.subscribe(topic)
 
-    Presence.track(self(), topic, user_id, %{})
+        user_id =
+          case current_user do
+            %Grasstube.User{username: username} ->
+              GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{username}")
+              username
+
+            _ ->
+              current_user
+          end
+
+        Presence.track(self(), topic, user_id, %{})
+        user_id
+      else
+        nil
+      end
 
     polls = ProcessRegistry.lookup(room, :polls)
 
@@ -48,7 +51,7 @@ defmodule GrasstubeWeb.PollsLive do
     presence = Presence.list(socket)
 
     if not Map.has_key?(presence, socket.assigns.user_id) and
-         socket.assigns.user == nil do
+         not Grasstube.User.is(socket.assigns.user) do
       PollsAgent.remove_vote(socket.assigns.polls, socket.assigns.user_id)
     end
 

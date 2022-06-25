@@ -251,3 +251,18 @@ h1 {
 .alert:not(:empty) {
   display: flex;
 }
+
+.VideoLive {
+  .users:hover {
+    opacity: 1;
+  }
+
+  .users {
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    opacity: 0;
+    cursor: default;
+    padding: 0.5em;
+  }
+}

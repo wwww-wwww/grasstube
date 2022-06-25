@@ -136,4 +136,7 @@ defmodule Grasstube.User do
       add_error(changeset, :current_password, "is not valid")
     end
   end
+
+  def is(%__MODULE__{}), do: true
+  def is(_), do: false
 end

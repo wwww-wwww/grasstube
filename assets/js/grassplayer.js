@@ -116,8 +116,11 @@ class GrassPlayer {
 
     this.stats.volume.textContent = `${Math.round(this.get_volume() * 100)}% / ${this.settings.video_volume}%`
 
+    this.on_playable = null
+
     this.video.addEventListener("progress", () => {
       this.seekbar.set_buffers(this.video.buffered, this.video.duration)
+      this.update_playable()
     })
 
     const update_time = () => {
@@ -133,6 +136,7 @@ class GrassPlayer {
     this.video.addEventListener("timeupdate", () => {
       this.seekbar.set_time((this.video.currentTime || 0) / this.video.duration)
       update_time()
+      this.update_playable()
     })
 
     this.video.addEventListener("play", () => {
@@ -714,39 +718,44 @@ class GrassPlayer {
 
     let row = create_element(stats_body, "div")
     const lbl_videos = create_element(row, "span")
-    lbl_videos.textContent = "videos:"
+    lbl_videos.textContent = "Videos:"
     this.stats.videos = create_element(row, "span")
     this.stats.videos.textContent = "not loaded"
 
     row = create_element(stats_body, "div")
     const lbl_video = create_element(row, "span")
-    lbl_video.textContent = "video:"
+    lbl_video.textContent = "Video:"
     this.stats.video = create_element(row, "span")
     this.stats.video.textContent = "not loaded"
 
     row = create_element(stats_body, "div")
     const lbl_subs = create_element(row, "span")
-    lbl_subs.textContent = "subtitles:"
+    lbl_subs.textContent = "Subtitles:"
     this.stats.subs = create_element(row, "span")
     this.stats.subs.textContent = "not loaded"
 
     row = create_element(stats_body, "div")
     const lbl_volume = create_element(row, "span")
-    lbl_volume.textContent = "volume:"
+    lbl_volume.textContent = "Volume:"
     this.stats.volume = create_element(row, "span")
 
     row = create_element(stats_body, "div")
+    const lbl_playable = create_element(row, "span")
+    lbl_playable.textContent = "Playable:"
+    this.stats.playable = create_element(row, "span")
+
+    row = create_element(stats_body, "div")
     const lbl_thumbs = create_element(row, "span")
-    lbl_thumbs.textContent = "thumbs:"
+    lbl_thumbs.textContent = "Thumbs:"
     this.stats.thumbs = create_element(row, "span")
 
     row = create_element(stats_body, "div")
     const lbl_styles = create_element(row, "span")
-    lbl_styles.textContent = "loaded styles:"
+    lbl_styles.textContent = "Styles:"
     this.stats.styles = create_element(row, "span")
 
     const btn_close = create_element(stats_panel, "button")
-    btn_close.textContent = "close"
+    btn_close.textContent = "Close"
     btn_close.addEventListener("click", () => {
       if (stats_panel.parentElement) {
         stats_panel.parentElement.removeChild(stats_panel)
@@ -1036,9 +1045,13 @@ class GrassPlayer {
     } else {
       this.video.currentTime = t
     }
+
     const pct = t / this.duration()
     this.seekbar.dial.style.left = pct * 100 + "%"
     this.seekbar.current.style.width = pct * 100 + "%"
+
+    this.update_playable()
+
     return t
   }
 
@@ -1131,6 +1144,26 @@ class GrassPlayer {
     btn_capture2.addEventListener("click", () => {
       this.capture_frame(true)
     })
+  }
+
+  update_playable() {
+    for (let i = 0; i < this.video.buffered.length; i++) {
+      const start = this.video.buffered.start(i)
+      const end = this.video.buffered.end(i)
+      if (start < this.video.currentTime && end > this.video.currentTime) {
+        const playable = Math.round(end - this.video.currentTime)
+        this.stats.playable.textContent = `${playable} seconds`
+        if (this.on_playable) {
+          this.on_playable(playable)
+        }
+        return
+      }
+    }
+
+    this.stats.playable.textContent = `0 seconds`
+    if (this.on_playable) {
+      this.on_playable(0)
+    }
   }
 }
 

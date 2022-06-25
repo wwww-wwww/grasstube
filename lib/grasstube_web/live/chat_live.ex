@@ -18,17 +18,11 @@ defmodule GrasstubeWeb.ChatLive do
       if connected?(socket) do
         GrasstubeWeb.Endpoint.subscribe(topic)
 
-        user_id =
-          if is_nil(current_user) do
-            "$" <> GrasstubeWeb.UserSocket.new_id()
-          else
-            current_user.username
+        {user_id, meta} =
+          case current_user do
+            %Grasstube.User{username: username} -> {username, %{}}
+            "$" <> user_id -> {current_user, %{nickname: "anon#{user_id}"}}
           end
-
-        meta =
-          if not is_nil(current_user),
-            do: %{nickname: current_user.nickname, username: current_user.username},
-            else: %{nickname: "anon#{user_id |> String.slice(1..-1)}"}
 
         Presence.track(self(), topic, user_id, meta)
         user_id

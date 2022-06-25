@@ -1,7 +1,7 @@
 defmodule GrasstubeWeb.VideoLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{ChatAgent, PlaylistAgent, ProcessRegistry, VideoAgent}
+  alias Grasstube.{ChatAgent, PlaylistAgent, Presence, ProcessRegistry, VideoAgent}
 
   def render(assigns) do
     GrasstubeWeb.PageView.render("video_live.html", assigns)
@@ -10,21 +10,36 @@ defmodule GrasstubeWeb.VideoLive do
   def mount(_params, %{"room" => room, "current_user" => current_user, "chat" => chat}, socket) do
     topic = "video:#{room}"
 
-    if connected?(socket) do
-      GrasstubeWeb.Endpoint.subscribe(topic)
+    user_id =
+      if connected?(socket) do
+        GrasstubeWeb.Endpoint.subscribe(topic)
 
-      if current_user do
-        GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+        user_id =
+          case current_user do
+            %Grasstube.User{username: username} ->
+              GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{username}")
+              username
+
+            "$" <> user_id ->
+              current_user
+          end
+
+        Presence.track(self(), topic, user_id, %{})
+        user_id
+      else
+        nil
       end
-    end
 
     socket =
       socket
       |> assign(room: room)
+      |> assign(topic: topic)
       |> assign(user: current_user)
+      |> assign(user_id: user_id)
       |> assign(chat: chat)
       |> assign(video: ProcessRegistry.lookup(room, :video))
       |> assign(controls: ChatAgent.controls?(chat, current_user))
+      |> assign(users: Presence.list(topic))
 
     if connected?(socket) do
       socket.assigns.video
@@ -51,6 +66,11 @@ defmodule GrasstubeWeb.VideoLive do
     end
 
     {:ok, socket}
+  end
+
+  def terminate(_reason, socket) do
+    Presence.untrack(self(), socket.assigns.topic, socket.assigns.user_id)
+    :ok
   end
 
   def handle_event("play", %{"offset" => offset}, socket) do
@@ -130,7 +150,19 @@ defmodule GrasstubeWeb.VideoLive do
     {:noreply, push_event(socket, "seek", payload)}
   end
 
+  def handle_event("buffered", %{"buffered" => buffered}, socket) do
+    Grasstube.Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
+      buffered: buffered
+    })
+
+    {:noreply, socket}
+  end
+
   def handle_info(%{event: "presence"}, socket) do
     {:noreply, socket}
+  end
+
+  def handle_info(%{event: "presence_diff"}, socket) do
+    {:noreply, socket |> assign(users: Presence.list(socket.assigns.topic))}
   end
 end

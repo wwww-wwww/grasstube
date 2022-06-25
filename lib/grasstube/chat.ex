@@ -73,6 +73,10 @@ defmodule Grasstube.ChatAgent do
 
   defp get_socket(socket), do: socket
 
+  defp member?(%{assigns: %{user: %Grasstube.User{}}}), do: true
+
+  defp member?(_), do: false
+
   defp update_presence({socket, pid}, meta) do
     Grasstube.Presence.update(pid, socket.assigns.topic, socket.assigns.user_id, meta)
   end
@@ -150,7 +154,7 @@ defmodule Grasstube.ChatAgent do
         content: "Nickname must be #{@max_name_length} characters or less"
       })
     else
-      if not is_nil(get_socket(socket).assigns.user) do
+      if member?(get_socket(socket)) do
         Repo.get(Grasstube.User, get_socket(socket).assigns.user_id)
         |> Ecto.Changeset.change(nickname: nick)
         |> Repo.update()
@@ -358,6 +362,8 @@ defmodule Grasstube.ChatAgent do
     broadcast_mod(pid, user)
   end
 
+  def mod?(_, "$" <> _id), do: false
+
   def mod?(pid, user) when is_bitstring(user),
     do: get_admin(pid) == user or get_mods(pid) |> Enum.any?(&(&1 == user))
 
@@ -366,6 +372,8 @@ defmodule Grasstube.ChatAgent do
   def mod?(_, _), do: false
 
   def socket_username({socket, _pid}), do: socket_username(socket)
+
+  def socket_username(%{assigns: %{user: "$" <> _}}), do: nil
 
   def socket_username(%{assigns: %{user: nil}}), do: nil
 

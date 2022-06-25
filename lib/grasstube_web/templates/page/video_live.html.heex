@@ -1,3 +1,21 @@
 <meta name="controls" content={if @controls, do: "true", else: "false"}>
 
 <div id="player" phx-hook="video" phx-update="ignore"></div>
+<div class="users">
+  <%= for {id, user} <- @users do %>
+  <div>
+    <span class="name">
+      <%= if user.member do %>
+        <%= user.nickname %>
+      <% else %>
+        anon<%= user.id %>
+      <% end %>
+    </span>
+    <span class="info">
+      <%= for %{buffered: buffered} <- user.metas do %>
+        <span><%= buffered %></span>
+      <% end %>
+    </span>
+  </div>
+  <% end %>
+</div>

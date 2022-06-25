@@ -221,6 +221,10 @@ const hooks = {
         this.pushEvent("next", {})
       }
 
+      player_state.player.on_playable = buffered => {
+        this.pushEvent("buffered", { buffered: buffered })
+      }
+
       this.stats_latency = player_state.player.stats_add_row("Latency (RTT):", this.latency_rtt)
 
       this.ping()

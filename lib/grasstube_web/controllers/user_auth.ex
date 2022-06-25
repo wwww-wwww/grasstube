@@ -20,7 +20,10 @@ defmodule GrasstubeWeb.UserAuth do
   end
 
   def on_mount(:default, _, _, socket) do
-    {:cont, Phoenix.LiveView.assign(socket, :current_user, nil)}
+    {:cont,
+     Phoenix.LiveView.assign_new(socket, :current_user, fn ->
+       "$" <> GrasstubeWeb.UserSocket.new_id()
+     end)}
   end
 
   @doc """
