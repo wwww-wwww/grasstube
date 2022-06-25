@@ -2,7 +2,7 @@
 
 <div id="player" phx-hook="video" phx-update="ignore"></div>
 <div class="users">
-  <%= for {id, user} <- @users do %>
+  <%= for {_id, user} <- @users do %>
   <div>
     <span class="name">
       <%= if user.member do %>

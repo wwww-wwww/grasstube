@@ -15,7 +15,7 @@ defmodule GrasstubeWeb.PlaylistLive do
 
       case current_user do
         %{username: username} ->
-          GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{current_user.username}")
+          GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{username}")
 
         _ ->
           nil

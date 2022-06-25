@@ -20,11 +20,11 @@ defmodule GrasstubeWeb.VideoLive do
               GrasstubeWeb.Endpoint.subscribe("user:#{room}:#{username}")
               username
 
-            "$" <> user_id ->
+            _ ->
               current_user
           end
 
-        Presence.track(self(), topic, user_id, %{})
+        Presence.track(self(), topic, user_id, %{buffered: 0})
         user_id
       else
         nil
@@ -124,6 +124,34 @@ defmodule GrasstubeWeb.VideoLive do
     {:reply, %{}, socket}
   end
 
+  def handle_event("buffered", %{"buffered" => buffered}, socket) do
+    Grasstube.Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
+      buffered: buffered
+    })
+
+    if VideoAgent.autopause?(socket.assigns.video) do
+      if buffered > 0 do
+        Presence.list(socket.assigns.topic)
+        |> Enum.map(&elem(&1, 1))
+        |> Enum.map(& &1.metas)
+        |> List.flatten()
+        |> Enum.map(& &1.buffered)
+        |> Enum.min()
+        |> Kernel.>(0)
+        |> Kernel.and(VideoAgent.autopaused?(socket.assigns.video))
+        |> if do
+          socket.assigns.video
+          |> VideoAgent.set_playing(true)
+        end
+      else
+        socket.assigns.video
+        |> VideoAgent.set_playing(false, true)
+      end
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_info(%{event: "setvid", payload: payload}, socket) do
     {:noreply, push_event(socket, "setvid", payload)}
   end
@@ -150,19 +178,11 @@ defmodule GrasstubeWeb.VideoLive do
     {:noreply, push_event(socket, "seek", payload)}
   end
 
-  def handle_event("buffered", %{"buffered" => buffered}, socket) do
-    Grasstube.Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
-      buffered: buffered
-    })
-
-    {:noreply, socket}
-  end
-
   def handle_info(%{event: "presence"}, socket) do
     {:noreply, socket}
   end
 
   def handle_info(%{event: "presence_diff"}, socket) do
-    {:noreply, socket |> assign(users: Presence.list(socket.assigns.topic))}
+    {:noreply, assign(socket, users: Presence.list(socket.assigns.topic))}
   end
 end

@@ -283,6 +283,23 @@ defmodule Grasstube.ChatAgent do
     |> Grasstube.VideoAgent.set_speed(speed)
   end
 
+  defp command("autopause", level, channel, socket) when level in [:mod, :admin] do
+    get_room_name(channel)
+    |> ProcessRegistry.lookup(:video)
+    |> Grasstube.VideoAgent.toggle_autopause()
+    |> if do
+      push(socket, "chat", %ChatMessage{
+        name: get_room_name(channel),
+        content: "Autopausing enabled"
+      })
+    else
+      push(socket, "chat", %ChatMessage{
+        name: get_room_name(channel),
+        content: "Autopausing disabled"
+      })
+    end
+  end
+
   defp command(cmd, _level, _channel, socket) do
     push(socket, "chat", %ChatMessage{content: "No command #{cmd}"})
   end

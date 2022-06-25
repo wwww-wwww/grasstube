@@ -22,7 +22,9 @@ defmodule Grasstube.VideoAgent do
             time_started: :not_started,
             time_seek: 0,
             room_name: "",
-            speed: 1
+            speed: 1,
+            autopaused: false,
+            autopause: false
 
   def start_link(room_name) do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
@@ -36,30 +38,39 @@ defmodule Grasstube.VideoAgent do
     |> Kernel./(1000)
   end
 
-  def set_playing(pid, playing) do
+  def set_playing(pid, playing, autopaused \\ false) do
     if not get_current_video(pid).ready do
       set_play_on_ready(pid, true)
     else
       set_play_on_ready(pid, false)
 
-      Agent.update(pid, fn val ->
-        %{
-          val
-          | playing: playing,
-            time_seek: actual_get_time(val),
-            time_started: current_time()
-        }
-      end)
+      current_state =
+        Agent.get_and_update(pid, fn val ->
+          if val.playing != playing do
+            {val.playing,
+             %{
+               val
+               | playing: playing,
+                 time_seek: actual_get_time(val),
+                 time_started: current_time(),
+                 autopaused: autopaused
+             }}
+          else
+            {val.playing, val}
+          end
+        end)
 
-      room_name = Agent.get(pid, & &1.room_name)
+      if current_state != playing do
+        room_name = Agent.get(pid, & &1.room_name)
 
-      Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
-      |> VideoScheduler.cancel_play()
+        Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+        |> VideoScheduler.cancel_play()
 
-      Endpoint.broadcast("video:#{room_name}", "sync", %{
-        t: get_time(pid),
-        playing: playing?(pid)
-      })
+        Endpoint.broadcast("video:#{room_name}", "sync", %{
+          t: get_time(pid),
+          playing: playing?(pid)
+        })
+      end
     end
 
     pid
@@ -109,7 +120,8 @@ defmodule Grasstube.VideoAgent do
            | current_video: next,
              playing: false,
              time_started: :not_started,
-             time_seek: 0
+             time_seek: 0,
+             autopaused: false
          }}
       end)
 
@@ -177,6 +189,14 @@ defmodule Grasstube.VideoAgent do
       end)
 
     Endpoint.broadcast("video:#{room_name}", "sync", %{speed: speed})
+  end
+
+  def autopaused?(pid), do: Agent.get(pid, & &1.autopaused)
+
+  def autopause?(pid), do: Agent.get(pid, & &1.autopause)
+
+  def toggle_autopause(pid) do
+    Agent.get_and_update(pid, &{not &1.autopause, %{&1 | autopause: not &1.autopause}})
   end
 end
 
