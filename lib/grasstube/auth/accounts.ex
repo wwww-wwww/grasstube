@@ -167,4 +167,13 @@ defmodule Grasstube.Accounts do
       {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
+
+  def get_users_nicknames_map(usernames) do
+    query =
+      from u in User,
+        where: u.username in ^usernames,
+        select: {u.username, u.nickname}
+
+    query |> Repo.all() |> Enum.into(%{})
+  end
 end

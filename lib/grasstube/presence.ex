@@ -3,7 +3,16 @@ defmodule Grasstube.Presence do
     otp_app: :grasstube,
     pubsub_server: Grasstube.PubSub
 
-  def fetch(topic, presences) do
+  def fetch(_topic, presences) do
+    users =
+      presences
+      |> Map.keys()
+      |> Enum.filter(&(not String.starts_with?(&1, "$")))
+      |> case do
+        [] -> %{}
+        usernames -> Grasstube.Accounts.get_users_nicknames_map(usernames)
+      end
+
     for {key, %{metas: metas}} <- presences, into: %{} do
       case key do
         "$" <> id ->
@@ -15,14 +24,12 @@ defmodule Grasstube.Presence do
            }}
 
         username ->
-          user = Grasstube.Repo.get(Grasstube.User, username)
-
-          {user.username,
+          {key,
            %{
              metas: metas,
              member: true,
-             username: user.username,
-             nickname: user.nickname
+             username: username,
+             nickname: users[username]
            }}
       end
     end
