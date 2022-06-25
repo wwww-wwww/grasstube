@@ -1038,6 +1038,8 @@ class GrassPlayer {
   }
 
   seek_to(t) {
+    t = Math.max(t, 0.01)
+
     if (this.current_video.yt) {
       if (this.current_video.yt.getDuration) {
         this.current_video.yt.seekTo(t)
