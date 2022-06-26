@@ -78,7 +78,17 @@ defmodule Grasstube.VideoAgent do
 
   def playing?(pid), do: Agent.get(pid, & &1.playing)
 
-  def get_time(pid), do: Agent.get(pid, &actual_get_time(&1))
+  def get_time(pid), do: Agent.get(pid, &actual_get_time/1)
+
+  def remaining_time(pid),
+    do:
+      Agent.get(pid, fn val ->
+        case val.current_video do
+          %{duration: :unset} -> 0
+          %{duration: n} -> n - actual_get_time(val)
+          _ -> 0
+        end
+      end)
 
   defp actual_get_time(val) do
     if val.playing and val.time_started != :not_started do

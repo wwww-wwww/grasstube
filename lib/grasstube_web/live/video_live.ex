@@ -147,8 +147,10 @@ defmodule GrasstubeWeb.VideoLive do
           |> VideoAgent.set_playing(true)
         end
       else
-        socket.assigns.video
-        |> VideoAgent.set_playing(false, true)
+        if VideoAgent.remaining_time(socket.assigns.video) > 5 do
+          socket.assigns.video
+          |> VideoAgent.set_playing(false, true)
+        end
       end
     end
 
