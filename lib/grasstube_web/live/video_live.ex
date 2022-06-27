@@ -3,6 +3,8 @@ defmodule GrasstubeWeb.VideoLive do
 
   alias Grasstube.{ChatAgent, PlaylistAgent, Presence, ProcessRegistry, VideoAgent}
 
+  @autopause_min 0.5
+
   def render(assigns) do
     GrasstubeWeb.PageView.render("video_live.html", assigns)
   end
@@ -140,7 +142,7 @@ defmodule GrasstubeWeb.VideoLive do
         |> List.flatten()
         |> Enum.map(& &1.buffered)
         |> Enum.min()
-        |> Kernel.>(0)
+        |> Kernel.>(@autopause_min)
         |> Kernel.and(VideoAgent.autopaused?(socket.assigns.video))
         |> if do
           socket.assigns.video
