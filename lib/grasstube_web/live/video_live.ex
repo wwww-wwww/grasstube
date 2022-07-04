@@ -134,7 +134,7 @@ defmodule GrasstubeWeb.VideoLive do
       buffered: buffered
     })
 
-    if VideoAgent.autopause?(socket.assigns.video) do
+    if VideoAgent.can_autopause?(socket.assigns.video) do
       if buffered > 0 do
         Presence.list(socket.assigns.topic)
         |> Enum.map(&elem(&1, 1))

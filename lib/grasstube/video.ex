@@ -203,7 +203,9 @@ defmodule Grasstube.VideoAgent do
 
   def autopaused?(pid), do: Agent.get(pid, & &1.autopaused)
 
-  def autopause?(pid) do
+  def autopause?(pid), do: Agent.get(pid, & &1.autopause)
+
+  def can_autopause?(pid) do
     Agent.get(
       pid,
       &(&1.autopause and &1.current_video != :nothing and &1.current_video.type == "default")
