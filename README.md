@@ -11,6 +11,8 @@ Includes soft subtitle rendering using [SubtitlesOctopus](https://github.com/Dad
   - [x] YouTube support
   - [x] Google Drive support (using a userscript)
   - [x] Thumbnails
+  - [x] Playlist repeat modes
+  - [x] Automatic pausing
 - [x] Authentication
   - [x] User created rooms
     - [x] Private rooms
