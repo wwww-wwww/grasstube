@@ -23,7 +23,8 @@ defmodule Grasstube.ChatAgent do
     "ops",
     "motd",
     "clear_motd",
-    "speed"
+    "speed",
+    "autopause"
   ]
 
   defstruct admin: "",
