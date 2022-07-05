@@ -130,11 +130,11 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def handle_event("buffered", %{"buffered" => buffered}, socket) do
-    Grasstube.Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
-      buffered: buffered
-    })
-
     if VideoAgent.can_autopause?(socket.assigns.video) do
+      Grasstube.Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
+        buffered: buffered
+      })
+
       if buffered > 0 do
         Presence.list(socket.assigns.topic)
         |> Enum.map(&elem(&1, 1))
