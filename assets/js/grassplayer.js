@@ -1152,7 +1152,7 @@ class GrassPlayer {
     for (let i = 0; i < this.video.buffered.length; i++) {
       const start = this.video.buffered.start(i)
       const end = this.video.buffered.end(i)
-      if (start < this.video.currentTime && end > this.video.currentTime) {
+      if ((start < this.video.currentTime || start < 1) && end > this.video.currentTime) {
         const playable = Math.round(end - this.video.currentTime)
         this.stats.playable.textContent = `${playable} seconds`
         if (this.on_playable) {
