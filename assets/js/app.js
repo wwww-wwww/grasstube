@@ -126,7 +126,7 @@ const hooks = {
 
       chat_state.emotes_modal = create_window("chat_emotes", {
         title: null,
-        root: this.root,
+        root: this.el,
         show: false,
         close_on_unfocus: true,
         invert_x: true,
@@ -485,9 +485,7 @@ const hooks = {
       tab1.appendChild(playlist_tab1)
       tab2.appendChild(playlist_tab2)
 
-      playlist_btn_show.addEventListener("click", () => {
-        playlist_modal.show()
-      })
+      playlist_btn_show.addEventListener("click", () => playlist_modal.show())
 
       this.el.addEventListener("mousedown", e => this.start_drag(e))
       this.el.addEventListener("touchstart", e => this.start_drag(e))
@@ -504,6 +502,7 @@ const hooks = {
 
   room: {
     extra_emotes: null,
+    on_keydown: null,
     toggle_chat() {
       view_chat.classList.toggle("hidden")
       if (view_chat.classList.contains("hidden")) {
@@ -523,19 +522,48 @@ const hooks = {
         autohide(msg.e, 5000)
       })
 
-      chat_input.addEventListener("keydown", e => {
-        if (!view_chat.classList.contains("hidden") && e.key == "Escape") {
-          e.preventDefault()
-          chat_input.value = ""
-          this.toggle_chat()
-          chat_state.emotes_modal.close()
-          player.focus()
-        }
-      })
+      this.on_keydown = e => {
+        const chat_open = !view_chat.classList.contains("hidden")
+        if (e.target.tagName == "INPUT" && e.target != chat_input) return
 
-      btn_open_chat.addEventListener("click", () => {
-        this.toggle_chat()
-      })
+        if (e.key == "Enter") {
+          this.toggle_chat()
+          if (chat_open) {
+            player.focus()
+          } else {
+            chat_input.focus()
+          }
+        } else if (e.key == "\\" && !chat_open) {
+          this.toggle_chat()
+          chat_btn_emotes.click()
+          chat_input.focus()
+        } else if (e.key == "e" && !chat_open) {
+          if (this.extra_emotes.is_open()) {
+            this.extra_emotes.close()
+          } else {
+            this.extra_emotes.show()
+          }
+        } else if (e.key == "Escape") {
+          if (!view_chat.classList.contains("hidden")) {
+            e.preventDefault()
+            chat_input.value = ""
+            this.toggle_chat()
+            chat_state.emotes_modal.close()
+            player.focus()
+          }
+          if (this.extra_emotes.is_open()) {
+            this.extra_emotes.close()
+          }
+        } else {
+          return
+        }
+
+        e.preventDefault()
+      }
+
+      document.addEventListener("keydown", this.on_keydown)
+
+      btn_open_chat.addEventListener("click", this.toggle_chat)
 
       this.extra_emotes = create_window("chat_emotes2", {
         title: null,
@@ -559,7 +587,6 @@ const hooks = {
         })
       }
     },
-    on_keydown: null,
     unload: null,
     mounted() {
       init_settings()
@@ -584,37 +611,6 @@ const hooks = {
       } else {
         chat_state.on_load = () => this.load()
       }
-
-      this.on_keydown = e => {
-        const chat_open = !view_chat.classList.contains("hidden")
-        if (e.target.tagName == "INPUT" && e.target != chat_input) return
-        let nothing = false
-
-        if (e.key == "Enter") {
-          this.toggle_chat()
-          if (chat_open) {
-            player.focus()
-          } else {
-            chat_input.focus()
-          }
-        } else if (e.key == "\\" && !chat_open) {
-          this.toggle_chat()
-          chat_btn_emotes.click()
-          chat_input.focus()
-        } else if (e.key == "e" && !chat_open) {
-          if (this.extra_emotes.is_open()) {
-            this.extra_emotes.close()
-          } else {
-            this.extra_emotes.show()
-          }
-        } else {
-          nothing = true
-        }
-
-        if (!nothing) e.preventDefault()
-      }
-
-      document.addEventListener("keydown", this.on_keydown)
     },
     destroyed() {
       if (this.unload) {
