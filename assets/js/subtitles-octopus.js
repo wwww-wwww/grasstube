@@ -172,8 +172,12 @@ export default class SubtitlesOctopus extends EventTarget {
             this.sendMessage('canvas', { width, height })
           }, 50)
         } else {
-          this._canvasctrl.width = width
-          this._canvasctrl.height = height
+          try {
+            this._canvasctrl.width = width
+            this._canvasctrl.height = height
+          } catch (e) {
+            console.log(e)
+          }
           this.sendMessage('canvas', { width, height })
           this._resizeTimeoutBuffer = setTimeout(() => {
             this._resizeTimeoutBuffer = undefined
