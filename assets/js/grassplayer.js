@@ -83,7 +83,7 @@ class GrassPlayer {
       const overlay_bbox = this.overlay.getBoundingClientRect()
       const bbox = this.ctxmenu.getBoundingClientRect()
       this.ctxmenu.style.left = `${e.clientX - overlay_bbox.x}px`
-      if (e.clientY + bbox.height > overlay_bbox.height) {
+      if (e.clientY + bbox.height > overlay_bbox.height + overlay_bbox.y) {
         this.ctxmenu.style.top = `${e.clientY - overlay_bbox.y - bbox.height}px`
       } else {
         this.ctxmenu.style.top = `${e.clientY - overlay_bbox.y}px`
