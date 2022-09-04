@@ -473,11 +473,11 @@ class GrassPlayer {
   }
 
   load_previews() {
-    if (this.current_video.type == "yt") return
-
     this.previews = []
     this.seekbar.preview.classList.toggle("hidden", true)
     this.stats.thumbs.textContent = "none"
+
+    if (this.current_video.type == "yt") return
 
     if (!this.has_controls
       || Object.keys(this.current_video.videos).length == 0) {
