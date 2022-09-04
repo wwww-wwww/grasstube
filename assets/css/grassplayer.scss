@@ -79,7 +79,7 @@
 
     .overlay_tmp {
       opacity: 0;
-      pointer-events: none;
+      pointer-events: all;
     }
   }
 
@@ -88,7 +88,6 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    pointer-events: none;
   }
 
   .shade {
@@ -222,6 +221,8 @@
 
   .shade,
   .ctxmenu {
+    pointer-events: all;
+
     button {
       border: none;
       background: none;

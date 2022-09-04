@@ -58,7 +58,7 @@ class GrassPlayer {
 
     this.video = create_element(root, "video")
     this.video.crossOrigin = "anonymous"
-    this.video.id = "video"
+    this.video.style.display = "none"
     this.video.volume = this.get_volume()
 
     this.video.addEventListener("loadedmetadata", () => {
@@ -72,7 +72,7 @@ class GrassPlayer {
     this.octopusInstance = null
 
     this.video2 = create_element(root, "div", "video")
-    this.video2.id = "video2"
+    this.video2.style.display = "none"
 
     this.overlay = create_element(root, "div", "overlay overlay_hidden")
     this.overlay.addEventListener("contextmenu", e => {
@@ -80,6 +80,8 @@ class GrassPlayer {
       if (e.target != this.overlay && e.target != this.bottom_shade) return
       e.preventDefault()
       this.overlay.appendChild(this.ctxmenu)
+
+      this.overlay.style.pointerEvents = "none"
       const overlay_bbox = this.overlay.getBoundingClientRect()
       const bbox = this.ctxmenu.getBoundingClientRect()
       this.ctxmenu.style.left = `${e.clientX - overlay_bbox.x}px`
@@ -284,6 +286,8 @@ class GrassPlayer {
 
     this.current_video.yt = null
     this.video.src = ""
+    this.video.style.display = "none"
+    this.video2.style.display = "none"
 
     while (this.seekbar.buffers.length > 0) {
       const buffer = this.seekbar.buffers.pop()
@@ -338,6 +342,7 @@ class GrassPlayer {
           }
         }
 
+        this.video.style.display = "block"
         this.video.currentTime = 0.01
 
         if (Object.keys(videos).length > 1) {
@@ -549,6 +554,7 @@ class GrassPlayer {
   set_youtube(video_id) {
     this.current_video.yt = video_id
     if (!document.yt_loaded) return
+    this.video2.style.display = "block"
     this.current_video.yt = new YT.Player(this.video2, {
       height: "100%",
       width: "100%",
@@ -681,6 +687,8 @@ class GrassPlayer {
       if (e.target == this.ctxmenu) return
       if (this.ctxmenu.parentElement) {
         this.ctxmenu.parentElement.removeChild(this.ctxmenu)
+        this.overlay.style.pointerEvents = "all"
+        e.preventDefault()
       }
     })
 
