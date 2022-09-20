@@ -221,7 +221,11 @@ const hooks = {
         this.pushEvent("next", {})
       }
 
+      let last_buffered = 0
+
       player_state.player.on_playable = buffered => {
+        if (buffered == last_buffered) return
+        last_buffered = buffered
         this.pushEvent("buffered", { buffered: buffered })
       }
 
@@ -290,7 +294,6 @@ const hooks = {
               player_state.player.seek(offset_time)
             }
           } else {
-            console.log("video:time", data)
             player_state.player.seek(data.t)
           }
         }

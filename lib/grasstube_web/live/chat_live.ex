@@ -39,7 +39,7 @@ defmodule GrasstubeWeb.ChatLive do
       |> assign(chat: chat)
       |> assign(history: ChatAgent.get_history(chat))
       |> assign(emotes: ChatAgent.get_emotes(chat))
-      |> assign(users: Presence.list(topic))
+      |> assign(users: Presence.list_with_nicknames(topic))
 
     case ChatAgent.get_motd(chat) do
       "" ->
@@ -68,7 +68,7 @@ defmodule GrasstubeWeb.ChatLive do
   end
 
   def handle_info(%{event: "presence_diff"}, socket) do
-    {:noreply, socket |> assign(users: Presence.list(socket.assigns.topic))}
+    {:noreply, socket |> assign(users: Presence.list_with_nicknames(socket.assigns.topic))}
   end
 
   def handle_info(%{event: "chat", payload: payload}, socket) do

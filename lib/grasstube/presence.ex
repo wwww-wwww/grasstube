@@ -4,15 +4,6 @@ defmodule Grasstube.Presence do
     pubsub_server: Grasstube.PubSub
 
   def fetch(_topic, presences) do
-    users =
-      presences
-      |> Map.keys()
-      |> Enum.filter(&(not String.starts_with?(&1, "$")))
-      |> case do
-        [] -> %{}
-        usernames -> Grasstube.Accounts.get_users_nicknames_map(usernames)
-      end
-
     for {key, %{metas: metas}} <- presences, into: %{} do
       case key do
         "$" <> id ->
@@ -29,9 +20,29 @@ defmodule Grasstube.Presence do
              metas: metas,
              member: true,
              username: username,
-             nickname: users[username]
+             nickname: username
            }}
       end
     end
   end
+
+  def add_nicknames(presences) do
+    users =
+      presences
+      |> Map.keys()
+      |> Enum.filter(&(not String.starts_with?(&1, "$")))
+      |> case do
+        [] -> %{}
+        usernames -> Grasstube.Accounts.get_users_nicknames_map(usernames)
+      end
+
+    for {key, u} <- presences, into: %{} do
+      case key do
+        "$" <> id -> {key, u}
+        username -> {key, %{u | nickname: users[username]}}
+      end
+    end
+  end
+
+  def list_with_nicknames(topic), do: list(topic) |> add_nicknames
 end

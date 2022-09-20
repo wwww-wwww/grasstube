@@ -456,22 +456,6 @@ class GrassPlayer {
     }
   }
 
-  seek_to(t) {
-    if (this.current_video.yt) {
-      if (!this.current_video.yt.playVideo) return
-      this.current_video.yt.seekTo(t)
-      if (this.current_video.yt.getCurrentTime() >= this.current_video.yt.getDuration()) {
-        this.current_video.yt.pauseVideo()
-      }
-    } else {
-      this.video.currentTime = t
-      if (this.video.currentTime >= this.video.duration) {
-        this.video.pause()
-      }
-    }
-    this.seekbar.set_time(t / this.duration())
-  }
-
   seek(t) {
     if (this.seeking) return
     this.seek_to(t)
@@ -1049,16 +1033,19 @@ class GrassPlayer {
     t = Math.max(t, 0.01)
 
     if (this.current_video.yt) {
-      if (this.current_video.yt.getDuration) {
-        this.current_video.yt.seekTo(t)
+      if (!this.current_video.yt.playVideo) return
+      this.current_video.yt.seekTo(t)
+      if (this.current_video.yt.getCurrentTime() >= this.current_video.yt.getDuration()) {
+        this.current_video.yt.pauseVideo()
       }
     } else {
       this.video.currentTime = t
+      if (this.video.currentTime >= this.video.duration) {
+        this.video.pause()
+      }
     }
 
-    const pct = t / this.duration()
-    this.seekbar.dial.style.left = pct * 100 + "%"
-    this.seekbar.current.style.width = pct * 100 + "%"
+    this.seekbar.set_time(t / this.duration())
 
     this.update_playable()
 
