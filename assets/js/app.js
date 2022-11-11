@@ -316,7 +316,7 @@ const hooks = {
 
       this.handleEvent("seek", data => this.on_seek(data))
 
-      fetch("https://res.cloudinary.com/grass/raw/upload/v1664613143/fonts.json")
+      fetch("https://res.cloudinary.com/grass/raw/upload/v1668168577/fonts.json")
         .then(res => res.json())
         .then(fonts => {
           player_state.player.set_fonts(fonts)
