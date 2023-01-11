@@ -235,7 +235,7 @@ defmodule Grasstube.VideoAgent do
           if val.autopause_min < time do
             false
           else
-            val.autopaused
+            val.playing or val.autopaused
           end
 
         if playing != val.playing do
