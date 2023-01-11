@@ -2,6 +2,7 @@ import { Socket } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import { create_element, enter, get_meta, pad, seconds_to_hms } from "./util"
 import { create_window } from "./window"
+import { get_cookie } from "./cookies"
 import GrassPlayer from "./grassplayer"
 import Text from "./danmaku"
 import { init_drag, destroy_drag } from "./drag"
@@ -187,6 +188,12 @@ const hooks = {
     latency_rtt: 0,
     ping_interval: null,
     stats_latency: null,
+    catchup_mul: 1,
+    catchup_target: null,
+    catchup_target_time: null,
+    catchup_interval: null,
+    stats_catchup: null,
+    speed: 1,
     ping() {
       this.ping_time = Date.now()
       if (!document.hidden) { console.log("video:ping") }
@@ -230,6 +237,9 @@ const hooks = {
       }
 
       this.stats_latency = player_state.player.stats_add_row("Latency (RTT):", this.latency_rtt)
+      this.stats_catchup = player_state.player.stats_add_row("Catchup mul:", `${this.catchup_mul}x`)
+      player_state.player.settings.set("catchup", get_cookie("catchup", true))
+      player_state.player.add_setting("catchup", "Catchup")
 
       this.ping()
       this.ping_interval = setInterval(() => this.ping(), 5000)
@@ -280,6 +290,26 @@ const hooks = {
         player_state.player.set_playing(data.playing)
       }
 
+      this.run_catchup = () => {
+        if (!player_state.player.settings.catchup) return
+        if (this.catchup_target == null || !player_state.player.playing) return
+        const elapsed = (Date.now() - this.catchup_target_time) / 1000
+        const dist = (this.catchup_target + elapsed) - player_state.player.current_time()
+
+        if (Math.abs(dist) < 0.03) {
+          this.catchup_mul = 1
+          player_state.player.set_speed(this.speed)
+        } else if (Math.abs(dist) > 0.06) {
+          const dir = dist > 0 ? 1 : -1
+          this.catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
+          player_state.player.set_speed(this.speed * this.catchup_mul)
+        }
+
+        this.stats_catchup.textContent = `${dist.toFixed(5)} ${this.catchup_mul.toFixed(5)}x`
+      }
+
+      this.catchup_interval = setInterval(() => this.run_catchup(), 200)
+
       this.handleEvent("sync", data => {
         console.log("video:sync", data)
 
@@ -287,8 +317,13 @@ const hooks = {
 
         if (data.t) {
           if (player_state.player.playing) {
-            const offset_time = data.t + this.latency_rtt / 1000
+            const offset_time = data.t + Math.min(this.latency_rtt / 1000, 1)
             if (offset_time >= player_state.player.duration()) { return }
+
+            this.catchup_target = offset_time
+            this.catchup_target_time = Date.now()
+            this.run_catchup()
+
             if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
               console.log("video:time offset", this.latency_rtt / 1000)
               player_state.player.seek(offset_time)
@@ -299,10 +334,11 @@ const hooks = {
         }
 
         if (data.speed) {
-          if (data.speed != player_state.player.speed) {
+          if (data.speed != this.speed) {
             player_state.player.show_osd(`Speed: ${data.speed}`)
           }
-          player_state.player.set_speed(data.speed)
+          this.speed = data.speed
+          player_state.player.set_speed(this.speed * this.catchup_mul)
         }
       })
 
@@ -316,7 +352,7 @@ const hooks = {
 
       this.handleEvent("seek", data => this.on_seek(data))
 
-      fetch("https://res.cloudinary.com/grass/raw/upload/v1668168577/fonts.json")
+      fetch("https://res.cloudinary.com/grass/raw/upload/v1669007803/fonts.json")
         .then(res => res.json())
         .then(fonts => {
           player_state.player.set_fonts(fonts)
@@ -334,6 +370,7 @@ const hooks = {
     },
     destroyed() {
       clearInterval(this.ping_interval)
+      clearInterval(this.catchup_interval)
       player_state.player = null
     }
   },

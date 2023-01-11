@@ -765,78 +765,44 @@ class GrassPlayer {
     }
     if (value != null && value != undefined) {
       const val = create_element(row, "span")
+      val.textContent = value
       return val
     }
     return row
   }
 
+  add_setting(setting, name) {
+    let row = create_element(this.settings_body, "div")
+
+    const input = create_element(row, "input")
+    input.id = `grassplayer_input_${setting}`
+    input.type = "checkbox"
+    input.checked = this.settings[setting]
+    input.addEventListener("change", () => {
+      this.settings.set(setting, input.checked)
+    })
+
+    const label = create_element(row, "label")
+    label.textContent = name
+    label.htmlFor = `grassplayer_input_${setting}`
+  }
+
   create_settings() {
     const settings = create_element(null, "div", "settings")
+
     const btn_settings = create_element(this.ctxmenu, "button")
     btn_settings.textContent = "Settings"
     btn_settings.addEventListener("click", () => {
       this.overlay.appendChild(settings)
     })
 
-    let row = create_element(settings, "div")
-    const input_volume_scroll = create_element(row, "input")
-    input_volume_scroll.id = "grassplayer_input_volume_scroll"
-    input_volume_scroll.type = "checkbox"
-    input_volume_scroll.checked = this.settings.video_volume_scroll
-    input_volume_scroll.addEventListener("change", () => {
-      this.settings.set("video_volume_scroll", input_volume_scroll.checked)
-    })
-    const lbl_volume_scroll = create_element(row, "label")
-    lbl_volume_scroll.textContent = "Change volume with scroll wheel"
-    lbl_volume_scroll.htmlFor = "grassplayer_input_volume_scroll"
+    this.settings_body = create_element(settings, "div")
 
-    row = create_element(settings, "div")
-    const input_volume_arrow = create_element(row, "input")
-    input_volume_arrow.id = "grassplayer_input_volume_arrow"
-    input_volume_arrow.type = "checkbox"
-    input_volume_arrow.checked = this.settings.video_volume_arrow
-    input_volume_arrow.addEventListener("change", () => {
-      this.settings.set("video_volume_arrow", input_volume_arrow.checked)
-    })
-    const lbl_volume_arrow = create_element(row, "label")
-    lbl_volume_arrow.textContent = "Change volume with up and down arrow keys"
-    lbl_volume_arrow.htmlFor = "grassplayer_input_volume_arrow"
-
-    row = create_element(settings, "div")
-    const input_play_space = create_element(row, "input")
-    input_play_space.id = "grassplayer_input_play_space"
-    input_play_space.type = "checkbox"
-    input_play_space.checked = this.settings.video_play_space
-    input_play_space.addEventListener("change", () => {
-      this.settings.set("video_play_space", input_play_space.checked)
-    })
-    const lbl_play_space = create_element(row, "label")
-    lbl_play_space.textContent = "Play and pause using the space bar"
-    lbl_play_space.htmlFor = "grassplayer_input_play_space"
-
-    row = create_element(settings, "div")
-    const input_seek_arrow = create_element(row, "input")
-    input_seek_arrow.id = "grassplayer_input_seek_arrow"
-    input_seek_arrow.type = "checkbox"
-    input_seek_arrow.checked = this.settings.video_seek_arrow
-    input_seek_arrow.addEventListener("change", () => {
-      this.settings.set("video_seek_arrow", input_seek_arrow.checked)
-    })
-    const lbl_seek_arrow = create_element(row, "label")
-    lbl_seek_arrow.textContent = "Seek using arrow keys"
-    lbl_seek_arrow.htmlFor = "grassplayer_input_seek_arrow"
-
-    row = create_element(settings, "div")
-    const input_fullscreen_f = create_element(row, "input")
-    input_fullscreen_f.id = "grassplayer_input_fullscreen_f"
-    input_fullscreen_f.type = "checkbox"
-    input_fullscreen_f.checked = this.settings.video_fullscreen_f
-    input_fullscreen_f.addEventListener("change", () => {
-      this.settings.set("video_fullscreen_f", input_fullscreen_f.checked)
-    })
-    const lbl_fullscreen_f = create_element(row, "label")
-    lbl_fullscreen_f.textContent = "Toggle fullscreen by pressing F"
-    lbl_fullscreen_f.htmlFor = "grassplayer_input_fullscreen_f"
+    this.add_setting("video_volume_scroll", "Change volume with scroll wheel")
+    this.add_setting("video_volume_arrow", "Change volume with up and down arrow keys")
+    this.add_setting("video_play_space", "Play and pause using the space bar")
+    this.add_setting("video_seek_arrow", "Seek using arrow keys")
+    this.add_setting("video_fullscreen_f", "Toggle fullscreen by pressing F")
 
     const btn_close = create_element(settings, "button")
     btn_close.textContent = "close"
