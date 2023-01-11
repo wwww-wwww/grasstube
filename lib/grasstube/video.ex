@@ -24,7 +24,8 @@ defmodule Grasstube.VideoAgent do
             room_name: "",
             speed: 1,
             autopaused: false,
-            autopause: false
+            autopause: false,
+            autopause_min: 0
 
   def start_link(room_name) do
     Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
@@ -32,7 +33,7 @@ defmodule Grasstube.VideoAgent do
 
   def via_tuple(room_name), do: Grasstube.ProcessRegistry.via_tuple({room_name, :video})
 
-  def current_time() do
+  defp current_time() do
     DateTime.utc_now()
     |> DateTime.to_unix(:millisecond)
     |> Kernel./(1000)
@@ -51,7 +52,7 @@ defmodule Grasstube.VideoAgent do
              %{
                val
                | playing: playing,
-                 time_seek: actual_get_time(val),
+                 time_seek: get_time(val),
                  time_started: current_time(),
                  autopaused: autopaused
              }}
@@ -78,19 +79,7 @@ defmodule Grasstube.VideoAgent do
 
   def playing?(pid), do: Agent.get(pid, & &1.playing)
 
-  def get_time(pid), do: Agent.get(pid, &actual_get_time/1)
-
-  def remaining_time(pid),
-    do:
-      Agent.get(pid, fn val ->
-        case val.current_video do
-          %{duration: :unset} -> 0
-          %{duration: n} -> n - actual_get_time(val)
-          _ -> 0
-        end
-      end)
-
-  defp actual_get_time(val) do
+  def get_time(val) when is_map(val) do
     if val.playing and val.time_started != :not_started do
       now = current_time()
       val.time_seek + (now - val.time_started) * val.speed
@@ -98,6 +87,18 @@ defmodule Grasstube.VideoAgent do
       val.time_seek
     end
   end
+
+  def get_time(pid), do: Agent.get(pid, &get_time/1)
+
+  def remaining_time(pid),
+    do:
+      Agent.get(pid, fn val ->
+        case val.current_video do
+          %{duration: :unset} -> 0
+          %{duration: n} -> n - get_time(val)
+          _ -> 0
+        end
+      end)
 
   def seek_shift(pid, t) do
     {new_time, room_name} =
@@ -173,9 +174,10 @@ defmodule Grasstube.VideoAgent do
     Agent.get(pid, fn val ->
       %{
         video: val.current_video,
-        time: actual_get_time(val),
+        time: get_time(val),
         playing: val.playing,
-        speed: val.speed
+        speed: val.speed,
+        pid: pid
       }
     end)
   end
@@ -192,7 +194,7 @@ defmodule Grasstube.VideoAgent do
         {val.room_name,
          %{
            val
-           | time_seek: actual_get_time(val),
+           | time_seek: get_time(val),
              time_started: current_time(),
              speed: speed
          }}
@@ -222,6 +224,58 @@ defmodule Grasstube.VideoAgent do
     Endpoint.broadcast("video:#{room_name}", "autopause", autopause)
 
     autopause
+  end
+
+  def check_autopause(pid) do
+    Agent.get_and_update(pid, fn val ->
+      if val.autopause do
+        time = get_time(val)
+
+        playing =
+          if val.autopause_min < time do
+            false
+          else
+            val.autopaused
+          end
+
+        if playing != val.playing do
+          {{playing, time},
+           %{
+             val
+             | playing: playing,
+               time_seek: time,
+               time_started: current_time(),
+               autopaused: true
+           }}
+        else
+          {false, val}
+        end
+      else
+        {false, val}
+      end
+    end)
+    |> case do
+      false ->
+        false
+
+      {playing, time} ->
+        room_name = Agent.get(pid, & &1.room_name)
+
+        Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+        |> VideoScheduler.cancel_play()
+
+        Endpoint.broadcast("video:#{room_name}", "sync", %{
+          t: time,
+          playing: playing
+        })
+
+        true
+    end
+  end
+
+  def set_autopause_time(pid, time) do
+    Agent.update(pid, &%{&1 | autopause_min: time})
+    check_autopause(pid)
   end
 end
 
@@ -287,32 +341,36 @@ defmodule Grasstube.VideoScheduler do
         %{video: :nothing} ->
           state
 
-        %{video: video, time: time, playing: playing, speed: speed} ->
-          Endpoint.broadcast("video:#{state.room_name}", "sync", %{
-            t: time,
-            playing: playing,
-            speed: speed
-          })
-
+        %{pid: pid, video: video, time: time, playing: playing, speed: speed} ->
           if video.duration == :unset do
             %{state | sync_task: :nothing}
           else
             scheduler = ProcessRegistry.lookup(state.room_name, :video_scheduler)
 
-            if time - video.duration > 0 do
-              Endpoint.broadcast("chat:#{state.room_name}", "chat", %{
-                sender: "sys",
-                name: "System",
-                content: "playing next video in #{@time_to_next + @time_to_start} seconds"
+            if !VideoAgent.check_autopause(pid) do
+              Endpoint.broadcast("video:#{state.room_name}", "sync", %{
+                t: time,
+                playing: playing,
+                speed: speed
               })
 
-              playlist = ProcessRegistry.lookup(state.room_name, :playlist)
+              if time - video.duration > 0 do
+                Endpoint.broadcast("chat:#{state.room_name}", "chat", %{
+                  sender: "sys",
+                  name: "System",
+                  content: "playing next video in #{@time_to_next + @time_to_start} seconds"
+                })
 
-              %{
-                state
-                | set_task: Process.send_after(scheduler, {:delayed_set, playlist}, 5000),
-                  sync_task: :nothing
-              }
+                playlist = ProcessRegistry.lookup(state.room_name, :playlist)
+
+                %{
+                  state
+                  | set_task: Process.send_after(scheduler, {:delayed_set, playlist}, 5000),
+                    sync_task: :nothing
+                }
+              else
+                %{state | sync_task: start_timer(scheduler, 2000)}
+              end
             else
               %{state | sync_task: start_timer(scheduler, 2000)}
             end

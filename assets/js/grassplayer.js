@@ -1148,10 +1148,9 @@ class GrassPlayer {
       const start = this.video.buffered.start(i)
       const end = this.video.buffered.end(i)
       if ((start < this.video.currentTime || start < 1) && end > this.video.currentTime) {
-        const playable = Math.round(end - this.video.currentTime)
-        this.stats.playable.textContent = `${playable} seconds`
+        this.stats.playable.textContent = `${Math.round(end - this.video.currentTime)} seconds`
         if (this.on_playable) {
-          this.on_playable(playable)
+          this.on_playable(end)
         }
         return
       }

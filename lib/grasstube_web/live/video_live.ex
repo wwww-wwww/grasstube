@@ -135,25 +135,15 @@ defmodule GrasstubeWeb.VideoLive do
         buffered: buffered
       })
 
-      if buffered > 0 do
+      time =
         Presence.list(socket.assigns.topic)
         |> Enum.map(&elem(&1, 1))
         |> Enum.map(& &1.metas)
         |> List.flatten()
         |> Enum.map(& &1.buffered)
         |> Enum.min()
-        |> Kernel.>(@autopause_min)
-        |> Kernel.and(VideoAgent.autopaused?(socket.assigns.video))
-        |> if do
-          socket.assigns.video
-          |> VideoAgent.set_playing(true)
-        end
-      else
-        if VideoAgent.remaining_time(socket.assigns.video) > 5 do
-          socket.assigns.video
-          |> VideoAgent.set_playing(false, true)
-        end
-      end
+
+      VideoAgent.set_autopause_time(socket.assigns.video, time)
     end
 
     {:noreply, socket}
