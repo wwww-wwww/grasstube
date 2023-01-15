@@ -277,61 +277,65 @@ const hooks = {
 
       this.on_playing = data => {
         if (data.playing == undefined) return
+
+        const current_state = player_state.player.playing
+
         if (player_state.player.playing != data.playing) {
           player_state.player.show_osd(data.playing ? "Play" : "Pause")
-          if (data.playing) {
-            const offset_time = data.t + this.latency_rtt / 1000
-            if (Math.abs(offset_time - player_state.player.current_time()) > 0.1) {
-              console.log("video:play offset", this.latency_rtt / 1000)
-              player_state.player.seek(offset_time)
-            }
-          }
+          player_state.player.set_playing(data.playing)
         }
-        player_state.player.set_playing(data.playing)
+
+        if (player_state.player.playing) {
+          const offset_time = data.t + Math.min(this.latency_rtt / 1000, 1)
+          if (offset_time >= player_state.player.duration()) return
+
+          if (current_state != data.playing) {
+            player_state.player.seek(offset_time)
+
+            this.catchup_target = offset_time
+            this.catchup_target_time = Date.now()
+
+            clearInterval(this.catchup_interval)
+            setTimeout(() =>
+              this.catchup_interval = setInterval(() => this.run_catchup(), 20), 200)
+          }
+
+          if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
+            player_state.player.seek(offset_time)
+          }
+        } else {
+          player_state.player.seek(data.t)
+        }
       }
 
       this.run_catchup = () => {
-        if (!player_state.player.settings.catchup) return
+        if (!player_state.player.settings.catchup) {
+          clearInterval(this.catchup_interval)
+          return
+        }
         if (this.catchup_target == null || !player_state.player.playing) return
         const elapsed = (Date.now() - this.catchup_target_time) / 1000
         const dist = (this.catchup_target + elapsed) - player_state.player.current_time()
 
-        if (Math.abs(dist) < 0.03) {
+        if (Math.abs(dist) < 0.02) {
           this.catchup_mul = 1
-          player_state.player.set_speed(this.speed)
-        } else if (Math.abs(dist) > 0.06) {
+          console.log("video:caught up")
+          clearInterval(this.catchup_interval)
+        } else {
           const dir = dist > 0 ? 1 : -1
           this.catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
-          player_state.player.set_speed(this.speed * this.catchup_mul)
         }
 
+        player_state.player.set_speed(this.speed * this.catchup_mul)
         this.stats_catchup.textContent = `${dist.toFixed(5)} ${this.catchup_mul.toFixed(5)}x`
       }
 
-      this.catchup_interval = setInterval(() => this.run_catchup(), 200)
+      this.catchup_interval = null
 
       this.handleEvent("sync", data => {
         console.log("video:sync", data)
 
         this.on_playing(data)
-
-        if (data.t) {
-          if (player_state.player.playing) {
-            const offset_time = data.t + Math.min(this.latency_rtt / 1000, 1)
-            if (offset_time >= player_state.player.duration()) { return }
-
-            this.catchup_target = offset_time
-            this.catchup_target_time = Date.now()
-            this.run_catchup()
-
-            if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
-              console.log("video:time offset", this.latency_rtt / 1000)
-              player_state.player.seek(offset_time)
-            }
-          } else {
-            player_state.player.seek(data.t)
-          }
-        }
 
         if (data.speed) {
           if (data.speed != this.speed) {
@@ -343,6 +347,9 @@ const hooks = {
       })
 
       this.on_seek = data => {
+        this.catchup_target = null
+        this.catchup_target_time = null
+
         if (Math.abs(data.t - player_state.player.current_time()) > 0.1) {
           console.log("video:seek", data)
           player_state.player.show_osd(`${seconds_to_hms(data.t, true)}`)

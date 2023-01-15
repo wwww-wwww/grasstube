@@ -996,6 +996,8 @@ class GrassPlayer {
   }
 
   seek_to(t) {
+    if (!isFinite(t)) return
+    
     t = Math.max(t, 0.01)
 
     if (this.current_video.yt) {
@@ -1066,14 +1068,16 @@ class GrassPlayer {
   }
 
   set_speed(speed) {
-    this.speed = speed
-
     if (this.current_video.yt) {
       if (!this.current_video.yt.setPlaybackRate) return
       this.current_video.yt.setPlaybackRate(speed)
     } else {
-      this.video.playbackRate = speed
+      if (this.speed != speed) {
+        this.video.playbackRate = speed
+      }
     }
+
+    this.speed = speed
   }
 
   capture_frame(subtitles) {
