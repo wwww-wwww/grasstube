@@ -228,11 +228,11 @@ defmodule Grasstube.VideoAgent do
 
   def check_autopause(pid) do
     Agent.get_and_update(pid, fn val ->
-      if val.autopause do
+      if val.current_video != :nothing and val.autopause do
         time = get_time(val)
 
         playing =
-          if val.autopause_min < time do
+          if val.autopause_min < time and val.current_video.duration - time > 1 do
             false
           else
             val.playing or val.autopaused
