@@ -8,8 +8,8 @@ defmodule Grasstube.PollsAgent do
             current_id: 0,
             room_name: ""
 
-  def start_link(room_name) do
-    Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
+  def start_link(room) do
+    Agent.start_link(fn -> %__MODULE__{room_name: room.title} end, name: via_tuple(room.title))
   end
 
   def via_tuple(room_name), do: Grasstube.ProcessRegistry.via_tuple({room_name, :polls})

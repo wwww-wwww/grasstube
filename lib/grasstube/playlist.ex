@@ -1,15 +1,14 @@
 defmodule Grasstube.PlaylistAgent do
   use Agent
-  require Logger
 
-  alias Grasstube.{VideoAgent, Video, ProcessRegistry}
+  alias Grasstube.{Repo, Room, VideoAgent, Video, ProcessRegistry}
   alias GrasstubeWeb.Endpoint
 
-  defstruct videos: %{},
+  defstruct videos: [],
             queue: [],
-            current_qid: 0,
             room_name: "",
-            repeat_mode: :none
+            repeat_mode: :none,
+            room: nil
 
   @yt_domains ["youtube.com", "www.youtube.com", "youtu.be", "www.youtu.be"]
   @gdrive_domains [
@@ -18,22 +17,47 @@ defmodule Grasstube.PlaylistAgent do
     "docs.google.com",
     "www.docs.google.com"
   ]
-  @yt_timeout 10000
+  @yt_timeout 30000
   @ffprobe_timeout 10000
 
-  def start_link(room_name) do
-    Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
+  def start_link(room) do
+    videos = Repo.preload(room, [:videos]).videos
+
+    videos
+    |> Enum.filter(&(&1.duration == nil))
+    |> Enum.each(&Repo.delete/1)
+
+    videos = Enum.filter(videos, &(&1.duration != nil))
+
+    video_ids = Enum.map(videos, & &1.id)
+
+    queue =
+      room.queue
+      |> Enum.filter(&(&1 in video_ids))
+      |> Kernel.++(video_ids)
+      |> Enum.uniq()
+
+    Agent.start_link(
+      fn ->
+        %__MODULE__{
+          room: room,
+          videos: videos |> Enum.map(&{&1.id, &1}) |> Map.new(),
+          room_name: room.title,
+          queue: queue
+        }
+      end,
+      name: via_tuple(room.title)
+    )
   end
 
   def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :playlist})
 
+  def get_room(pid), do: Agent.get(pid, & &1.room)
+
   def get_room_name(pid), do: Agent.get(pid, & &1.room_name)
 
-  def get_videos(pid), do: Agent.get(pid, & &1.videos)
-
-  def get_video(pid, id) when is_integer(id) do
-    Agent.get(pid, &Map.get(&1.videos, id, :nothing))
-  end
+  def get_video(pid, id) when is_integer(id),
+    do: Agent.get(pid, &Map.get(&1.videos, id, :nothing))
 
   def get_video(pid, id) do
     {id, _} = Integer.parse(to_string(id))
@@ -43,16 +67,22 @@ defmodule Grasstube.PlaylistAgent do
   def get_queue(pid), do: Agent.get(pid, & &1.queue)
 
   def set_queue(pid, queue) do
-    Agent.update(pid, &%{&1 | queue: queue})
+    videos = Agent.get_and_update(pid, &{&1.videos, %{&1 | queue: queue}})
 
-    Endpoint.broadcast("playlist:" <> get_room_name(pid), "playlist", %{
-      playlist: get_playlist(pid)
+    room = get_room(pid)
+
+    Room.changeset(room, %{queue: queue})
+    |> Repo.update()
+
+    Endpoint.broadcast("playlist:" <> room.title, "playlist", %{
+      playlist: get_playlist(%{videos: videos, queue: queue})
     })
   end
 
-  def get_playlist(pid) do
-    Agent.get(pid, fn state -> Enum.map(state.queue, &Map.get(state.videos, &1, :nothing)) end)
-  end
+  def get_playlist(%{videos: videos, queue: queue}),
+    do: Enum.map(queue, &Map.get(videos, &1, :nothing))
+
+  def get_playlist(pid), do: Agent.get(pid, fn state -> get_playlist(state) end)
 
   def get_index(pid, id) do
     Agent.get(pid, fn state -> Enum.find_index(state.queue, &(&1 == id)) end) || 0
@@ -69,68 +99,89 @@ defmodule Grasstube.PlaylistAgent do
   end
 
   def add_queue(pid, title, url, sub, alts) do
-    Agent.update(pid, fn val ->
-      new_videos =
-        Map.put(val.videos, val.current_qid, %Video{
-          id: val.current_qid,
-          title: "loading",
-          url: url
-        })
+    room = get_room(pid)
 
-      new_queue = val.queue ++ [val.current_qid]
+    Ecto.build_assoc(room, :videos)
+    |> Video.changeset(%{title: "loading", url: url})
+    |> Repo.insert()
+    |> case do
+      {:ok, video} ->
+        {new_playlist, queue} =
+          Agent.get_and_update(pid, fn val ->
+            queue = val.queue ++ [video.id]
+            val = %{val | videos: Map.put(val.videos, video.id, video), queue: queue}
+            {{get_playlist(val), queue}, val}
+          end)
 
-      %{val | videos: new_videos, queue: new_queue, current_qid: val.current_qid + 1}
-    end)
+        Room.changeset(room, %{queue: queue})
+        |> Repo.update()
 
-    room_name = get_room_name(pid)
-    Endpoint.broadcast("playlist:" <> room_name, "playlist", %{playlist: get_playlist(pid)})
+        Endpoint.broadcast("playlist:" <> room.title, "playlist", %{playlist: new_playlist})
 
-    queue_id = Agent.get(pid, &(&1.current_qid - 1))
+        Task.Supervisor.async_nolink(Tasks, fn ->
+          queue_lookup(pid, room, video, title, url, sub, alts)
+        end)
 
-    Task.Supervisor.async_nolink(Tasks, fn ->
-      queue_lookup(pid, room_name, queue_id, title, url, sub, alts)
-    end)
+      err ->
+        IO.inspect(err)
+    end
   end
 
-  def update_queue_item(pid, queue_id, opts) do
-    Agent.update(pid, fn val ->
-      new_videos =
-        if Map.has_key?(val.videos, queue_id) do
-          Map.update(val.videos, queue_id, %Video{}, &Map.merge(&1, opts))
-        else
-          val.videos
-        end
-
-      %{val | videos: new_videos}
-    end)
+  def update_queue_item(pid, video, opts) do
+    Video.changeset(video, opts)
+    |> Repo.update()
+    |> case do
+      {:ok, video} -> Agent.update(pid, &%{&1 | videos: Map.put(&1.videos, video.id, video)})
+      err -> IO.inspect(err)
+    end
   end
 
-  def insert_queue(pid, queue_id, videos) do
+  def insert_queue(pid, video, videos) do
     Agent.update(pid, fn val ->
-      new_videos =
-        val.videos
-        |> Map.update(queue_id, %Video{}, &%Video{Enum.at(videos, 0) | id: &1.id})
+      multi =
+        Ecto.Multi.new()
+        |> Ecto.Multi.update(:first, Video.changeset(video, Enum.at(videos, 0)))
 
-      {new_videos, queue, count} =
+      {new_videos, video_ids} =
         videos
         |> Enum.drop(1)
-        |> Enum.reduce({new_videos, [], val.current_qid}, fn video, {videos, queue, count} ->
-          new_videos = Map.put(videos, count, %Video{video | id: count})
-
-          {new_videos, queue ++ [count], count + 1}
+        |> Enum.map(
+          &(Ecto.build_assoc(val.room, :videos)
+            |> Video.changeset(&1))
+        )
+        |> Enum.with_index()
+        |> Enum.reduce(multi, fn {changeset, i}, acc ->
+          Ecto.Multi.insert(acc, i, changeset)
         end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, videos} ->
+            {
+              Map.values(videos) |> Enum.reduce(val.videos, &Map.put(&2, &1.id, &1)),
+              videos
+              |> Enum.filter(&(elem(&1, 0) != :first))
+              |> Enum.sort_by(&elem(&1, 0))
+              |> Enum.map(&elem(&1, 1).id)
+            }
+
+          err ->
+            IO.inspect(err)
+            {val.videos, []}
+        end
 
       {right, left} =
         val.queue
         |> Enum.reverse()
-        |> Enum.split_while(&(&1 != queue_id))
+        |> Enum.split_while(&(&1 != video.id))
 
-      new_queue = Enum.reverse(right ++ Enum.reverse(queue) ++ left)
-      %{val | videos: new_videos, current_qid: count, queue: new_queue}
+      new_queue = Enum.reverse(right ++ Enum.reverse(video_ids) ++ left)
+      %{val | videos: new_videos, queue: new_queue}
     end)
   end
 
   def remove_queue(pid, id) when is_integer(id) do
+    Repo.get(Video, id) |> Repo.delete()
+
     Agent.update(pid, fn val ->
       new_videos = Map.drop(val.videos, [id])
       new_queue = Enum.filter(val.queue, &(&1 != id))
@@ -216,10 +267,10 @@ defmodule Grasstube.PlaylistAgent do
     end
   end
 
-  def queue_lookup(pid, room_name, queue_id, custom_title, url, sub, alts) do
+  def queue_lookup(pid, room, video, custom_title, url, sub, alts) do
     case URI.parse(url) do
       %URI{host: nil} ->
-        update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+        update_queue_item(pid, video, %{title: "failed", ready: :failed})
         false
 
       %URI{host: host, query: query} ->
@@ -240,7 +291,7 @@ defmodule Grasstube.PlaylistAgent do
                     videos =
                       videos
                       |> Enum.map(
-                        &%Video{
+                        &%{
                           title: &1.title,
                           url: &1.id,
                           sub: nil,
@@ -250,12 +301,11 @@ defmodule Grasstube.PlaylistAgent do
                         }
                       )
 
-                    insert_queue(pid, queue_id, videos)
-
+                    insert_queue(pid, video, videos)
                     true
 
                   _ ->
-                    update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                    update_queue_item(pid, video, %{title: "failed", ready: :failed})
                     false
                 end
 
@@ -266,7 +316,7 @@ defmodule Grasstube.PlaylistAgent do
                   {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
                     title = if String.length(custom_title) > 0, do: custom_title, else: new_title
 
-                    update_queue_item(pid, queue_id, %{
+                    update_queue_item(pid, video, %{
                       title: title,
                       url: id,
                       sub: sub,
@@ -278,7 +328,7 @@ defmodule Grasstube.PlaylistAgent do
                     true
 
                   _ ->
-                    update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                    update_queue_item(pid, video, %{title: "failed", ready: :failed})
                     false
                 end
             end
@@ -290,7 +340,7 @@ defmodule Grasstube.PlaylistAgent do
               {:ok, {:ok, %{id: id, duration: duration, title: new_title}}} ->
                 title = if String.length(custom_title) > 0, do: custom_title, else: new_title
 
-                update_queue_item(pid, queue_id, %{
+                update_queue_item(pid, video, %{
                   title: title,
                   url: id,
                   sub: sub,
@@ -302,7 +352,7 @@ defmodule Grasstube.PlaylistAgent do
                 true
 
               _ ->
-                update_queue_item(pid, queue_id, %{title: "failed", ready: :failed})
+                update_queue_item(pid, video, %{title: "failed", ready: :failed})
                 false
             end
 
@@ -316,7 +366,7 @@ defmodule Grasstube.PlaylistAgent do
                     do: custom_title,
                     else: Path.basename(URI.decode(url))
 
-                update_queue_item(pid, queue_id, %{
+                update_queue_item(pid, video, %{
                   title: title,
                   url: url,
                   sub: sub,
@@ -329,26 +379,26 @@ defmodule Grasstube.PlaylistAgent do
                 true
 
               _ ->
-                update_queue_item(pid, queue_id, %{title: "failed"})
+                update_queue_item(pid, video, %{title: "failed"})
                 false
             end
         end
     end
     |> if do
-      video = ProcessRegistry.lookup(room_name, :video)
-      current_video = VideoAgent.get_current_video(video)
+      video_pid = ProcessRegistry.lookup(room.title, :video)
+      current_video = VideoAgent.get_current_video(video_pid)
 
-      if current_video != :nothing and current_video.id == queue_id do
-        VideoAgent.set_current_video(video, get_video(pid, queue_id))
+      if current_video != :nothing and current_video.id == video.id do
+        VideoAgent.set_current_video(video_pid, get_video(pid, video.id))
 
-        if VideoAgent.play_on_ready?(video) do
-          ProcessRegistry.lookup(room_name, :video_scheduler)
+        if VideoAgent.play_on_ready?(video_pid) do
+          ProcessRegistry.lookup(room.title, :video_scheduler)
           |> Grasstube.VideoScheduler.delayed_start(5000)
         end
       end
     end
 
-    Endpoint.broadcast("playlist:" <> room_name, "playlist", %{playlist: get_playlist(pid)})
+    Endpoint.broadcast("playlist:" <> room.title, "playlist", %{playlist: get_playlist(pid)})
   end
 
   def next_video(pid) do

@@ -2,21 +2,20 @@ defmodule GrasstubeWeb.EditRoomLive do
   use GrasstubeWeb, :live_view
   on_mount GrasstubeWeb.RoomAuth
 
-  alias Grasstube.ChatAgent
+  alias Grasstube.{Repo, Room}
 
   def render(assigns) do
     GrasstubeWeb.UserView.render("edit_room.html", assigns)
   end
 
   def mount(%{"room" => room}, _session, socket) do
-    if ChatAgent.get_admin(socket.assigns.chat) == socket.assigns.current_user.username do
-      if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(inspect(socket.assigns.chat))
+    if Room.get_room(room).user_username == socket.assigns.current_user.username do
+      if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(room)
 
       socket =
         socket
-        |> assign(chat_state: ChatAgent.get(socket.assigns.chat))
         |> assign(chat: socket.assigns.chat)
-        |> assign(room: room)
+        |> assign(room: Room.get_room(room) |> Repo.preload([:mods, :emotelists]))
         |> assign(page_title: room)
 
       {:ok, socket}
@@ -28,60 +27,64 @@ defmodule GrasstubeWeb.EditRoomLive do
     end
   end
 
+  def get_room(socket) do
+    Repo.get(Room, socket.assigns.room.id) |> Repo.preload([:mods, :emotelists])
+  end
+
   def handle_event("password", %{"password" => password}, socket) do
-    ChatAgent.set_password(socket.assigns.chat, password)
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.set_password(socket.assigns.room, password)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("op_add", %{"username" => username}, socket) do
-    ChatAgent.add_mod(socket.assigns.chat, String.trim(username))
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.add_mod(socket.assigns.room, username)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("op_remove", %{"value" => username}, socket) do
-    ChatAgent.remove_mod(socket.assigns.chat, username)
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.remove_mod(socket.assigns.room, username)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("motd_set", %{"motd" => motd}, socket) do
-    ChatAgent.set_motd(socket.assigns.chat, String.trim(motd))
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
-  end
-
-  def handle_event("emotelist_remove", %{"value" => value}, socket) do
-    ChatAgent.remove_emotelist(socket.assigns.chat, value)
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.set_motd(socket.assigns.room, motd)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("emotelist_add", %{"username" => username}, socket) do
-    ChatAgent.add_emotelist(socket.assigns.chat, String.trim(username))
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.add_emotelist(socket.assigns.room, username)
+    {:noreply, assign(socket, room: get_room(socket))}
+  end
+
+  def handle_event("emotelist_remove", %{"value" => value}, socket) do
+    Room.remove_emotelist(socket.assigns.room, value)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("script_set", %{"key" => key, "script" => script}, socket) do
-    ChatAgent.set_script(socket.assigns.chat, String.to_atom(key), script)
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.set_script(socket.assigns.room, String.to_atom(key), script)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("script_remove", %{"value" => key}, socket) do
-    ChatAgent.remove_script(socket.assigns.chat, String.to_atom(key))
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.remove_script(socket.assigns.room, String.to_atom(key))
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("public_controls", %{"value" => "on"}, socket) do
-    ChatAgent.set_public_controls(socket.assigns.chat, true)
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.set_public_controls(socket.assigns.room, true)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("public_controls", %{}, socket) do
-    ChatAgent.set_public_controls(socket.assigns.chat, false)
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    Room.set_public_controls(socket.assigns.room, false)
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("close_room", %{"room" => room}, socket) do
     socket =
-      if room == socket.assigns.room do
-        Grasstube.ProcessRegistry.close_room(room)
+      if room == socket.assigns.room.title do
+        Grasstube.ProcessRegistry.delete_room(room)
 
         socket
         |> put_flash(:info, "Room closed.")
@@ -94,6 +97,6 @@ defmodule GrasstubeWeb.EditRoomLive do
   end
 
   def handle_info(%{event: "details"}, socket) do
-    {:noreply, assign(socket, chat_state: ChatAgent.get(socket.assigns.chat))}
+    {:noreply, assign(socket, room: get_room(socket))}
   end
 end

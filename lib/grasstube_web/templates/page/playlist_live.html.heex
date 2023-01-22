@@ -51,7 +51,7 @@
 
     <a class="title" href={if item.type == "yt", do: URI.merge(URI.parse("https://youtu.be/"), item.url) |> to_string(), else: nil}><%= item.title %></a>
 
-    <%= if item.duration != :unset do %>
+    <%= if item.duration != nil do %>
     <span><%= seconds_to_string(item.duration) %></span>
     <% end %>
 

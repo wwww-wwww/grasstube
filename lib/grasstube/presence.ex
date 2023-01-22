@@ -38,7 +38,7 @@ defmodule Grasstube.Presence do
 
     for {key, u} <- presences, into: %{} do
       case key do
-        "$" <> id -> {key, u}
+        "$" <> _id -> {key, u}
         username -> {key, %{u | nickname: users[username]}}
       end
     end

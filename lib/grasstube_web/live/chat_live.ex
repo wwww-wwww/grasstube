@@ -41,12 +41,9 @@ defmodule GrasstubeWeb.ChatLive do
       |> assign(emotes: ChatAgent.get_emotes(chat))
       |> assign(users: Presence.list_with_nicknames(topic))
 
-    case ChatAgent.get_motd(chat) do
-      "" ->
-        nil
-
-      motd ->
-        send(self(), %{event: "chat", payload: %{sender: "sys", name: room, content: motd}})
+    case ChatAgent.get_motd(chat, true) do
+      "" -> nil
+      motd -> send(self(), %{event: "chat", payload: %{sender: "sys", name: room, content: motd}})
     end
 
     {:ok, socket}

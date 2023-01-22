@@ -149,7 +149,7 @@ defmodule GrasstubeWeb.PlaylistLive do
   def handle_info(%{event: "playlist", payload: %{playlist: playlist}}, socket) do
     duration =
       playlist
-      |> Enum.filter(&(&1.duration != :unset))
+      |> Enum.filter(&(&1.duration != nil))
       |> Enum.reduce(0, &(&2 + &1.duration))
 
     current_index =

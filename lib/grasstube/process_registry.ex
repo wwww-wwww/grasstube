@@ -1,10 +1,12 @@
 defmodule Grasstube.ProcessRegistry do
+  alias Grasstube.{Repo, User, Room}
+
   def start_link do
     Registry.start_link(keys: :unique, name: __MODULE__)
   end
 
-  def via_tuple({room_name, key}, admin \\ nil) do
-    {:via, Registry, {__MODULE__, {room_name |> String.downcase(), key}, {room_name, admin}}}
+  def via_tuple({room_name, key}) do
+    {:via, Registry, {__MODULE__, {room_name |> String.downcase(), key}, room_name}}
   end
 
   def child_spec(_) do
@@ -22,55 +24,80 @@ defmodule Grasstube.ProcessRegistry do
     end
   end
 
-  def rooms_of(user) when is_bitstring(user) do
-    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", user}}, [], [:"$1"]}])
-  end
-
-  def rooms_of(%{username: username}), do: rooms_of(username)
-
-  def rooms_of(_), do: []
-
   def list_rooms() do
-    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", {:"$3", :"$4"}}, [], [:"$3"]}])
+    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", :"$3"}, [], [:"$3"]}])
   end
 
   def create_room(%Grasstube.User{} = user, room_name, password) do
+    user = Repo.preload(user, :rooms)
+
     cond do
-      length(rooms_of(user)) > 0 ->
-        {:error, "User already has a room"}
+      Application.get_env(:grasstube, :max_rooms) != :unlimited and
+          length(user.rooms) > Application.get_env(:grasstube, :max_rooms) ->
+        {:error, "Max amount of rooms"}
 
       String.length(room_name) == 0 ->
         {:error, "Room name is too short"}
 
       true ->
-        case create_room(user.username, room_name, password) do
-          {:ok, _} ->
-            GrasstubeWeb.RoomsLive.update()
-            {:ok, room_name}
+        Ecto.build_assoc(user, :rooms)
+        |> Room.changeset(%{title: room_name, password: password})
+        |> Repo.insert()
+        |> case do
+          {:ok, room} ->
+            room
+            |> Repo.preload([:user, :mods, [emotelists: :emotes]])
+            |> start_room()
+            |> case do
+              {:ok, _} ->
+                GrasstubeWeb.RoomsLive.update()
+                {:ok, room_name}
 
-          {:error, {reason, _}} ->
-            case reason do
-              :already_started ->
-                {:error, "A room already exists with this name"}
+              {:error, {reason, _}} ->
+                case reason do
+                  :already_started ->
+                    {:error, "A room already exists with this name"}
 
-              _ ->
-                {:error, "Error creating room #{inspect(reason)}"}
+                  _ ->
+                    {:error, "Error creating room #{inspect(reason)}"}
+                end
             end
+
+          {:error, %{errors: errors}} ->
+            {:error, inspect(errors)}
+
+          err ->
+            {:error, inspect(err)}
         end
     end
   end
 
   def create_room(admin, room_name, password) when is_bitstring(admin) do
-    DynamicSupervisor.start_child(
-      Grasstube.DynamicSupervisor,
-      {Grasstube.RoomSupervisor, admin: admin, room_name: room_name, password: password}
-    )
+    Repo.get(User, admin)
+    |> case do
+      nil -> nil
+      %User{} = user -> create_room(user, room_name, password)
+    end
   end
 
   def create_room(_, _, _), do: {:error, "Admin must be provided"}
 
+  def start_room(room) do
+    DynamicSupervisor.start_child(
+      Grasstube.DynamicSupervisor,
+      {Grasstube.RoomSupervisor, room: room}
+    )
+  end
+
   def close_room(room_name) do
     DynamicSupervisor.stop(lookup(room_name, :supervisor))
     GrasstubeWeb.RoomsLive.update()
+  end
+
+  def delete_room(room) when is_bitstring(room), do: Repo.get_by(Room, title: room) |> delete_room
+
+  def delete_room(room) do
+    Repo.delete(room)
+    close_room(room.title)
   end
 end

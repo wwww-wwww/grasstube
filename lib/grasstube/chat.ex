@@ -3,7 +3,7 @@ defmodule Grasstube.ChatAgent do
 
   alias GrasstubeWeb.Endpoint
 
-  alias Grasstube.{ProcessRegistry, Repo}
+  alias Grasstube.{ProcessRegistry, Repo, Room}
 
   alias Phoenix.HTML
 
@@ -27,15 +27,8 @@ defmodule Grasstube.ChatAgent do
     "autopause"
   ]
 
-  defstruct admin: "",
-            password: "",
-            mods: [],
-            history: [],
-            room_name: "",
-            emotelists: [],
-            motd: "",
-            public_controls: false,
-            scripts: %{}
+  defstruct history: [],
+            room: nil
 
   defmodule ChatMessage do
     @derive Jason.Encoder
@@ -47,15 +40,8 @@ defmodule Grasstube.ChatAgent do
   @max_history_size 20
   @max_name_length 24
 
-  def start_link(opts) do
-    room_name = Keyword.get(opts, :room_name)
-    admin = Keyword.get(opts, :admin)
-    password = Keyword.get(opts, :password)
-
-    Agent.start_link(
-      fn -> %__MODULE__{room_name: room_name, admin: admin, password: password} end,
-      name: via_tuple(room_name)
-    )
+  def start_link(room) do
+    Agent.start_link(fn -> %__MODULE__{room: room} end, name: via_tuple(room.title))
   end
 
   def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :chat})
@@ -74,6 +60,20 @@ defmodule Grasstube.ChatAgent do
 
   defp get_socket(socket), do: socket
 
+  def get_room(pid), do: Agent.get(pid, & &1.room)
+
+  def set_room(pid, room), do: Agent.update(pid, &%{&1 | room: room})
+
+  def reload_room(room_name, room) when is_bitstring(room_name),
+    do: ProcessRegistry.lookup(room_name, :chat) |> reload_room(room)
+
+  def reload_room(pid, room),
+    do:
+      set_room(
+        pid,
+        Repo.get(Room, room.id) |> Repo.preload([:user, :mods, [emotelists: :emotes]])
+      )
+
   defp member?(%{assigns: %{user: %Grasstube.User{}}}), do: true
 
   defp member?(_), do: false
@@ -87,10 +87,12 @@ defmodule Grasstube.ChatAgent do
   end
 
   def chat(channel, socket, @command_prefix <> command) do
+    room = get_room(channel)
+
     level =
       cond do
-        get_admin(channel) == socket_username(socket) -> :admin
-        mod?(channel, get_socket(socket).assigns.user) -> :mod
+        room.user.username == socket_username(socket) -> :admin
+        mod?(room, get_socket(socket).assigns.user) -> :mod
         true -> :user
       end
 
@@ -168,24 +170,28 @@ defmodule Grasstube.ChatAgent do
   defp command("op " <> username, :admin, channel, socket) do
     username = String.downcase(username)
 
-    if mod?(channel, username) do
-      push(socket, "chat", %ChatMessage{content: "#{username} is already an op"})
-    else
-      add_mod(channel, username)
+    case Room.add_mod(get_room(channel), username) do
+      :ok ->
+        push(socket, "chat", %ChatMessage{content: "opped #{username}"})
 
-      push(socket, "chat", %ChatMessage{content: "opped #{username}"})
+      {:error, %{errors: [unique: _]}} ->
+        push(socket, "chat", %ChatMessage{content: "#{username} is already an op"})
+
+      err ->
+        push(socket, "chat", %ChatMessage{content: inspect(err)})
     end
   end
 
   defp command("deop " <> username, :admin, channel, socket) do
     username = String.downcase(username)
 
-    if not mod?(channel, username) do
-      push(socket, "chat", %ChatMessage{content: "#{username} is already not an op"})
-    else
-      remove_mod(channel, username)
+    Room.remove_mod(get_room(channel), username)
+    |> case do
+      :ok ->
+        push(socket, "chat", %ChatMessage{content: "de-opped #{username}"})
 
-      push(socket, "chat", %ChatMessage{content: "de-opped #{username}"})
+      :fail ->
+        push(socket, "chat", %ChatMessage{content: "#{username} is not an op"})
     end
   end
 
@@ -193,16 +199,15 @@ defmodule Grasstube.ChatAgent do
        when level in [:mod, :admin] do
     username = String.downcase(username)
 
-    if get_emotelists(channel) |> Enum.member?(username) do
-      push(socket, "chat", %ChatMessage{
-        content: "#{username} is already in emotelists"
-      })
-    else
-      add_emotelist(channel, username)
+    case Room.add_emotelist(get_room(channel), username) do
+      :ok ->
+        push(socket, "chat", %ChatMessage{content: "added #{username} to emote lists"})
 
-      push(socket, "chat", %ChatMessage{
-        content: "added #{username} to emote lists"
-      })
+      {:error, %{errors: [unique: _]}} ->
+        push(socket, "chat", %ChatMessage{content: "#{username} is already in emotelists"})
+
+      err ->
+        push(socket, "chat", %ChatMessage{content: inspect(err)})
     end
   end
 
@@ -210,16 +215,13 @@ defmodule Grasstube.ChatAgent do
        when level in [:mod, :admin] do
     username = username |> String.downcase()
 
-    if not (get_emotelists(channel) |> Enum.member?(username)) do
-      push(socket, "chat", %ChatMessage{
-        content: "#{username} is already not in emotelists"
-      })
-    else
-      remove_emotelist(channel, username)
+    Room.remove_emotelist(get_room(channel), username)
+    |> case do
+      :ok ->
+        push(socket, "chat", %ChatMessage{content: "removed #{username} from emotelists"})
 
-      push(socket, "chat", %ChatMessage{
-        content: "removed #{username} from emotelists"
-      })
+      :fail ->
+        push(socket, "chat", %ChatMessage{content: "#{username} is not in emotelists"})
     end
   end
 
@@ -231,20 +233,25 @@ defmodule Grasstube.ChatAgent do
 
   defp command("emotelists", _, channel, socket) do
     push(socket, "chat", %ChatMessage{
-      content: "emotelists: " <> (get_emotelists(channel) |> Enum.join(", "))
+      content:
+        "emotelists: " <> (get_emotelists(channel) |> Enum.map(& &1.username) |> Enum.join(", "))
     })
   end
 
   defp command("ops", level, channel, socket) when level in [:mod, :admin] do
+    room = get_room(channel)
+
     push(socket, "chat", %ChatMessage{
-      content: "ops: " <> ((get_mods(channel) ++ [get_admin(channel)]) |> Enum.join(", "))
+      content:
+        "ops: " <> ((room.mods ++ [room.user]) |> Enum.map(& &1.username) |> Enum.join(", "))
     })
   end
 
   defp command("controls", :admin, channel, socket) do
-    set_public_controls(channel, !public_controls?(channel))
+    controls = !public_controls?(channel)
+    Room.set_public_controls(get_room(channel), controls)
 
-    if public_controls?(channel) do
+    if controls do
       push(socket, "chat", %ChatMessage{content: "Controls are now public"})
     else
       push(socket, "chat", %ChatMessage{content: "Controls are now operators-only"})
@@ -259,19 +266,21 @@ defmodule Grasstube.ChatAgent do
   end
 
   defp command("motd " <> motd, level, channel, socket) when level in [:mod, :admin] do
-    set_motd(channel, motd)
+    room = get_room(channel)
+    Room.set_motd(room, motd)
 
     push(socket, "chat", %ChatMessage{
-      name: get_room_name(channel),
+      name: room.title,
       content: "Motd set to \"" <> motd <> "\""
     })
   end
 
   defp command("clear_motd", level, channel, socket) when level in [:mod, :admin] do
-    set_motd(channel, "")
+    room = get_room(channel)
+    Room.set_motd(room, "")
 
     push(socket, "chat", %ChatMessage{
-      name: get_room_name(channel),
+      name: room.title,
       content: "Motd cleared"
     })
   end
@@ -279,23 +288,25 @@ defmodule Grasstube.ChatAgent do
   defp command("speed " <> speed, level, channel, _socket) when level in [:mod, :admin] do
     {speed, _} = Float.parse(speed)
 
-    get_room_name(channel)
+    get_room(channel).title
     |> ProcessRegistry.lookup(:video)
     |> Grasstube.VideoAgent.set_speed(speed)
   end
 
   defp command("autopause", level, channel, socket) when level in [:mod, :admin] do
-    get_room_name(channel)
+    room = get_room(channel)
+
+    room.title
     |> ProcessRegistry.lookup(:video)
     |> Grasstube.VideoAgent.toggle_autopause()
     |> if do
       push(socket, "chat", %ChatMessage{
-        name: get_room_name(channel),
+        name: room.title,
         content: "Autopausing enabled"
       })
     else
       push(socket, "chat", %ChatMessage{
-        name: get_room_name(channel),
+        name: room.title,
         content: "Autopausing disabled"
       })
     end
@@ -305,24 +316,18 @@ defmodule Grasstube.ChatAgent do
     push(socket, "chat", %ChatMessage{content: "No command #{cmd}"})
   end
 
-  def get_room_name(pid), do: Agent.get(pid, & &1.room_name)
+  def get_motd(pid, true) do
+    escaped =
+      get_motd(pid)
+      |> HTML.html_escape()
+      |> HTML.safe_to_string()
 
-  def get_motd(pid), do: Agent.get(pid, & &1.motd)
-
-  def set_motd(pid, motd), do: Agent.update(pid, &%{&1 | motd: motd})
-
-  def set_public_controls(pid, public_controls) do
-    Agent.update(pid, &%{&1 | public_controls: public_controls})
-
-    Endpoint.broadcast("video:#{get_room_name(pid)}", "controls", %{})
-    Endpoint.broadcast("playlist:#{get_room_name(pid)}", "controls", %{})
-    Endpoint.broadcast("polls:#{get_room_name(pid)}", "controls", %{})
-    Endpoint.broadcast(inspect(pid), "details", %{})
+    do_emote(pid, AutoLinker.link(escaped))
   end
 
-  def public_controls?(pid), do: Agent.get(pid, & &1.public_controls)
+  def get_motd(pid), do: Agent.get(pid, & &1.room.motd)
 
-  def controls_user?(pid, user), do: public_controls?(pid) or mod?(pid, user)
+  def public_controls?(pid), do: Agent.get(pid, & &1.room.public_controls)
 
   def controls?(pid, %{assigns: %{user: user}}), do: controls?(pid, user)
 
@@ -342,52 +347,16 @@ defmodule Grasstube.ChatAgent do
 
   def get_history(pid), do: Agent.get(pid, & &1.history)
 
-  def get_admin(pid), do: Agent.get(pid, & &1.admin)
-
-  def get_mods(pid), do: Agent.get(pid, & &1.mods)
-
-  def add_emotelist(pid, user) do
-    Agent.update(pid, &%{&1 | emotelists: [user | &1.emotelists]})
-    Endpoint.broadcast(inspect(pid), "details", %{})
-  end
-
-  def remove_emotelist(pid, user) do
-    Agent.update(pid, &%{&1 | emotelists: List.delete(&1.emotelists, user)})
-    Endpoint.broadcast(inspect(pid), "details", %{})
-  end
-
-  def broadcast_mod(pid, user) do
-    is_mod = mod?(pid, user)
-    room_name = get_room_name(pid)
-
-    Endpoint.broadcast("user:#{room_name}:#{user}", "presence", %{
-      mod: is_mod
-    })
-
-    controls = if is_mod, do: "controls", else: "revoke_controls"
-    Endpoint.broadcast("user:#{room_name}:#{user}", controls, %{})
-
-    Endpoint.broadcast(inspect(pid), "details", %{})
-  end
-
-  def add_mod(pid, user) do
-    Agent.update(pid, &%{&1 | mods: [user | &1.mods]})
-    broadcast_mod(pid, user)
-  end
-
-  def remove_mod(pid, user) do
-    Agent.update(pid, &%{&1 | mods: List.delete(&1.mods, user)})
-    broadcast_mod(pid, user)
-  end
-
   def mod?(_, "$" <> _id), do: false
 
-  def mod?(pid, user) when is_bitstring(user),
-    do: get_admin(pid) == user or get_mods(pid) |> Enum.any?(&(&1 == user))
+  def mod?(_, nil), do: false
+
+  def mod?(%Room{user: admin, mods: mods}, user) when is_bitstring(user),
+    do: admin.username == user or mods |> Enum.any?(&(&1.username == user))
 
   def mod?(pid, %{username: username}), do: mod?(pid, username)
 
-  def mod?(_, _), do: false
+  def mod?(pid, user), do: mod?(get_room(pid), user)
 
   def socket_username({socket, _pid}), do: socket_username(socket)
 
@@ -397,14 +366,12 @@ defmodule Grasstube.ChatAgent do
 
   def socket_username(%{assigns: %{user: %{username: username}}}), do: username
 
-  defp get_emotelists(pid), do: Agent.get(pid, & &1.emotelists)
+  defp get_emotelists(pid), do: Agent.get(pid, & &1.room.emotelists)
 
   def get_emotes(pid) do
     get_emotelists(pid)
-    |> Enum.reduce([], fn username, acc ->
-      Repo.get(Grasstube.User, username)
-      |> Repo.preload(:emotes)
-      |> Map.get(:emotes)
+    |> Enum.reduce([], fn user, acc ->
+      user.emotes
       |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, url: emote.url} | acc] end)
       |> Kernel.++(acc)
     end)
@@ -446,19 +413,17 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  def set_password(pid, password) do
-    Agent.update(pid, &%{&1 | password: password})
-    Endpoint.broadcast(inspect(pid), "details", %{})
-    GrasstubeWeb.RoomsLive.update()
-  end
+  def password?(nil), do: false
 
   def password?(pid) do
-    Agent.get(pid, & &1.password)
-    |> String.length()
-    |> Kernel.>(0)
+    Agent.get(pid, & &1.room.password)
+    |> case do
+      nil -> false
+      password -> String.length(password) > 0
+    end
   end
 
-  def check_password(pid, password), do: Agent.get(pid, & &1.password) == password
+  def check_password(pid, password), do: Agent.get(pid, & &1.room.password) == password
 
   def auth(socket, room_name, password) do
     case ProcessRegistry.lookup(room_name, :chat) do
@@ -478,11 +443,6 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  def get_script(pid, key), do: Agent.get(pid, & &1.scripts[key])
-
-  def set_script(pid, key, value),
-    do: Agent.update(pid, &%{&1 | scripts: Map.put(&1.scripts, key, value)})
-
-  def remove_script(pid, key),
-    do: Agent.update(pid, &%{&1 | scripts: Map.delete(&1.scripts, key)})
+  def get_script(pid, key) when is_atom(key), do: get_script(pid, Atom.to_string(key))
+  def get_script(pid, key), do: Agent.get(pid, & &1.room.scripts[key])
 end

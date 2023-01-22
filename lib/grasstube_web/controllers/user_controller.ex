@@ -140,8 +140,8 @@ defmodule GrasstubeWeb.UserController do
     user = conn.assigns.current_user
     room_id = room_name |> to_string() |> String.downcase()
 
-    if room_id in ProcessRegistry.rooms_of(user) do
-      ProcessRegistry.close_room(room_id)
+    if Repo.preload(user, [:rooms]).rooms |> Enum.map(&(room_id == &1.title)) |> Enum.any?() do
+      ProcessRegistry.delete_room(room_id)
       redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
     else
       conn

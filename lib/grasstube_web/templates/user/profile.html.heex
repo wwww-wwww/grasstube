@@ -1,22 +1,22 @@
 <div>
 
 <%= if @is_current_user do %>
-	<%= if length(@rooms) > 0 do %>
+	<%= if length(@user.rooms) > 0 do %>
 		<div class="heading">
-			you have <%= if length(@rooms) > 1 do %>rooms<% else %>a room<% end%> at:
+			you have <%= if length(@user.rooms) > 1 do %>rooms<% else %>a room<% end%> at:
 		</div>
 
-		<%= for room_name <- @rooms do %>
+		<%= for %{title: room_name} <- @user.rooms do %>
 			<div>
 				<%= live_redirect(room_name, to: Routes.live_path(@socket, GrasstubeWeb.RoomLive, room_name)) %>
 				<%= live_redirect("Edit", to: Routes.live_path(@socket, GrasstubeWeb.EditRoomLive, room_name)) %>
 			</div>
 		<% end %>
 	<% else %>
+	<% end %>
 		<div>
 			Create a room <%= live_redirect("here", to: Routes.live_path(@socket, GrasstubeWeb.CreateRoomLive)) %>
 		</div>
-	<% end %>
 <% end %>
 
 <h2><%= @user.name %>'s emotes:</h2>
@@ -28,7 +28,7 @@
 </form>
 
 <div class="emotes">
-<%= for %{id: id, emote: emote, url: url} <- @emotes do %>
+<%= for %{id: id, emote: emote, url: url} <- @user.emotes |> Enum.sort_by(& &1.emote) do %>
 	<div>
 		<%= img_tag(url, alt: emote, title: emote, class: "emote") %>
     <span>:<%= emote %>:</span>

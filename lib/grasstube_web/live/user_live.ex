@@ -33,7 +33,9 @@ defmodule GrasstubeWeb.UserLive do
 
   def mount(%{"username" => username}, _session, socket) do
     socket =
-      case Repo.get(User, username) do
+      Repo.get(User, username)
+      |> Repo.preload([:emotes, :rooms])
+      |> case do
         nil ->
           socket
           |> put_flash(:error, "User does not exist")
@@ -48,28 +50,9 @@ defmodule GrasstubeWeb.UserLive do
               User.is(socket.assigns.current_user) and
                 socket.assigns.current_user.username == user.username
           )
-          |> assign(rooms: Grasstube.ProcessRegistry.rooms_of(user))
-          |> assign(emotes: Repo.preload(user, :emotes).emotes |> Enum.sort_by(& &1.emote))
       end
 
     {:ok, socket}
-  end
-
-  def handle_event("room_delete", %{"name" => name}, socket) do
-    rooms = Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user)
-
-    socket =
-      if name in rooms do
-        Grasstube.ProcessRegistry.close_room(name)
-
-        assign(socket,
-          rooms: Grasstube.ProcessRegistry.rooms_of(socket.assigns.current_user)
-        )
-      else
-        put_flash(socket, :error, "You can't close this room")
-      end
-
-    {:noreply, socket}
   end
 
   def handle_event("emote_add", %{"name" => name, "url" => url}, socket) do

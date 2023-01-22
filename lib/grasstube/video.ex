@@ -1,17 +1,5 @@
-defmodule Grasstube.Video do
-  defstruct id: 0,
-            title: "",
-            type: "default",
-            url: "",
-            sub: "",
-            alts: %{},
-            duration: :unset,
-            ready: false
-end
-
 defmodule Grasstube.VideoAgent do
   use Agent
-  require Logger
 
   alias Grasstube.{PlaylistAgent, VideoScheduler}
   alias GrasstubeWeb.Endpoint
@@ -27,8 +15,8 @@ defmodule Grasstube.VideoAgent do
             autopause: false,
             autopause_min: 0
 
-  def start_link(room_name) do
-    Agent.start_link(fn -> %__MODULE__{room_name: room_name} end, name: via_tuple(room_name))
+  def start_link(room) do
+    Agent.start_link(fn -> %__MODULE__{room_name: room.title} end, name: via_tuple(room.title))
   end
 
   def via_tuple(room_name), do: Grasstube.ProcessRegistry.via_tuple({room_name, :video})
@@ -39,7 +27,7 @@ defmodule Grasstube.VideoAgent do
     |> Kernel./(1000)
   end
 
-  def set_playing(pid, playing, autopaused \\ false) do
+  def set_playing(pid, playing) do
     if not get_current_video(pid).ready do
       set_play_on_ready(pid, true)
     else
@@ -53,8 +41,7 @@ defmodule Grasstube.VideoAgent do
                val
                | playing: playing,
                  time_seek: get_time(val),
-                 time_started: current_time(),
-                 autopaused: autopaused
+                 time_started: current_time()
              }}
           else
             {val.playing, val}
@@ -90,16 +77,6 @@ defmodule Grasstube.VideoAgent do
 
   def get_time(pid), do: Agent.get(pid, &get_time/1)
 
-  def remaining_time(pid),
-    do:
-      Agent.get(pid, fn val ->
-        case val.current_video do
-          %{duration: :unset} -> 0
-          %{duration: n} -> n - get_time(val)
-          _ -> 0
-        end
-      end)
-
   def seek_shift(pid, t) do
     {new_time, room_name} =
       Agent.get_and_update(pid, fn val ->
@@ -119,8 +96,6 @@ defmodule Grasstube.VideoAgent do
     Endpoint.broadcast("video:#{room_name}", "seek", %{t: t})
     pid
   end
-
-  def set_time_started(pid, t), do: Agent.update(pid, &%{&1 | time_started: t})
 
   def set_current_video(pid, next) do
     room_name =
@@ -203,8 +178,6 @@ defmodule Grasstube.VideoAgent do
     Endpoint.broadcast("video:#{room_name}", "sync", %{speed: speed})
   end
 
-  def autopaused?(pid), do: Agent.get(pid, & &1.autopaused)
-
   def autopause?(pid), do: Agent.get(pid, & &1.autopause)
 
   def can_autopause?(pid) do
@@ -281,7 +254,6 @@ end
 
 defmodule Grasstube.VideoScheduler do
   use GenServer
-  require Logger
 
   alias Grasstube.{PlaylistAgent, VideoAgent, ProcessRegistry}
   alias GrasstubeWeb.Endpoint
@@ -289,17 +261,17 @@ defmodule Grasstube.VideoScheduler do
   @time_to_next 5
   @time_to_start 5
 
-  def start_link(room_name) do
+  def start_link(room) do
     GenServer.start_link(
       __MODULE__,
       %{
         sync_time: 0,
-        room_name: room_name,
+        room_name: room.title,
         sync_task: :nothing,
         set_task: :nothing,
         play_task: :nothing
       },
-      name: via_tuple(room_name)
+      name: via_tuple(room.title)
     )
   end
 
@@ -342,7 +314,7 @@ defmodule Grasstube.VideoScheduler do
           state
 
         %{pid: pid, video: video, time: time, playing: playing, speed: speed} ->
-          if video.duration == :unset do
+          if video.duration == nil do
             %{state | sync_task: :nothing}
           else
             scheduler = ProcessRegistry.lookup(state.room_name, :video_scheduler)

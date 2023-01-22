@@ -3,7 +3,7 @@
 <div>
   <h2>Password</h2>
   <div>
-    <span>There is <%= if @chat_state.password != "" do %>a<% else %>no<% end %> password.</span>
+    <span>There is <%= if @room.password != nil and String.length(@room.password) > 0 do %>a<% else %>no<% end %> password.</span>
     <form phx-submit="password">
     <%= tag(:input, type: "password", name: "password", placeholder: "Password") %>
     <%= submit("Change") %>
@@ -14,14 +14,14 @@
 <div>
   <h2>Public Controls</h2>
   <span>
-    <input type="checkbox" phx-click="public_controls" checked={@chat_state.public_controls}>
+    <input type="checkbox" phx-click="public_controls" checked={@room.public_controls}>
   </span>
 </div>
 
 <div>
   <h2>Operators</h2>
   <ul>
-    <%= for username <- @chat_state.mods do %>
+    <%= for %{username: username} <- @room.mods do %>
     <li>
       <%= username %>
       <button class="icon square" phx-click="op_remove" value={username}>clear</button>
@@ -39,7 +39,7 @@
   <h2>MOTD</h2>
   <form phx-submit="motd_set">
     <div>
-      <textarea name="motd" placeholder="MOTD"><%= @chat_state.motd %></textarea>
+      <textarea name="motd" placeholder="MOTD"><%= @room.motd %></textarea>
       <span>
       <%= submit("save", class: "icon square") %>
       </span>
@@ -50,7 +50,7 @@
 <div>
   <h2>Emotelists</h2>
   <ul>
-    <%= for username <- @chat_state.emotelists do %>
+    <%= for %{username: username} <- @room.emotelists do %>
     <li>
       <%= username %>
       <button class="icon square" phx-click="emotelist_remove" value={username}>clear</button>
@@ -66,7 +66,7 @@
 
 <div>
   <h2>Userscripts</h2>
-  <%= for {key, script} <- @chat_state.scripts do %>
+  <%= for {key, script} <- @room.scripts || %{} do %>
   <div>
     <h3><%= key %></h3>
     <form phx-submit="script_set">

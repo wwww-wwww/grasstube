@@ -3,8 +3,6 @@ defmodule GrasstubeWeb.VideoLive do
 
   alias Grasstube.{ChatAgent, PlaylistAgent, Presence, ProcessRegistry, VideoAgent}
 
-  @autopause_min 0.5
-
   def render(assigns) do
     GrasstubeWeb.PageView.render("video_live.html", assigns)
   end

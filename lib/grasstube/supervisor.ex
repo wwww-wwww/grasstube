@@ -2,27 +2,26 @@ defmodule Grasstube.RoomSupervisor do
   use Supervisor, restart: :transient
 
   def start_link(opts) do
-    room_name = opts |> Keyword.get(:room_name)
-    admin = opts |> Keyword.get(:admin)
-    Supervisor.start_link(__MODULE__, opts, name: via_tuple(room_name, admin))
+    room = opts |> Keyword.get(:room)
+    Supervisor.start_link(__MODULE__, opts, name: via_tuple(room.title))
   end
 
   def init(opts) do
-    room_name = opts |> Keyword.get(:room_name)
+    room = Keyword.get(opts, :room)
 
     children = [
-      {Grasstube.ChatAgent, opts},
-      {Grasstube.VideoAgent, room_name},
-      {Grasstube.VideoScheduler, room_name},
-      {Grasstube.PlaylistAgent, room_name},
-      {Grasstube.PollsAgent, room_name}
+      {Grasstube.ChatAgent, room},
+      {Grasstube.VideoAgent, room},
+      {Grasstube.VideoScheduler, room},
+      {Grasstube.PlaylistAgent, room},
+      {Grasstube.PollsAgent, room}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
 
-  def via_tuple(room_name, admin) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :supervisor}, admin)
+  def via_tuple(room_name) do
+    Grasstube.ProcessRegistry.via_tuple({room_name, :supervisor})
   end
 end
 
@@ -40,7 +39,6 @@ end
 
 defmodule GrasstubeWeb.UserSocket do
   use Phoenix.Socket
-  require Logger
 
   channel("chat:*", GrasstubeWeb.ChatChannel)
   channel("video:*", GrasstubeWeb.VideoChannel)

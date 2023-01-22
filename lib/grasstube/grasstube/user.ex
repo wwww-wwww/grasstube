@@ -2,6 +2,8 @@ defmodule Grasstube.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Grasstube.Repo
+
   @primary_key false
   schema "users" do
     field :username, :string, primary_key: true
@@ -10,6 +12,7 @@ defmodule Grasstube.User do
     field :password, :string, redact: true
 
     has_many :emotes, Grasstube.Emote, references: :username
+    has_many :rooms, Grasstube.Room, references: :username
 
     timestamps()
   end
@@ -26,6 +29,9 @@ defmodule Grasstube.User do
         changeset
     end
   end
+
+  def get_user(user) when is_bitstring(user), do: Repo.get(Grasstube.User, user)
+  def get_user(%Grasstube.User{} = user), do: user
 
   @doc """
   A user changeset for registration.

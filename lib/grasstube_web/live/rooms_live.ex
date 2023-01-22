@@ -29,11 +29,13 @@ defmodule GrasstubeWeb.RoomsLive do
     if connected?(socket), do: GrasstubeWeb.Endpoint.subscribe(@topic)
 
     can_make_room =
-      Grasstube.User.is(socket.assigns.current_user) and
-        socket.assigns.current_user
-        |> ProcessRegistry.rooms_of()
-        |> length()
-        |> Kernel.==(0)
+      Application.get_env(:grasstube, :max_rooms) == :unlimited or
+        (Grasstube.User.is(socket.assigns.current_user) and
+           socket.assigns.current_user
+           |> Grasstube.Repo.preload(:rooms)
+           |> Map.get(:rooms)
+           |> length()
+           |> Kernel.<(Application.get_env(:grasstube, :max_rooms)))
 
     socket =
       socket
