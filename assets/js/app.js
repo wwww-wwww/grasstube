@@ -285,31 +285,37 @@ const hooks = {
           player_state.player.set_playing(data.playing)
         }
 
-        if (player_state.player.playing) {
-          const offset_time = data.t + Math.min(this.latency_rtt / 1000, 1)
-          if (offset_time >= player_state.player.duration()) return
-
-          if (current_state != data.playing) {
-            player_state.player.seek(offset_time)
-
-            this.catchup_target = offset_time
-            this.catchup_target_time = Date.now()
-
-            clearInterval(this.catchup_interval)
-            setTimeout(() =>
-              this.catchup_interval = setInterval(() => this.run_catchup(), 20), 200)
-          }
-
-          if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
-            player_state.player.seek(offset_time)
-          }
-        } else {
+        if (!player_state.player.playing) {
           player_state.player.seek(data.t)
+          return
+        }
+
+        const offset_time = data.t + Math.min(this.latency_rtt / 1000, 1)
+        if (offset_time >= player_state.player.duration()) return
+
+        this.catchup_target = offset_time
+        this.catchup_target_time = Date.now()
+
+        if (current_state != data.playing) {
+          if (Math.abs(offset_time - player_state.player.current_time()) > 0.1) {
+            player_state.player.seek(offset_time)
+          }
+
+          clearInterval(this.catchup_interval)
+          clearTimeout(this.catchup_timeout)
+          this.catchup_timeout = setTimeout(() => {
+            console.log("video:catchup start")
+            this.catchup_interval = setInterval(() => this.run_catchup(), 20)
+          }, 200)
+        }
+
+        if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
+          player_state.player.seek(offset_time)
         }
       }
 
       this.run_catchup = () => {
-        if (!player_state.player.settings.catchup) {
+        if (player_state.player == null || !player_state.player.settings.catchup) {
           clearInterval(this.catchup_interval)
           return
         }
@@ -319,7 +325,7 @@ const hooks = {
 
         if (Math.abs(dist) < 0.02) {
           this.catchup_mul = 1
-          console.log("video:caught up")
+          console.log("video:catchup end")
           clearInterval(this.catchup_interval)
         } else {
           const dir = dist > 0 ? 1 : -1
@@ -331,6 +337,7 @@ const hooks = {
       }
 
       this.catchup_interval = null
+      this.catchup_timeout = null
 
       this.handleEvent("sync", data => {
         console.log("video:sync", data)
@@ -350,10 +357,29 @@ const hooks = {
         this.catchup_target = null
         this.catchup_target_time = null
 
-        if (Math.abs(data.t - player_state.player.current_time()) > 0.1) {
-          console.log("video:seek", data)
-          player_state.player.show_osd(`${seconds_to_hms(data.t, true)}`)
-          player_state.player.seek(data.t)
+        let offset_time = data.t
+        if (player_state.player.playing) {
+          offset_time += Math.min(this.latency_rtt / 1000, 1)
+        }
+
+        if (offset_time >= player_state.player.duration()) return
+
+        if (Math.abs(offset_time - player_state.player.current_time()) < 0.1)
+          return
+
+        console.log("video:seek", data)
+        player_state.player.show_osd(`${seconds_to_hms(data.t, true)}`)
+        player_state.player.seek(offset_time)
+
+        if (player_state.player.playing) {
+          this.catchup_target = offset_time
+          this.catchup_target_time = Date.now()
+          clearInterval(this.catchup_interval)
+          clearTimeout(this.catchup_timeout)
+          this.catchup_timeout = setTimeout(() => {
+            console.log("video:catchup start")
+            this.catchup_interval = setInterval(() => this.run_catchup(), 20)
+          }, 200)
         }
       }
 
@@ -377,6 +403,7 @@ const hooks = {
     },
     destroyed() {
       clearInterval(this.ping_interval)
+      clearTimeout(this.catchup_timeout)
       clearInterval(this.catchup_interval)
       player_state.player = null
     }
