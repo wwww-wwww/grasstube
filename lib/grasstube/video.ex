@@ -41,7 +41,8 @@ defmodule Grasstube.VideoAgent do
                val
                | playing: playing,
                  time_seek: get_time(val),
-                 time_started: current_time()
+                 time_started: current_time(),
+                 autopaused: false
              }}
           else
             {val.playing, val}
