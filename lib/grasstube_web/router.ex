@@ -67,6 +67,7 @@ defmodule GrasstubeWeb.Router do
     end
 
     get "/sign_out", UserController, :sign_out
+    get "/emote/:id", UserController, :emote
 
     scope "/api" do
       pipe_through :api

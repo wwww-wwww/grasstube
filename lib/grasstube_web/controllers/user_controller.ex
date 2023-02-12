@@ -45,18 +45,29 @@ defmodule GrasstubeWeb.UserController do
   def add_emote(conn, %{"emote" => emote, "url" => url}) do
     user = conn.assigns.current_user
 
-    new_emote =
-      Ecto.build_assoc(user, :emotes,
-        emote: emote |> to_string() |> String.downcase() |> String.trim(":"),
-        url: url
-      )
+    Ecto.build_assoc(user, :emotes,
+      emote: emote |> to_string() |> String.downcase() |> String.trim(":"),
+      url: url
+    )
+    |> Emote.download()
+    |> case do
+      {:ok, cs} ->
+        case Repo.insert(cs) do
+          {:ok, _} ->
+            Grasstube.Room.reload_emotelist(user)
 
-    case Repo.insert(new_emote) do
-      {:ok, _} ->
-        redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
+            conn
+            |> redirect(to: Routes.user_path(conn, :show_user, user.username))
 
-      {:error, _} ->
+          {:error, err} ->
+            conn
+            |> put_flash(:error, inspect(err))
+            |> redirect(to: Routes.user_path(conn, :show_user, user.username))
+        end
+
+      err ->
         conn
+        |> put_flash(:error, inspect(err))
         |> redirect(to: Routes.user_path(conn, :show_user, user.username))
     end
   end
@@ -96,8 +107,13 @@ defmodule GrasstubeWeb.UserController do
       emote ->
         if emote.user_username == user.username do
           case Repo.delete(emote) do
-            {:ok, _} -> redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
-            {:error, _} -> redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
+            {:ok, _} ->
+              Grasstube.Room.reload_emotelist(user)
+
+              redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
+
+            {:error, _} ->
+              redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
           end
         else
           redirect(conn, to: Routes.user_path(conn, :show_user, user.username))
@@ -147,6 +163,25 @@ defmodule GrasstubeWeb.UserController do
       conn
       |> put_flash("error", "you can't close this room")
       |> redirect(to: Routes.user_path(conn, :show_user, user.username))
+    end
+  end
+
+  def emote(conn, %{"id" => id}) do
+    case Repo.get(Emote, id) do
+      %Emote{data: nil, content_type: content_type} ->
+        conn
+        |> put_status(:not_found)
+        |> text("Emote does not have data")
+
+      %Emote{data: data, content_type: content_type} ->
+        conn
+        |> put_resp_content_type(content_type)
+        |> send_resp(200, data)
+
+      _ ->
+        conn
+        |> put_status(:not_found)
+        |> text("Emote not found")
     end
   end
 end

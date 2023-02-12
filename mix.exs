@@ -43,7 +43,7 @@ defmodule Grasstube.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:bcrypt_elixir, "~> 2.0"},
       {:auto_linker, "~> 0.2.2"},
-      {:httpoison, "~> 1.5"},
+      {:httpoison, "~> 2.0"},
       {:dart_sass, "~> 0.5.1", runtime: Mix.env() == :dev}
     ]
   end

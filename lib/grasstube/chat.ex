@@ -64,15 +64,15 @@ defmodule Grasstube.ChatAgent do
 
   def set_room(pid, room), do: Agent.update(pid, &%{&1 | room: room})
 
-  def reload_room(room_name, room) when is_bitstring(room_name),
-    do: ProcessRegistry.lookup(room_name, :chat) |> reload_room(room)
+  def reload_room(%Room{title: title} = room),
+    do: ProcessRegistry.lookup(title, :chat) |> reload_room(room)
 
-  def reload_room(pid, room),
-    do:
-      set_room(
-        pid,
-        Repo.get(Room, room.id) |> Repo.preload([:user, :mods, [emotelists: :emotes]])
-      )
+  def reload_room(pid, room) do
+    set_room(
+      pid,
+      Repo.get(Room, room.id) |> Repo.preload([:user, :mods, [emotelists: :emotes]])
+    )
+  end
 
   defp member?(%{assigns: %{user: %Grasstube.User{}}}), do: true
 
@@ -372,7 +372,7 @@ defmodule Grasstube.ChatAgent do
     get_emotelists(pid)
     |> Enum.reduce([], fn user, acc ->
       user.emotes
-      |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, url: emote.url} | acc] end)
+      |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, id: emote.id} | acc] end)
       |> Kernel.++(acc)
     end)
     |> Enum.sort_by(&Map.get(&1, :emote))
@@ -389,7 +389,8 @@ defmodule Grasstube.ChatAgent do
         :not_emote
 
       emote ->
-        Phoenix.HTML.Tag.img_tag(emote.url,
+        Phoenix.HTML.Tag.img_tag(
+          GrasstubeWeb.Router.Helpers.user_path(Endpoint, :emote, emote.id),
           alt: String.downcase(input),
           title: String.downcase(input)
         )

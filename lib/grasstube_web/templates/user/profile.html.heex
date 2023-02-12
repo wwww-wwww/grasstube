@@ -28,9 +28,9 @@
 </form>
 
 <div class="emotes">
-<%= for %{id: id, emote: emote, url: url} <- @user.emotes |> Enum.sort_by(& &1.emote) do %>
+<%= for %{id: id, emote: emote, url: url} <- @emotes |> Enum.sort_by(& &1.emote) do %>
 	<div>
-		<%= img_tag(url, alt: emote, title: emote, class: "emote") %>
+		<%= img_tag(Routes.user_path(@socket, :emote, id), alt: emote, title: emote, class: "emote") %>
     <span>:<%= emote %>:</span>
     <%= if @is_current_user do %>
       <button phx-click="emote_delete" phx-value-id={id}>Delete</button>

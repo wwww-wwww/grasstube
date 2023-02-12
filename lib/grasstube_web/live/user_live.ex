@@ -50,6 +50,7 @@ defmodule GrasstubeWeb.UserLive do
               User.is(socket.assigns.current_user) and
                 socket.assigns.current_user.username == user.username
           )
+          |> assign(emotes: user.emotes |> Enum.sort_by(& &1.emote))
       end
 
     {:ok, socket}
@@ -63,12 +64,22 @@ defmodule GrasstubeWeb.UserLive do
         emote: name |> String.downcase() |> String.trim(":"),
         url: url
       )
-      |> Repo.insert()
+      |> Emote.download()
       |> case do
-        {:ok, _} ->
-          assign(socket, emotes: Repo.preload(user, :emotes).emotes |> Enum.sort_by(& &1.emote))
+        {:ok, cs} ->
+          case Repo.insert(cs) do
+            {:ok, _} ->
+              Grasstube.Room.reload_emotelist(user)
 
-        {:error, err} ->
+              socket
+              |> put_flash(:info, "added " <> name)
+              |> assign(emotes: Repo.preload(user, :emotes).emotes |> Enum.sort_by(& &1.emote))
+
+            {:error, err} ->
+              put_flash(socket, :error, inspect(err))
+          end
+
+        err ->
           put_flash(socket, :error, inspect(err))
       end
 
@@ -76,27 +87,32 @@ defmodule GrasstubeWeb.UserLive do
   end
 
   def handle_event("emote_delete", %{"id" => id}, socket) do
+    username = socket.assigns.current_user.username
+
     socket =
       case Repo.get(Emote, id) do
         nil ->
           put_flash(socket, :error, "Emote does not exist")
 
-        emote ->
-          if emote.user_username == socket.assigns.current_user.username do
-            case Repo.delete(emote) do
-              {:ok, _} ->
-                assign(socket,
-                  emotes:
-                    Repo.preload(socket.assigns.current_user, :emotes).emotes
-                    |> Enum.sort_by(& &1.emote)
-                )
+        %Emote{user_username: ^username} = emote ->
+          case Repo.delete(emote) do
+            {:ok, _} ->
+              Grasstube.Room.reload_emotelist(socket.assigns.current_user)
 
-              {:error, err} ->
-                put_flash(socket, :error, inspect(err))
-            end
-          else
-            put_flash(socket, :error, "This emote does not belong to you")
+              socket
+              |> put_flash(:info, "deleted " <> emote.emote)
+              |> assign(
+                emotes:
+                  Repo.preload(socket.assigns.current_user, :emotes).emotes
+                  |> Enum.sort_by(& &1.emote)
+              )
+
+            {:error, err} ->
+              put_flash(socket, :error, inspect(err))
           end
+
+        _ ->
+          put_flash(socket, :error, "This emote does not belong to you")
       end
 
     {:noreply, socket}

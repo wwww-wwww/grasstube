@@ -20,8 +20,8 @@
 </div>
 
 <div id="chat_emotes" phx-update="ignore" style="display: none">
-  <%= for %{emote: emote, url: url} <- @emotes do %>
-  <img src={url} alt={emote} title={emote}>
+  <%= for %{emote: emote, id: id} <- @emotes do %>
+  <img src={Routes.user_path(@socket, :emote, id)} alt={emote} title={emote}>
   <% end %>
 </div>
 

@@ -59,7 +59,7 @@ defmodule Grasstube.Room do
       |> case do
         {:ok, _} ->
           GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
-          ChatAgent.reload_room(room_name, room)
+          ChatAgent.reload_room(room)
           :ok
 
         err ->
@@ -86,7 +86,7 @@ defmodule Grasstube.Room do
 
       {_, _} ->
         GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
-        ChatAgent.reload_room(room_name, room)
+        ChatAgent.reload_room(room)
         :ok
 
       err ->
@@ -111,7 +111,7 @@ defmodule Grasstube.Room do
     |> case do
       {:ok, _} ->
         GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
-        ChatAgent.reload_room(room_name, room)
+        ChatAgent.reload_room(room)
         :ok
 
       err ->
@@ -137,7 +137,7 @@ defmodule Grasstube.Room do
 
       {_, _} ->
         GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
-        ChatAgent.reload_room(room_name, room)
+        ChatAgent.reload_room(room)
         :ok
 
       err ->
@@ -155,7 +155,7 @@ defmodule Grasstube.Room do
     |> Repo.update()
 
     GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
-    ChatAgent.reload_room(room_name, room)
+    ChatAgent.reload_room(room)
     GrasstubeWeb.RoomsLive.update()
   end
 
@@ -166,7 +166,7 @@ defmodule Grasstube.Room do
     |> Repo.update()
 
     GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
-    ChatAgent.reload_room(room_name, room)
+    ChatAgent.reload_room(room)
   end
 
   def set_public_controls(room, public_controls) when is_bitstring(room),
@@ -176,7 +176,7 @@ defmodule Grasstube.Room do
     changeset(room, %{public_controls: public_controls})
     |> Repo.update()
 
-    ChatAgent.reload_room(room_name, room)
+    ChatAgent.reload_room(room)
 
     GrasstubeWeb.Endpoint.broadcast("video:#{room_name}", "controls", %{})
     GrasstubeWeb.Endpoint.broadcast("playlist:#{room_name}", "controls", %{})
@@ -193,7 +193,7 @@ defmodule Grasstube.Room do
     changeset(room, %{scripts: Map.put(room.scripts || %{}, key, value)})
     |> Repo.update()
 
-    ChatAgent.reload_room(room_name, room)
+    ChatAgent.reload_room(room)
     GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
   end
 
@@ -205,7 +205,15 @@ defmodule Grasstube.Room do
     changeset(room, %{scripts: Map.delete(room.scripts || %{}, key)})
     |> Repo.update()
 
-    ChatAgent.reload_room(room_name, room)
+    ChatAgent.reload_room(room)
     GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
+  end
+
+  def reload_emotelist(%User{username: username}) do
+    from(el in Grasstube.RoomsEmotelists, where: el.user_username == ^username)
+    |> Repo.all()
+    |> Repo.preload(:room)
+    |> Enum.map(& &1.room)
+    |> Enum.each(&Grasstube.ChatAgent.reload_room/1)
   end
 end
