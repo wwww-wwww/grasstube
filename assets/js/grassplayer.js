@@ -1,13 +1,55 @@
 import { get_cookie, set_cookie } from "./cookies"
 import { create_element, seconds_to_hms } from "./util"
 import SubtitlesOctopus from "./subtitles-octopus"
+import Stream from "./grassplayer_stream"
 
 class GrassPlayer {
+  current_video = {
+    type: "",
+    videos: {},
+    subs: "",
+    yt: null
+  }
+
+  root
+  fullscreen_element
+  video
+  video2
+  ctxmenu
+  stats_panel
+
+  stream
+
+  settings = {}
+  settings_body
+
+  has_controls = true
+  playing = false
+  on_toggle_playing = null
+
+  speed = 1
+
+  seekbar
+  seeking = false
+
+  octopusInstance = null
+  availableFonts
+
+  cc
+  on_toggle_cc = []
+  on_playable = null
+
+  previews = []
+  overlay
+  overlay_hide = null
+
   constructor(root, fonts, controls = true) {
     this.root = root
     this.fullscreen_element = this.root
     this.availableFonts = fonts
     this.root.classList.toggle("grassplayer", true)
+
+    this.stream = new Stream()
 
     const test_autoplay = document.createElement("video").play()
     if (test_autoplay != undefined) {
@@ -38,23 +80,9 @@ class GrassPlayer {
 
     this.load_settings()
 
-    this.current_video = {}
-    this.current_video.type = ""
-    this.current_video.videos = {}
-    this.current_video.subs = ""
-    this.current_video.yt = null
-
-    this.previews = []
-
-    this.playing = false
-
-    this.on_toggle_playing = null
     this.on_seek = t => this.seek(t)
 
     this.cc = this.settings.cc || true
-    this.on_toggle_cc = []
-
-    this.speed = 1
 
     this.video = create_element(root, "video")
     this.video.crossOrigin = "anonymous"
@@ -68,8 +96,6 @@ class GrassPlayer {
     this.video.addEventListener("abort", () => {
       this.stats.video.textContent = "not loaded"
     })
-
-    this.octopusInstance = null
 
     this.video2 = create_element(root, "div", "video")
     this.video2.style.display = "none"
@@ -118,8 +144,6 @@ class GrassPlayer {
 
     this.stats.volume.textContent = `${Math.round(this.get_volume() * 100)}% / ${this.settings.video_volume}%`
 
-    this.on_playable = null
-
     this.video.addEventListener("progress", () => {
       this.seekbar.set_buffers(this.video.buffered, this.video.duration)
       this.update_playable()
@@ -149,8 +173,6 @@ class GrassPlayer {
       this.btn_play.textContent = "play_arrow"
     })
 
-    this.overlay_hide = null
-
     this.overlay.addEventListener("mousemove", () => {
       this.overlay.classList.toggle("overlay_hidden", false)
       if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
@@ -171,7 +193,6 @@ class GrassPlayer {
   }
 
   load_settings() {
-    this.settings = {}
     this.settings.set = (setting, value) => {
       this.settings[setting] = value
       set_cookie(setting, value);
@@ -275,10 +296,15 @@ class GrassPlayer {
     this.add_volume(e.deltaY > 0 ? -5 : 5)
   }
 
-  set_video(type, videos, subs = "") {
+  async set_video(type, videos, subs = "") {
     this.current_video.type = type
     this.current_video.videos = videos
     this.current_video.subs = subs
+
+    const vid = videos["normal"]
+    if (!this.stream.ready) {
+      this.stream.load_file(vid)
+    }
 
     this.load_previews()
 
@@ -772,7 +798,7 @@ class GrassPlayer {
   }
 
   add_setting(setting, name) {
-    let row = create_element(this.settings_body, "div")
+    const row = create_element(this.settings_body, "div")
 
     const input = create_element(row, "input")
     input.id = `grassplayer_input_${setting}`
@@ -997,7 +1023,7 @@ class GrassPlayer {
 
   seek_to(t) {
     if (!isFinite(t)) return
-    
+
     t = Math.max(t, 0.01)
 
     if (this.current_video.yt) {
