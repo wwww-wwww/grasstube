@@ -3,6 +3,45 @@ import { create_element, seconds_to_hms } from "./util"
 import SubtitlesOctopus from "./subtitles-octopus"
 
 class GrassPlayer {
+  current_video = {
+    type: "",
+    videos: {},
+    subs: "",
+    yt: null
+  }
+
+  root
+  fullscreen_element
+  video
+  video2
+  ctxmenu
+  stats_panel
+
+  stream
+
+  settings = {}
+  settings_body
+
+  has_controls = true
+  on_toggle_playing = null
+
+  speed = 1
+
+  seekbar
+  seeking = false
+  seeking_playing = false
+
+  octopusInstance = null
+  availableFonts
+
+  cc
+  on_toggle_cc = []
+  on_playable = null
+
+  previews = []
+  overlay
+  overlay_hide = null
+
   constructor(root, fonts, controls = true) {
     this.root = root
     this.fullscreen_element = this.root
@@ -45,8 +84,6 @@ class GrassPlayer {
     this.current_video.yt = null
 
     this.previews = []
-
-    this.playing = false
 
     this.on_toggle_playing = null
     this.on_seek = t => this.seek(t)
@@ -433,8 +470,13 @@ class GrassPlayer {
     }
   }
 
+  get playing() {
+    if (this.current_video.yt && this.current_video.yt.getPlayerState)
+      return this.current_video.yt.getPlayerState() == 1
+    return !this.video.paused
+  }
+
   set_playing(playing) {
-    this.playing = playing
     if (this.seeking) return
     if (this.current_video.yt) {
       if (!this.current_video.yt.playVideo) return
@@ -997,7 +1039,7 @@ class GrassPlayer {
 
   seek_to(t) {
     if (!isFinite(t)) return
-    
+
     t = Math.max(t, 0.01)
 
     if (this.current_video.yt) {
@@ -1037,7 +1079,7 @@ class GrassPlayer {
     window.addEventListener("mouseup", this.seekbar._mouseup)
 
     this.seeking = true
-
+    this.seeking_playing = this.playing
     this.pause()
 
     this.seekbar._seek(e)
@@ -1054,7 +1096,7 @@ class GrassPlayer {
     body.removeEventListener("mousemove", this.seekbar._seek)
     window.removeEventListener("mouseup", this.seekbar._mouseup)
 
-    if (this.playing) { this.play() }
+    if (this.seeking_playing) { this.play() }
 
     this.on_seek(this.seekbar._seek(e, false))
 

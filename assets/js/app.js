@@ -196,12 +196,12 @@ const hooks = {
     speed: 1,
     ping() {
       this.ping_time = Date.now()
-      if (!document.hidden) { console.log("video:ping") }
+      if (!document.hidden) { console.info("video:ping") }
       this.pushEvent("ping", {}, () => {
         const latency = (Date.now() - this.ping_time)
         this.latency_rtt = latency * 0.75 + (this.latency_rtt || latency) * 0.25
         this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
-        if (!document.hidden) { console.log("video:pong", this.latency_rtt) }
+        if (!document.hidden) { console.info("video:pong", this.latency_rtt) }
       })
     },
     mounted() {
@@ -218,6 +218,17 @@ const hooks = {
 
       player_state.player.on_seek = t => {
         this.pushEvent("seek", { time: t })
+        this.catchup_target = t
+        this.catchup_target_time = Date.now()
+
+        if (player_state.player.playing) {
+          clearInterval(this.catchup_interval)
+          clearTimeout(this.catchup_timeout)
+          this.catchup_timeout = setTimeout(() => {
+            console.log("video:catchup start")
+            this.catchup_interval = setInterval(() => this.run_catchup(), 20)
+          }, 200)
+        }
       }
 
       player_state.player.on_toggle_playing = playing => {
@@ -258,7 +269,6 @@ const hooks = {
           if (data.url.length > 0) {
             videos["normal"] = data.url
           }
-          console.log(data.alts)
           for (const alt in data.alts) {
             videos[alt] = data.alts[alt]
           }
@@ -266,9 +276,9 @@ const hooks = {
           videos = data.url
         }
         if (!this.fonts_complete) {
-          this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub }
+          this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub || "" }
         } else {
-          player_state.player.set_video(data.type, videos, data.sub)
+          player_state.player.set_video(data.type, videos, data.sub || "")
         }
 
         if (data.playing) this.on_playing(data)
@@ -285,8 +295,9 @@ const hooks = {
           player_state.player.set_playing(data.playing)
         }
 
-        if (!player_state.player.playing) {
+        if (!current_state && !data.playing) {
           player_state.player.seek(data.t)
+          player_state.player.set_playing(false)
           return
         }
 
@@ -340,7 +351,7 @@ const hooks = {
       this.catchup_timeout = null
 
       this.handleEvent("sync", data => {
-        console.log("video:sync", data)
+        console.info("video:sync", data)
 
         this.on_playing(data)
 

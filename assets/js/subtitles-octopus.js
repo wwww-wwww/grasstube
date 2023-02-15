@@ -579,10 +579,6 @@ export default class SubtitlesOctopus extends EventTarget {
   }
 }
 
-if (typeof exports !== 'undefined' && typeof module !== 'undefined' && module.exports) {
-  exports = module.exports = SubtitlesOctopus
-}
-
 if (!('requestVideoFrameCallback' in HTMLVideoElement.prototype) && 'getVideoPlaybackQuality' in HTMLVideoElement.prototype) {
   HTMLVideoElement.prototype._rvfcpolyfillmap = {}
   HTMLVideoElement.prototype.requestVideoFrameCallback = function (callback) {
