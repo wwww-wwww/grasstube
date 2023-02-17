@@ -1,4 +1,4 @@
-import { spawnFFmpegWorker } from "./bundle.js"
+import spawnFFmpegWorker from "./bundle.js"
 import mkv from "./ebml"
 
 function get_vint(dv, start) {
@@ -79,12 +79,12 @@ class Stream {
   }
 
   async init() {
+    console.log("Starting ffmpeg worker")
     this.ffmpeg_worker = spawnFFmpegWorker()
-    if (!(await this.ffmpeg_worker.isLoaded())) {
-      console.log("Starting ffmpeg worker")
-      await this.ffmpeg_worker.load()
-      console.log("Loaded ffmpeg worker")
-    }
+    //if (!(await this.ffmpeg_worker.isLoaded())) {
+    //  await this.ffmpeg_worker.load()
+    //  console.log("Loaded ffmpeg worker")
+    //}
     this.ready = true
     if (this.on_ready) this.on_ready()
     if (this.load_when_ready) this.load_file(this.load_when_ready)
@@ -102,7 +102,7 @@ class Stream {
     return [start, end]
   }
 
-  async download_chunk(url, start, end) {
+  async download_chunk(url, start, end, store = true) {
     end -= 1
     const new_range = this.check_range(start, end, this.buffer_file, 1)
     if (!new_range) {
@@ -117,16 +117,23 @@ class Stream {
       .then(async arr => {
         end = start + arr.length
 
-        let buffer_e = this.buffer_file.filter(e => e[1] + 1 == start).at(0)
-        if (buffer_e) buffer_e[1] = Math.max(buffer_e[1], end)
+        if (store) {
+          let buffer_e = this.buffer_file.filter(e => e[1] + 1 == start).at(0)
+          if (buffer_e) buffer_e[1] = Math.max(buffer_e[1], end)
 
-        let buffer_s = this.buffer_file.filter(e => e[0] - 1 == end).at(0)
-        if (buffer_s) buffer_s[0] = Math.max(buffer_s[0], start)
+          let buffer_s = this.buffer_file.filter(e => e[0] - 1 == end).at(0)
+          if (buffer_s) buffer_s[0] = Math.max(buffer_s[0], start)
 
-        if (!buffer_e && !buffer_s) this.buffer_file.push([start, end])
+          if (!buffer_e && !buffer_s) this.buffer_file.push([start, end])
 
-        const buf = await this.ffmpeg_worker.writeData(arr, start)
-        return { data: buf, end: end }
+          console.log("buf_file", this.buffer_file)
+
+          const buf = await this.ffmpeg_worker.writeData(arr, start)
+
+          return { data: buf, end: end }
+        }
+
+        return { data: arr, end: end }
       })
   }
 
@@ -141,6 +148,7 @@ class Stream {
       const res = await this.download_chunk(url, start, start + 65536)
       start = res.end
       const arr = await this.ffmpeg_worker.getInputData()
+      console.log(arr)
       info = await mkv(arr)
     } while (start < content_length && (info == null || !info.have_cluster || info.segment == null))
 
@@ -166,10 +174,10 @@ class Stream {
 
     const cues = []
 
-    const res = await this.download_chunk(url, cues_position, Math.min(cues_position + 65536, cues_end))
+    const res = await this.download_chunk(url, cues_position, Math.min(cues_position + 65536, cues_end), false)
     const cues_data = res.data.subarray(cues_position)
 
-    const cues_dataview = new DataView(cues_data.buffer, cues_position)
+    const cues_dataview = new DataView(cues_data.buffer, 0)
     const header = [...Array(4).keys()].reduce((acc, i) => acc + cues_dataview.getUint8(i).toString(16), "")
     if (header != "1c53bb6b") {
       console.log("cues are not in the right spot?")
@@ -257,7 +265,7 @@ class Stream {
     }
 
     this.video_element.dispatchEvent(new Event("timeupdate"))
-    await this.download(0, 2)
+    await this.download(0, 10)
     this.video_element.addEventListener("timeupdate", () => this.onTimeUpdate())
     //this.onTimeUpdate()
     /*
@@ -312,7 +320,7 @@ class Stream {
 
     const nextChunkTime = getFirstUnbuffered()
     if (nextChunkTime - time < 5.0) {
-      this.download(nextChunkTime, nextChunkTime + 2)
+      this.download(nextChunkTime, nextChunkTime + 5)
     }
   }
 
@@ -327,7 +335,7 @@ class Stream {
       let to_download = [cue_start, cue_end]
 
       while (to_download) {
-        await this.download_chunk(this.url, to_download[0].position, to_download[1].position)
+        await this.download_chunk(this.url, to_download[0].position, to_download[1].position + 1024)
         this.queue_remux(to_download[0].time, to_download[1].time)
         to_download = this.downloader_next
         this.downloader_next = null
@@ -364,8 +372,8 @@ class Stream {
   }
 
   download(start, end) {
-    let cue_start = this.cues.filter(e => start >= e.time).at(-1) || this.cues[0]
-    let cue_end = this.cues.filter(e => end <= e.time).at(0)
+    let cue_start = this.cues.filter(e => start >= e.time).at(-2) || this.cues[0]
+    let cue_end = this.cues.filter(e => end <= e.time).at(1) || this.cues.at(-1)
 
     const new_range = this.check_range(cue_start.position, cue_end.position - 1, this.buffer_file, 1)
     if (!new_range) {

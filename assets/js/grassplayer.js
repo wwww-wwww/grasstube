@@ -24,7 +24,6 @@ class GrassPlayer {
   settings_body
 
   has_controls = true
-  playing = false
   on_toggle_playing = null
 
   speed = 1
@@ -48,8 +47,6 @@ class GrassPlayer {
     this.fullscreen_element = this.root
     this.availableFonts = fonts
     this.root.classList.toggle("grassplayer", true)
-
-    this.stream = new Stream()
 
     const test_autoplay = document.createElement("video").play()
     if (test_autoplay != undefined) {
@@ -88,6 +85,8 @@ class GrassPlayer {
     this.video.crossOrigin = "anonymous"
     this.video.style.display = "none"
     this.video.volume = this.get_volume()
+
+    this.stream = new Stream(this.video)
 
     this.video.addEventListener("loadedmetadata", () => {
       this.stats.video.textContent = this.video.src
@@ -302,10 +301,12 @@ class GrassPlayer {
     this.current_video.subs = subs
 
     const vid = videos["normal"]
-    if (!this.stream.ready) {
-      this.stream.load_file(vid)
-    }
 
+    await this.stream.load_file(vid)
+    this.btn_play.disabled = false
+    this.video.style.display = "block"
+
+    return
     this.load_previews()
 
     if (this.current_video.yt) { this.current_video.yt.destroy() }
