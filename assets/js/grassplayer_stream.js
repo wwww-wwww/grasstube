@@ -17,7 +17,7 @@ function get_vint(dv, start) {
 }
 
 function get_atom_head(dv, start, header) {
-  if (dv.getUint8(start).toString(16) != header) {
+  if (!header.match(/.{2}/g).every((e, i) => dv.getUint8(start + i).toString(16) == e)) {
     console.log(`expecting ${header}, got`, dv.getUint8(start).toString(16))
     return null
   }
@@ -41,15 +41,17 @@ function get_nint(dv, start, length) {
 
 class Stream {
   buffer_file = []
+  buffer_remux = []
 
   video_element
+  url
 
-  mediaSource
-  audioSourceBuffer
-  videoSourceBuffer
+  media_source
+  audio_source_buffer
+  video_source_buffer
 
-  ffmpeg
   ffmpeg_worker
+  metadata
 
   ready = false
   on_ready = null
@@ -57,7 +59,22 @@ class Stream {
 
   cues = []
 
-  constructor() {
+  downloader = null
+  downloader_next = null
+
+  remuxer = null
+  remuxer_queue = []
+
+  constructor(video_element) {
+    if (!window.MediaSource) {
+      const err = "Media Source Extensions are not supported by this browser."
+      alert(err)
+      throw new Error(err)
+    }
+
+    this.video_element = video_element
+    this.media_source = new MediaSource()
+
     this.init()
   }
 
@@ -73,23 +90,24 @@ class Stream {
     if (this.load_when_ready) this.load_file(this.load_when_ready)
   }
 
-  check_range(start, end) {
-    const starts = this.buffer_file.filter(r => start >= r[0] && start <= r[1])
-    if (starts.length > 0) start = starts[0][1] + 1
+  check_range(start, end, arr, offset = 0) {
+    const starts = arr.filter(r => start >= r[0] && start <= r[1])
+    if (starts.length > 0) start = starts[0][1] + offset
 
-    const ends = this.buffer_file.filter(r => end >= r[0] && end <= r[1])
-    if (ends.length > 0) end = ends[0][0] - 1
+    const ends = arr.filter(r => end >= r[0] && end <= r[1])
+    if (ends.length > 0) end = ends[0][0] - offset
 
-    if (start > end) return false
+    if (starts[0] != null && starts[0] == ends[0]) return false
+    if (start >= end) return false
     return [start, end]
   }
 
   async download_chunk(url, start, end) {
     end -= 1
-    const new_range = this.check_range(start, end)
+    const new_range = this.check_range(start, end, this.buffer_file, 1)
     if (!new_range) {
       console.log("already downloaded", start, end)
-      return
+      return false
     }
     [start, end] = new_range
     console.log("downloading", start, end)
@@ -98,9 +116,17 @@ class Stream {
       .then(buf => new Uint8Array(buf))
       .then(async arr => {
         end = start + arr.length
-        this.buffer_file.push([start, end])
-        await this.ffmpeg_worker.writeData(arr, start)
-        return { data: arr, end: end }
+
+        let buffer_e = this.buffer_file.filter(e => e[1] + 1 == start).at(0)
+        if (buffer_e) buffer_e[1] = Math.max(buffer_e[1], end)
+
+        let buffer_s = this.buffer_file.filter(e => e[0] - 1 == end).at(0)
+        if (buffer_s) buffer_s[0] = Math.max(buffer_s[0], start)
+
+        if (!buffer_e && !buffer_s) this.buffer_file.push([start, end])
+
+        const buf = await this.ffmpeg_worker.writeData(arr, start)
+        return { data: buf, end: end }
       })
   }
 
@@ -139,19 +165,11 @@ class Stream {
       info.segment.dataSize + info.segment.start + info.segment.next
 
     const cues = []
-    console.log(cues_position, cues_end)
 
-    const cues_data = new Uint8Array(cues_end - cues_position)
+    const res = await this.download_chunk(url, cues_position, Math.min(cues_position + 65536, cues_end))
+    const cues_data = res.data.subarray(cues_position)
 
-    let start = cues_position
-    do {
-      const lim = Math.min(start + 65536, cues_end)
-      const res = await this.download_chunk(url, start, lim)
-      cues_data.set(res.data, start - cues_position)
-      start = res.end
-    } while (start < cues_end)
-
-    const cues_dataview = new DataView(cues_data.buffer)
+    const cues_dataview = new DataView(cues_data.buffer, cues_position)
     const header = [...Array(4).keys()].reduce((acc, i) => acc + cues_dataview.getUint8(i).toString(16), "")
     if (header != "1c53bb6b") {
       console.log("cues are not in the right spot?")
@@ -191,11 +209,17 @@ class Stream {
   }
 
   async load_file(url) {
+    this.url = url
     console.log("load_file", url)
     if (!this.ready) {
       this.load_when_ready = url
       return
     }
+
+    this.video_element.src = URL.createObjectURL(this.media_source)
+    this.media_source.addEventListener("sourceopen", () => {
+      URL.revokeObjectURL(this.video_element.src)
+    }, { once: true })
 
     this.buffer_file = []
     await this.ffmpeg_worker.reset()
@@ -204,15 +228,39 @@ class Stream {
     if (info == null) return
     console.log("info", info)
 
-    console.log(await this.ffmpeg_worker.consumeMetadata())
-    console.log(await this.ffmpeg_worker.getMetadata())
+    await this.ffmpeg_worker.consumeMetadata()
+    this.metadata = await this.ffmpeg_worker.getMetadata()
 
     console.log("downloading cues")
     this.cues = await this.download_cues(info, url)
     console.log("cues", this.cues)
 
-    /*const res = await this.download_chunk(url, this.cues[32].position, this.cues[35].position)
+    /*
+    const res = await this.download_chunk(url, this.cues[32].position, this.cues[35].position)
+    const dataview = new DataView(res.data.buffer, this.cues[32].position, this.cues[35].position - this.cues[32].position)
 
+    const start = 0
+    while (start < dataview.byteLength) {
+
+      break
+    }*/
+
+
+    if (this.media_source.readyState === "open") {
+      console.log("sourceopen", this.metadata.durationSeconds)
+      this.media_source.duration = this.metadata.durationSeconds
+    } else if (this.media_source.readyState == "closed") {
+      this.media_source.addEventListener("sourceopen", () => {
+        console.log("sourceopen", this.metadata.durationSeconds)
+        this.media_source.duration = this.metadata.durationSeconds
+      }, { once: true });
+    }
+
+    this.video_element.dispatchEvent(new Event("timeupdate"))
+    await this.download(0, 2)
+    this.video_element.addEventListener("timeupdate", () => this.onTimeUpdate())
+    //this.onTimeUpdate()
+    /*
     console.log("extracting subs", res.data)
     await this.ffmpeg_worker.runFFmpeg(
       "-ss", this.cues[32].time.toString(),
@@ -224,12 +272,165 @@ class Stream {
       "-movflags", "frag_keyframe+delay_moov+default_base_moof",
       "out.ass")
     const FS = this.ffmpeg_worker.ffmpegCore.FS
-
+ 
     const subtitle_track = await FS.readFile("out.ass")
     console.log(new TextDecoder().decode(subtitle_track))
     FS.unlink("out.ass")
     */
   }
+
+
+  async onTimeUpdate() {
+    //console.log("timeupdate")
+    const time = this.video_element.currentTime
+
+    const getFirstUnbuffered = () => {
+      const buffers = this.media_source.sourceBuffers
+      let res = undefined
+
+      for (let i = 0; i < buffers.length; i++) {
+        let intersectingRangeEnd = undefined
+        const bufferedRanges = buffers[i].buffered
+        for (let j = 0; j < bufferedRanges.length; j++) {
+          const start = bufferedRanges.start(j)
+          const end = bufferedRanges.end(j)
+          if (start <= time && time <= end) {
+            intersectingRangeEnd = end
+            break
+          }
+        }
+        if (intersectingRangeEnd === undefined) {
+          return time
+        } else if (res === undefined) {
+          res = intersectingRangeEnd
+        } else {
+          res = Math.min(res, intersectingRangeEnd)
+        }
+      }
+      return res || time
+    }
+
+    const nextChunkTime = getFirstUnbuffered()
+    if (nextChunkTime - time < 5.0) {
+      this.download(nextChunkTime, nextChunkTime + 2)
+    }
+  }
+
+  queue_download(cue_start, cue_end) {
+    console.log("queue_dl", cue_start, cue_end)
+    if (this.downloader) {
+      this.downloader_next = [cue_start, cue_end]
+      return
+    }
+
+    this.downloader = setTimeout(async () => {
+      let to_download = [cue_start, cue_end]
+
+      while (to_download) {
+        await this.download_chunk(this.url, to_download[0].position, to_download[1].position)
+        this.queue_remux(to_download[0].time, to_download[1].time)
+        to_download = this.downloader_next
+        this.downloader_next = null
+      }
+      this.downloader = null
+    }, 0)
+  }
+
+  queue_remux(start, end) {
+    const new_range = this.check_range(start, end, this.buffer_remux)
+    if (!new_range) {
+      console.log("already remuxed", start, end)
+      return
+    }
+
+    [start, end] = new_range
+    console.log("queue remux")
+
+    if (this.remuxer_queue.filter(e => e[0] == start && e[1] == end).length > 0)
+      return
+
+    this.remuxer_queue.push([start, end])
+
+    if (this.remuxer) return
+
+    this.remuxer = setTimeout(async () => {
+      while (this.remuxer_queue.length > 0) {
+        [start, end] = this.remuxer_queue.shift()
+        await this.loadChunk(start, end)
+      }
+      this.remuxer = null
+    }, 0)
+
+  }
+
+  download(start, end) {
+    let cue_start = this.cues.filter(e => start >= e.time).at(-1) || this.cues[0]
+    let cue_end = this.cues.filter(e => end <= e.time).at(0)
+
+    const new_range = this.check_range(cue_start.position, cue_end.position - 1, this.buffer_file, 1)
+    if (!new_range) {
+      //console.log("already downloaded", start, end)
+      this.queue_remux(cue_start.time, cue_end.time)
+      return false
+    }
+
+    cue_start = this.cues.filter(e => new_range[0] >= e.position).at(-1) || this.cues[0]
+    cue_end = this.cues.filter(e => new_range[1] <= e.position).at(0)
+
+    this.queue_download(cue_start, cue_end)
+  }
+
+  async loadChunk(start, end) {
+    console.log(this.buffer_remux)
+    const new_range = this.check_range(start, end, this.buffer_remux)
+    if (!new_range) {
+      console.log("already remuxed", start, end)
+      return
+    }
+    console.log(new_range)
+
+    console.log(`Remuxing media segment with time range [${start} - ${end}]`)
+    const remuxedChunk = await this.ffmpeg_worker.remuxChunk(start, end, this.metadata.videoStreams[0]?.id, this.metadata.audioStreams[0]?.id)
+    console.log("remuxedchunk", remuxedChunk)
+    //console.log(remuxedChunk)
+
+    // TODO: loadChunk for updating buffers, not ready
+    /*if (this.audio_source_buffer === undefined && remuxedChunk.audioChunk != null) {
+      this.audio_source_buffer = this.media_source.addSourceBuffer(remuxedChunk.audioChunk.mime)
+    }*/
+    if (this.video_source_buffer === undefined && remuxedChunk.videoChunk != null) {
+      this.video_source_buffer = this.media_source.addSourceBuffer(remuxedChunk.videoChunk.mime)
+    }
+    let updating = 0
+    const cb = s => {
+      const sizeMB = (s.data.length / (1 << 20)).toFixed(3)
+      //console.log(`Added remuxed segment of type ${s.mime} with size ${sizeMB} MB to SourceBuffer`)
+      if (--updating == 0) {
+        this.updatingTime = undefined
+      }
+    }
+    if (remuxedChunk.audioChunk) {
+      updating++
+      //  this.audio_source_buffer.appendBuffer(remuxedChunk.audioChunk.data)
+      //  this.audio_source_buffer.addEventListener("updateend", () => cb(remuxedChunk.audioChunk), { once: true })
+    }
+    if (remuxedChunk.videoChunk) {
+      updating++
+      this.video_source_buffer.appendBuffer(remuxedChunk.videoChunk.data)
+      this.video_source_buffer.addEventListener("updateend", () => cb(remuxedChunk.videoChunk), { once: true })
+    }
+
+    let buffer_e = this.buffer_remux.filter(e => e[1] == start).at(0)
+    if (buffer_e) buffer_e[1] = Math.max(buffer_e[1], end)
+
+    let buffer_s = this.buffer_remux.filter(e => e[0] == end).at(0)
+    if (buffer_s) buffer_s[0] = Math.max(buffer_s[0], start)
+
+    if (!buffer_e && !buffer_s) this.buffer_remux.push([start, end])
+
+    console.log("buf_remux", this.buffer_remux)
+  }
+
 }
 
 export default Stream
