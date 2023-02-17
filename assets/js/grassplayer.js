@@ -459,8 +459,13 @@ class GrassPlayer {
     }
   }
 
+  get playing() {
+    if (this.current_video.yt && this.current_video.yt.getPlayerState)
+      return this.current_video.yt.getPlayerState() == 1
+    return !this.video.paused
+  }
+
   set_playing(playing) {
-    this.playing = playing
     if (this.seeking) return
     if (this.current_video.yt) {
       if (!this.current_video.yt.playVideo) return
@@ -1063,7 +1068,7 @@ class GrassPlayer {
     window.addEventListener("mouseup", this.seekbar._mouseup)
 
     this.seeking = true
-
+    this.seeking_playing = this.playing
     this.pause()
 
     this.seekbar._seek(e)
@@ -1080,7 +1085,7 @@ class GrassPlayer {
     body.removeEventListener("mousemove", this.seekbar._seek)
     window.removeEventListener("mouseup", this.seekbar._mouseup)
 
-    if (this.playing) { this.play() }
+    if (this.seeking_playing) { this.play() }
 
     this.on_seek(this.seekbar._seek(e, false))
 
