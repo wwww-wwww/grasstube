@@ -3,7 +3,8 @@ import Config
 config :grasstube,
   ecto_repos: [Grasstube.Repo],
   ytdl: "yt-dlp",
-  max_rooms: :unlimited
+  max_rooms: :unlimited,
+  serve_emotes: false
 
 config :grasstube, GrasstubeWeb.Endpoint,
   url: [host: "localhost"],

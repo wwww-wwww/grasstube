@@ -59,12 +59,18 @@ defmodule GrasstubeWeb.UserLive do
   def handle_event("emote_add", %{"name" => name, "url" => url}, socket) do
     user = socket.assigns.current_user
 
-    socket =
+    emote =
       Ecto.build_assoc(user, :emotes,
         emote: name |> String.downcase() |> String.trim(":"),
         url: url
       )
-      |> Emote.download()
+
+    socket =
+      if Application.get_env(:grasstube, :serve_emotes) do
+        Emote.download(emote)
+      else
+        {:ok, emote}
+      end
       |> case do
         {:ok, cs} ->
           case Repo.insert(cs) do

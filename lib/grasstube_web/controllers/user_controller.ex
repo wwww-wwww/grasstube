@@ -42,14 +42,20 @@ defmodule GrasstubeWeb.UserController do
     end
   end
 
-  def add_emote(conn, %{"emote" => emote, "url" => url}) do
+  def add_emote(conn, %{"emote" => name, "url" => url}) do
     user = conn.assigns.current_user
 
-    Ecto.build_assoc(user, :emotes,
-      emote: emote |> to_string() |> String.downcase() |> String.trim(":"),
-      url: url
-    )
-    |> Emote.download()
+    emote =
+      Ecto.build_assoc(user, :emotes,
+        emote: name |> to_string() |> String.downcase() |> String.trim(":"),
+        url: url
+      )
+
+    if Application.get_env(:grasstube, :serve_emotes) do
+      Emote.download(emote)
+    else
+      {:ok, emote}
+    end
     |> case do
       {:ok, cs} ->
         case Repo.insert(cs) do
@@ -57,6 +63,7 @@ defmodule GrasstubeWeb.UserController do
             Grasstube.Room.reload_emotelist(user)
 
             conn
+            |> put_flash(:info, "added " <> name)
             |> redirect(to: Routes.user_path(conn, :show_user, user.username))
 
           {:error, err} ->
@@ -168,7 +175,7 @@ defmodule GrasstubeWeb.UserController do
 
   def emote(conn, %{"id" => id}) do
     case Repo.get(Emote, id) do
-      %Emote{data: nil, content_type: content_type} ->
+      %Emote{data: nil} ->
         conn
         |> put_status(:not_found)
         |> text("Emote does not have data")

@@ -372,7 +372,14 @@ defmodule Grasstube.ChatAgent do
     get_emotelists(pid)
     |> Enum.reduce([], fn user, acc ->
       user.emotes
-      |> Enum.reduce([], fn emote, acc -> [%{emote: emote.emote, id: emote.id} | acc] end)
+      |> Enum.reduce([], fn emote, acc ->
+        url =
+          if Application.get_env(:grasstube, :serve_emotes),
+            do: GrasstubeWeb.Router.Helpers.user_path(Endpoint, :emote, emote.id),
+            else: emote.url
+
+        [%{emote: emote.emote, id: emote.id, url: url} | acc]
+      end)
       |> Kernel.++(acc)
     end)
     |> Enum.sort_by(&Map.get(&1, :emote))
@@ -383,14 +390,13 @@ defmodule Grasstube.ChatAgent do
   defp split_emote(msg), do: Regex.split(~r{(:[^:]+:)}, msg, include_captures: true, parts: 2)
 
   defp process_emote(input, emotes) do
-    case emotes
-         |> Enum.find(:not_emote, &(String.downcase(input) == ":" <> &1.emote <> ":")) do
+    case Enum.find(emotes, :not_emote, &(String.downcase(input) == ":" <> &1.emote <> ":")) do
       :not_emote ->
         :not_emote
 
-      emote ->
+      %{url: url} ->
         Phoenix.HTML.Tag.img_tag(
-          GrasstubeWeb.Router.Helpers.user_path(Endpoint, :emote, emote.id),
+          url,
           alt: String.downcase(input),
           title: String.downcase(input)
         )
