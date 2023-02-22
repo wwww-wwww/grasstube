@@ -535,7 +535,10 @@ class GrassPlayer {
     _path = `${_path}/${filename}.thumb`
 
     fetch(_path, { method: "GET", mode: "cors" })
-      .then(r => r.arrayBuffer())
+      .then(resp => {
+        if (!resp.ok) throw resp
+        return resp.arrayBuffer()
+      })
       .then(buffer => {
         const n_frames = new Uint32Array(buffer.slice(0, 4))[0]
         const last_frame = new Float32Array(buffer.slice(4, 8))[0]
@@ -566,6 +569,10 @@ class GrassPlayer {
 
         this.stats.thumbs.textContent = `${n_frames} images; ${mime_type}`
         this.seekbar.preview.classList.toggle("hidden", false)
+      })
+      .catch(e => {
+        if (e.status == 404) return
+        console.log("error fetching thumbs", e)
       })
   }
 
