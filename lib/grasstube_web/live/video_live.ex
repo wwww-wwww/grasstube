@@ -147,6 +147,28 @@ defmodule GrasstubeWeb.VideoLive do
     {:noreply, socket}
   end
 
+  def handle_event("getvid", _, socket) do
+    socket.assigns.video
+    |> VideoAgent.get_status()
+    |> case do
+      %{video: :nothing} ->
+        {:reply, %{}, socket}
+
+      %{video: video, time: time, playing: playing} ->
+        {:reply,
+         %{
+           id: video.id,
+           type: video.type,
+           url: video.url,
+           sub: video.sub,
+           alts: video.alts,
+           duration: video.duration,
+           playing: playing,
+           t: time
+         }, socket}
+    end
+  end
+
   def handle_info(%{event: "setvid", payload: payload}, socket) do
     {:noreply, push_event(socket, "setvid", payload)}
   end

@@ -194,6 +194,7 @@ const hooks = {
     catchup_interval: null,
     stats_catchup: null,
     speed: 1,
+    mount_loaded: false,
     ping() {
       this.ping_time = Date.now()
       if (!document.hidden) { console.info("video:ping") }
@@ -202,7 +203,38 @@ const hooks = {
         this.latency_rtt = latency * 0.75 + (this.latency_rtt || latency) * 0.25
         this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
         if (!document.hidden) { console.info("video:pong", this.latency_rtt) }
+        if (!this.mount_loaded) {
+          this.pushEvent("getvid", {}, data => {
+            console.log("video:getvid", data)
+            if (Object.keys(data).length == 0) return
+            this.setvid(data)
+          })
+        }
       })
+    },
+    setvid(data) {
+      this.mount_loaded = true
+      if (this.current_video == data) return
+      this.current_video = data
+      let videos = {}
+      if (data.type == "default") {
+        if (data.url.length > 0) {
+          videos["normal"] = data.url
+        }
+        for (const alt in data.alts) {
+          videos[alt] = data.alts[alt]
+        }
+      } else {
+        videos = data.url
+      }
+      if (!this.fonts_complete) {
+        this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub || "" }
+      } else {
+        player_state.player.set_video(data.type, videos, data.sub || "")
+      }
+
+      if (data.playing) this.on_playing(data)
+      if (data.t) this.on_seek(data)
     },
     mounted() {
       player_state.player = new GrassPlayer(
@@ -262,27 +294,7 @@ const hooks = {
 
       this.handleEvent("setvid", data => {
         console.log("video:setvid", data)
-        if (this.current_video == data) return
-        this.current_video = data
-        let videos = {}
-        if (data.type == "default") {
-          if (data.url.length > 0) {
-            videos["normal"] = data.url
-          }
-          for (const alt in data.alts) {
-            videos[alt] = data.alts[alt]
-          }
-        } else {
-          videos = data.url
-        }
-        if (!this.fonts_complete) {
-          this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub || "" }
-        } else {
-          player_state.player.set_video(data.type, videos, data.sub || "")
-        }
-
-        if (data.playing) this.on_playing(data)
-        if (data.t) this.on_seek(data)
+        this.setvid(data)
       })
 
       this.on_playing = data => {
