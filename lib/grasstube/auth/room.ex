@@ -1,5 +1,6 @@
 defmodule GrasstubeWeb.RoomAuth do
   import Phoenix.LiveView
+  import Phoenix.Component
 
   alias Grasstube.ChatAgent
   alias GrasstubeWeb.Router.Helpers, as: Routes
@@ -10,7 +11,7 @@ defmodule GrasstubeWeb.RoomAuth do
         {:halt,
          socket
          |> put_flash(:error, "Room does not exist")
-         |> push_redirect(to: "/")}
+         |> push_navigate(to: "/")}
 
       chat ->
         if not ChatAgent.password?(chat) or ChatAgent.mod?(chat, socket.assigns.current_user) or
@@ -24,7 +25,7 @@ defmodule GrasstubeWeb.RoomAuth do
            socket
            |> put_flash(:error, "Bad password")
            |> put_flash(:target, socket.view)
-           |> push_redirect(to: Routes.live_path(socket, GrasstubeWeb.AuthLive, room))}
+           |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.AuthLive, room))}
         end
     end
   end

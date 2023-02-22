@@ -39,7 +39,7 @@ defmodule GrasstubeWeb.UserLive do
         nil ->
           socket
           |> put_flash(:error, "User does not exist")
-          |> push_redirect(to: Routes.live_path(socket, GrasstubeWeb.RoomsLive))
+          |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomsLive))
 
         user ->
           socket
@@ -141,7 +141,7 @@ defmodule GrasstubeWeb.CreateRoomLive do
       Grasstube.ProcessRegistry.create_room(socket.assigns.current_user, name, password)
       |> case do
         {:ok, room} ->
-          push_redirect(socket, to: Routes.live_path(socket, GrasstubeWeb.RoomLive, room))
+          push_navigate(socket, to: Routes.live_path(socket, GrasstubeWeb.RoomLive, room))
 
         {:error, reason} ->
           put_flash(socket, :error, reason)

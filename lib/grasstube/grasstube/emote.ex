@@ -40,7 +40,7 @@ defmodule Grasstube.Emote do
   defp check(%__MODULE__{url: url}) do
     HTTPoison.options(url)
     |> case do
-      {:ok, %HTTPoison.Response{headers: headers, status_code: 200} = resp} ->
+      {:ok, %HTTPoison.Response{headers: headers, status_code: 200}} ->
         content_type =
           headers
           |> Enum.filter(&(elem(&1, 0) == "Content-Type"))
@@ -87,17 +87,16 @@ defmodule Grasstube.Emote do
         HTTPoison.get(url)
         |> case do
           {:ok, %HTTPoison.Response{body: body, headers: headers}} ->
-            content_type =
-              headers
-              |> Enum.filter(&(elem(&1, 0) == "Content-Type"))
-              |> Enum.at(0)
-              |> case do
-                {_, content_type} ->
-                  {:ok, Ecto.Changeset.change(e, %{content_type: content_type, data: body})}
+            headers
+            |> Enum.filter(&(elem(&1, 0) == "Content-Type"))
+            |> Enum.at(0)
+            |> case do
+              {_, content_type} ->
+                {:ok, Ecto.Changeset.change(e, %{content_type: content_type, data: body})}
 
-                resp ->
-                  {:error, {"bad response?", resp}}
-              end
+              resp ->
+                {:error, {"bad response?", resp}}
+            end
 
           err ->
             err

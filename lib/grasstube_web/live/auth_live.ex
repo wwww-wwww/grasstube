@@ -11,7 +11,7 @@ defmodule GrasstubeWeb.AuthLive do
         :not_found ->
           socket
           |> put_flash(:error, "Room does not exist")
-          |> push_redirect(to: "/")
+          |> push_navigate(to: "/")
 
         _chat ->
           socket
@@ -30,14 +30,14 @@ defmodule GrasstubeWeb.AuthLive do
     socket =
       socket
       |> put_flash(:target, target)
-      |> push_redirect(to: Routes.live_path(socket, target, room, password: password))
+      |> push_navigate(to: Routes.live_path(socket, target, room, password: password))
 
     {:noreply, socket}
   end
 
   def handle_event("auth", %{"password" => password}, socket) do
     socket =
-      push_redirect(socket,
+      push_navigate(socket,
         to:
           Routes.live_path(socket, GrasstubeWeb.RoomLive, socket.assigns.room, password: password)
       )

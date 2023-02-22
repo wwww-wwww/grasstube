@@ -23,7 +23,7 @@ defmodule GrasstubeWeb.EditRoomLive do
       {:ok,
        socket
        |> put_flash(:error, "You are not the owner of this room.")
-       |> push_redirect(to: "/")}
+       |> push_navigate(to: "/")}
     end
   end
 
@@ -88,7 +88,7 @@ defmodule GrasstubeWeb.EditRoomLive do
 
         socket
         |> put_flash(:info, "Room closed.")
-        |> push_redirect(to: "/")
+        |> push_navigate(to: "/")
       else
         socket
       end

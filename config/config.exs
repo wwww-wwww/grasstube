@@ -4,7 +4,7 @@ config :grasstube,
   ecto_repos: [Grasstube.Repo],
   ytdl: "yt-dlp",
   max_rooms: :unlimited,
-  serve_emotes: false
+  serve_emotes: true
 
 config :grasstube, GrasstubeWeb.Endpoint,
   url: [host: "localhost"],

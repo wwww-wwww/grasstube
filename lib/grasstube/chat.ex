@@ -422,6 +422,8 @@ defmodule Grasstube.ChatAgent do
 
   def password?(nil), do: false
 
+  def password?(:not_found), do: false
+
   def password?(pid) do
     Agent.get(pid, & &1.room.password)
     |> case do

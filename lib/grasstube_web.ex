@@ -45,9 +45,10 @@ defmodule GrasstubeWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {GrasstubeWeb.LayoutView, "live.html"},
+        layout: {GrasstubeWeb.LayoutView, :live},
         container: {:div, class: __MODULE__ |> to_string() |> String.split(".") |> Enum.at(-1)}
 
+      import Phoenix.Component
       unquote(view_helpers())
     end
   end
@@ -87,6 +88,8 @@ defmodule GrasstubeWeb do
 
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
+
+      import Phoenix.Component
 
       import GrasstubeWeb.ErrorHelpers
       import GrasstubeWeb.Gettext

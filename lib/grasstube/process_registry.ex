@@ -73,8 +73,7 @@ defmodule Grasstube.ProcessRegistry do
   end
 
   def create_room(admin, room_name, password) when is_bitstring(admin) do
-    Repo.get(User, admin)
-    |> case do
+    case Repo.get(User, admin) do
       nil -> nil
       %User{} = user -> create_room(user, room_name, password)
     end
@@ -94,7 +93,7 @@ defmodule Grasstube.ProcessRegistry do
     GrasstubeWeb.RoomsLive.update()
   end
 
-  def delete_room(room) when is_bitstring(room), do: Repo.get_by(Room, title: room) |> delete_room
+  def delete_room(room) when is_bitstring(room), do: delete_room(Repo.get_by(Room, title: room))
 
   def delete_room(room) do
     Repo.delete(room)
