@@ -196,7 +196,9 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def handle_info(%{event: "autopause", payload: autopause}, socket) do
-    {:noreply, assign(socket, autopause: autopause)}
+    {:noreply,
+     assign(socket, autopause: autopause)
+     |> push_event("autopause", %{})}
   end
 
   def handle_info(%{event: "presence"}, socket) do

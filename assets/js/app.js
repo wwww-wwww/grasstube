@@ -287,6 +287,11 @@ const hooks = {
       this.ping()
       this.ping_interval = setInterval(() => this.ping(), 5000)
 
+      this.handleEvent("autopause", data => {
+        console.log("video:autopause", data)
+        this.pushEvent("buffered", { buffered: last_buffered })
+      })
+
       this.handleEvent("controls", data => {
         console.log("video:controls", data)
         player_state.player.set_controls(data.controls)
