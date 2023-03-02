@@ -54,7 +54,9 @@ const chat_state = {
   chat: null,
   emotes_modal: null,
   on_load: null,
+  autohide: false
 }
+window.chat_state = chat_state
 
 const player_state = {
   player: null,
@@ -84,7 +86,13 @@ const hooks = {
 
       this.handleEvent("chat", data => {
         console.log("chat:chat", data)
+
+        for (const i in chat_state.on_message) {
+          if (!chat_state.on_message[i][1](data)) return
+        }
+
         const msg = new Message(data)
+        if (chat_state.autohide) autohide(msg.e, 5000)
 
         chat_messages.prepend(msg.e)
 
@@ -114,8 +122,6 @@ const hooks = {
           }
           chat_state.last_chat_user = data.name
         }
-
-        chat_state.on_message.forEach(fn => fn(msg, true))
       })
 
       this.handleEvent("clear", data => {
@@ -614,15 +620,15 @@ const hooks = {
       }
     },
     load() {
+      chat_state.autohide = true
       for (const msg of chat_messages.children) {
         autohide(msg, 5000)
       }
 
-      chat_state.on_message.push((msg, notify) => {
-        if (notify) new Text(chat_danmaku, msg)
-
-        autohide(msg.e, 5000)
-      })
+      chat_state.on_message.push(["danmaku", (msg) => {
+        new Text(chat_danmaku, msg)
+        return true
+      }])
 
       this.on_keydown = e => {
         const chat_open = !view_chat.classList.contains("hidden")
@@ -719,6 +725,7 @@ const hooks = {
         this.unload()
         this.unload = null
       }
+      chat_state.autohide = false
       chat_state.on_message = []
       destroy_drag()
       delete document.windows["Settings"]

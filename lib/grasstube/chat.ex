@@ -86,6 +86,10 @@ defmodule Grasstube.ChatAgent do
     Grasstube.Presence.update(socket, socket.assigns.user_id, meta)
   end
 
+  def chat(channel, socket, @command_prefix <> "!" <> msg) do
+    send_chat(channel, socket, "/!" <> msg, false)
+  end
+
   def chat(channel, socket, @command_prefix <> command) do
     room = get_room(channel)
 
@@ -103,7 +107,9 @@ defmodule Grasstube.ChatAgent do
     {:noreply}
   end
 
-  def chat(channel, socket, msg) do
+  def chat(channel, socket, msg), do: send_chat(channel, socket, msg)
+
+  defp send_chat(channel, socket, msg, history \\ true) do
     if String.length(msg) > @max_message_size do
       push(socket, "chat", %ChatMessage{
         content: "message must be #{@max_message_size} characters or less"
@@ -121,7 +127,7 @@ defmodule Grasstube.ChatAgent do
       id = if sender.member, do: sender.username, else: sender.id
       nickname = if sender.member, do: sender.nickname, else: Enum.at(sender.metas, 0).nickname
 
-      add_to_history(channel, nickname, new_msg)
+      if history, do: add_to_history(channel, nickname, new_msg)
 
       Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
         sender: id,
