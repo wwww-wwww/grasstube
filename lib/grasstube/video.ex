@@ -202,7 +202,7 @@ defmodule Grasstube.VideoAgent do
 
   def check_autopause(pid) do
     Agent.get_and_update(pid, fn val ->
-      if val.current_video != :nothing and val.autopause do
+      if val.current_video != :nothing and val.current_video.type != "yt" and val.autopause do
         time = get_time(val)
 
         playing =
