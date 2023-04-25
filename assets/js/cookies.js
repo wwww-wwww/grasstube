@@ -29,7 +29,7 @@ function set_cookie(cookie_name, value) {
   const d = new Date()
   d.setTime(d.getTime() + (3600 * 24 * 365 * 1000))
 
-  document.cookie = `data=${JSON.stringify(cookie)};path=/;expires=${d.toUTCString()}`
+  document.cookie = `data=${JSON.stringify(cookie)};path=/;expires=${d.toUTCString()};SameSite=Strict`
 }
 
 export { get_cookie, set_cookie }
