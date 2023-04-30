@@ -28,38 +28,43 @@ defmodule Grasstube.VideoAgent do
   end
 
   def set_playing(pid, playing) do
-    if not get_current_video(pid).ready do
-      set_play_on_ready(pid, true)
-    else
-      set_play_on_ready(pid, false)
+    case get_current_video(pid) do
+      :nothing ->
+        nil
 
-      current_state =
-        Agent.get_and_update(pid, fn val ->
-          if val.playing != playing do
-            {val.playing,
-             %{
-               val
-               | playing: playing,
-                 time_seek: get_time(val),
-                 time_started: current_time(),
-                 autopaused: false
-             }}
-          else
-            {val.playing, val}
-          end
-        end)
+      %{ready: false} ->
+        set_play_on_ready(pid, true)
 
-      if current_state != playing do
-        room_name = Agent.get(pid, & &1.room_name)
+      %{ready: true} ->
+        set_play_on_ready(pid, false)
 
-        Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
-        |> VideoScheduler.cancel_play()
+        current_state =
+          Agent.get_and_update(pid, fn val ->
+            if val.playing != playing do
+              {val.playing,
+               %{
+                 val
+                 | playing: playing,
+                   time_seek: get_time(val),
+                   time_started: current_time(),
+                   autopaused: false
+               }}
+            else
+              {val.playing, val}
+            end
+          end)
 
-        Endpoint.broadcast("video:#{room_name}", "sync", %{
-          t: get_time(pid),
-          playing: playing?(pid)
-        })
-      end
+        if current_state != playing do
+          room_name = Agent.get(pid, & &1.room_name)
+
+          Grasstube.ProcessRegistry.lookup(room_name, :video_scheduler)
+          |> VideoScheduler.cancel_play()
+
+          Endpoint.broadcast("video:#{room_name}", "sync", %{
+            t: get_time(pid),
+            playing: playing?(pid)
+          })
+        end
     end
 
     pid
