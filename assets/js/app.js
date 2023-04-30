@@ -63,6 +63,7 @@ const player_state = {
   player: null,
   fullscreen_element: null,
 }
+window.player_state = player_state
 
 const hooks = {
   chat: {
@@ -345,7 +346,14 @@ const hooks = {
         }
 
         if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
-          player_state.player.seek(offset_time)
+          player_state.player.show_osd("CHECK THE CONSOLE")
+          console.error("something went horribly wrong", {
+            latency: this.latency_rtt / 1000,
+            data: data,
+            offset_time: offset_time,
+            current_time: player_state.player.current_time(),
+          })
+          //player_state.player.seek(offset_time)
         }
       }
 
@@ -561,7 +569,7 @@ const hooks = {
         this.unload = scripts.unload
       }
 
-      load_media_directories(this, get_meta("media_directories").split("\n"))
+      load_media_directories(this, (get_meta("media_directories") || []).split("\n"))
 
       playlist_add.addEventListener("click", () => {
         this.pushEvent("add", {

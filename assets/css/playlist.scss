@@ -68,11 +68,16 @@
   gap: 0.5em;
 }
 
+#playlist_btn_show {
+  backdrop-filter: blur(1px);
+}
+
 #playlist_tab1 {
   > div:first-child {
     display: flex;
     gap: 0.5em;
     align-items: center;
+    flex-wrap: wrap;
 
     > input {
       flex: 1;
