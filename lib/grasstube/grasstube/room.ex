@@ -10,7 +10,7 @@ defmodule Grasstube.Room do
     field :password, :string, default: ""
     field :motd, :string, default: ""
     field :public_controls, :boolean, default: false
-    field :scripts, {:map, :string}
+    field :attributes, {:map, :string}
     field :queue, {:array, :id}, default: []
 
     has_many :videos, Grasstube.Video
@@ -33,7 +33,7 @@ defmodule Grasstube.Room do
 
   def changeset(struct, params \\ %{}) do
     struct
-    |> cast(params, [:title, :password, :motd, :public_controls, :scripts, :queue])
+    |> cast(params, [:title, :password, :motd, :public_controls, :attributes, :queue])
     |> validate_required([:title, :user_username])
     |> unique_constraint(:title)
   end
@@ -190,7 +190,7 @@ defmodule Grasstube.Room do
   def set_script(%Room{title: room_name} = room, key, value) do
     room = Repo.get(Room, room.id)
 
-    changeset(room, %{scripts: Map.put(room.scripts || %{}, key, value)})
+    changeset(room, %{attributes: Map.put(room.attributes || %{}, key, value)})
     |> Repo.update()
 
     ChatAgent.reload_room(room)
@@ -202,7 +202,7 @@ defmodule Grasstube.Room do
   def remove_script(%Room{title: room_name} = room, key) do
     room = Repo.get(Room, room.id)
 
-    changeset(room, %{scripts: Map.delete(room.scripts || %{}, key)})
+    changeset(room, %{attributes: Map.delete(room.attributes || %{}, key)})
     |> Repo.update()
 
     ChatAgent.reload_room(room)

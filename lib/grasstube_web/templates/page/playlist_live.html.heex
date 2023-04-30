@@ -5,7 +5,7 @@
       <input id="playlist_add_url" placeholder="URL"/>
       <input id="playlist_add_sub" placeholder="Subtitles"/>
       <input id="playlist_add_small" placeholder="Alts"/>
-      <button id="playlist_add">Add</button>
+      <button id="playlist_add" class="icon">add</button>
     </div>
   </div>
 
@@ -20,6 +20,10 @@
 
 <%= if @script do %>
 <meta name="playlist_script" content={@script}>
+<% end %>
+
+<%= if @media_directories do %>
+<meta name="media_directories" content={@media_directories}>
 <% end %>
 
 <div class="playlist_header">

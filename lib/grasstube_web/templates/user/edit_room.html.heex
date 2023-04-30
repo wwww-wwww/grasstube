@@ -65,8 +65,48 @@
 </div>
 
 <div>
-  <h2>Userscripts</h2>
-  <%= for {key, script} <- @room.scripts || %{} do %>
+  <h2>Attributes
+  </h2>
+  <div>
+    <h3>Media Directories</h3>
+    <form phx-submit="script_set">
+      <div>
+        <%= tag(:input, type: "hidden", name: "key", value: "media_directories") %>
+        <textarea name="script"><%= Map.get(@room.attributes || %{}, "media_directories", "") %></textarea>
+        <span>
+          <%= submit("save", class: "icon square") %>
+          <button form="" class="icon square" phx-click="script_remove" value="media_directories">clear</button>
+        </span>
+      </div>
+    </form>
+  </div>
+  <div>
+    <h3>Room script</h3>
+    <form phx-submit="script_set">
+      <div>
+        <%= tag(:input, type: "hidden", name: "key", value: "room") %>
+        <textarea name="script"><%= Map.get(@room.attributes || %{}, "room", "") %></textarea>
+        <span>
+          <%= submit("save", class: "icon square") %>
+          <button form="" class="icon square" phx-click="script_remove" value="room">clear</button>
+        </span>
+      </div>
+    </form>
+  </div>
+  <div>
+    <h3>Playlist script</h3>
+    <form phx-submit="script_set">
+      <div>
+        <%= tag(:input, type: "hidden", name: "key", value: "playlist") %>
+        <textarea name="script"><%= Map.get(@room.attributes || %{}, "playlist", "") %></textarea>
+        <span>
+          <%= submit("save", class: "icon square") %>
+          <button form="" class="icon square" phx-click="script_remove" value="playlist">clear</button>
+        </span>
+      </div>
+    </form>
+  </div>
+  <%= for {key, script} <- (@room.attributes || %{}) |> Enum.filter(& elem(&1, 0) not in ["room", "playlist", "media_directories"]) do %>
   <div>
     <h3><%= key %></h3>
     <form phx-submit="script_set">
@@ -83,7 +123,7 @@
   <% end %>
 
   <div>
-    <h3>New Script</h3>
+    <h3>New Attribute</h3>
     <form phx-submit="script_set">
       <div>
         <%= tag(:input, name: "key", placeholder: "Key") %>

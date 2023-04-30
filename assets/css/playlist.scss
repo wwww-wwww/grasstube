@@ -69,42 +69,108 @@
 }
 
 #playlist_tab1 {
+  > div:first-child {
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+
+    > input {
+      flex: 1;
+    }
+  }
+
+  .icon {
+    padding: 0.25em;
+  }
+
   .hosted_videos_outer {
     overflow: auto;
     display: flex;
-  }
-
-  .hosted_videos {
-    display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    width: 100%;
 
-    td:nth-child(2),
-    th:nth-child(2) {
-      text-align: center;
+    > div {
+      display: flex;
+      flex-direction: column;
     }
 
-    tr:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+    > .collapsed {
+      .table_outer {
+        height: 0;
+        overflow: hidden;
+      }
+
+      .directory {
+        > span::before {
+          content: "expand_more";
+        }
+      }
     }
-  }
 
-  .table_outer {
-    overflow: auto;
-    transition: height 0.25s;
-  }
+    .table_outer {
+      padding: 0 0.5em;
+    }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+    table {
+      width: 100%;
+      border-collapse: collapse;
 
-  th {
-    padding: 0.25em;
-    text-align: left;
-    font-weight: 400;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+      tr {
+        display: flex;
+      }
+
+      td:not(:last-child) {
+        padding-right: 0.5em;
+      }
+
+      td:first-child {
+        flex: 1;
+        word-wrap: anywhere;
+      }
+
+      td:nth-child(2),
+      th:nth-child(2) {
+        text-align: center;
+      }
+  
+      tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .directory {
+      width: 100%;
+      display: flex;
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(4px);
+      padding: 0.25em 0.5em;
+
+      > span {
+        cursor: pointer;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 0.25em;
+      }
+
+      > span::before {
+        font-family: "Material Icons";
+        font-weight: normal;
+        font-style: normal;
+        font-size: 1em;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        display: inline-block;
+        white-space: nowrap;
+        word-wrap: normal;
+        direction: ltr;
+      }
+
+      > span::before {
+        content: "expand_less";
+      }
+    }
   }
 }
 

@@ -8,6 +8,7 @@ import Text from "./danmaku"
 import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
 import topbar from "../vendor/topbar"
+import load_media_directories from "./media_directories"
 
 function autohide(msg, duration) {
   msg.classList.toggle("visible", true)
@@ -559,6 +560,8 @@ const hooks = {
         scripts.load(this)
         this.unload = scripts.unload
       }
+
+      load_media_directories(this, get_meta("media_directories").split("\n"))
 
       playlist_add.addEventListener("click", () => {
         this.pushEvent("add", {

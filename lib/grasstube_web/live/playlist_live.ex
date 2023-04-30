@@ -59,7 +59,8 @@ defmodule GrasstubeWeb.PlaylistLive do
       |> assign(current: current_video)
       |> assign(current_index: current_index)
       |> assign(repeat_mode: PlaylistAgent.get_repeat_mode(playlist))
-      |> assign(script: ChatAgent.get_script(chat, :playlist))
+      |> assign(script: ChatAgent.get_attr(chat, :playlist))
+      |> assign(media_directories: ChatAgent.get_attr(chat, :media_directories))
 
     {:ok, socket}
   end
