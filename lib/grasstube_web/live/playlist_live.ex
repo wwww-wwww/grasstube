@@ -1,7 +1,7 @@
 defmodule GrasstubeWeb.PlaylistLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{ChatAgent, PlaylistAgent, ProcessRegistry, VideoAgent}
+  alias Grasstube.{ChatAgent, PlaylistAgent, ProcessRegistry, Room, VideoAgent}
 
   def render(assigns) do
     GrasstubeWeb.PageView.render("playlist_live.html", assigns)
@@ -59,8 +59,8 @@ defmodule GrasstubeWeb.PlaylistLive do
       |> assign(current: current_video)
       |> assign(current_index: current_index)
       |> assign(repeat_mode: PlaylistAgent.get_repeat_mode(playlist))
-      |> assign(script: ChatAgent.get_attr(chat, :playlist))
-      |> assign(media_directories: ChatAgent.get_attr(chat, :media_directories))
+      |> assign(script: Room.get_attr(chat, :playlist))
+      |> assign(media_directories: Room.get_attr(chat, :media_directories))
 
     {:ok, socket}
   end

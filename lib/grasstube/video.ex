@@ -1,7 +1,7 @@
 defmodule Grasstube.VideoAgent do
   use Agent
 
-  alias Grasstube.{PlaylistAgent, VideoScheduler}
+  alias Grasstube.{PlaylistAgent, Room, VideoScheduler}
   alias GrasstubeWeb.Endpoint
 
   defstruct current_video: :nothing,
@@ -12,7 +12,6 @@ defmodule Grasstube.VideoAgent do
             room_name: "",
             speed: 1,
             autopaused: false,
-            autopause: false,
             autopause_min: 0
 
   def start_link(room) do
@@ -184,21 +183,24 @@ defmodule Grasstube.VideoAgent do
     Endpoint.broadcast("video:#{room_name}", "sync", %{speed: speed})
   end
 
-  def autopause?(pid), do: Agent.get(pid, & &1.autopause)
+  def autopause?(%{room_name: room_name}), do: Room.get_attr(room_name, :autopause, false)
+  def autopause?(pid), do: autopause?(Agent.get(pid, & &1))
 
   def can_autopause?(pid) do
     Agent.get(
       pid,
-      &(&1.autopause and &1.current_video != :nothing and &1.current_video.type == "default")
+      &(autopause?(&1) and &1.current_video != :nothing and &1.current_video.type == "default")
     )
   end
 
   def toggle_autopause(pid) do
     {room_name, autopause} =
-      Agent.get_and_update(
-        pid,
-        &{{&1.room_name, not &1.autopause}, %{&1 | autopause: not &1.autopause}}
-      )
+      Agent.get(pid, fn %{room_name: room_name} ->
+        autopause = not Room.get_attr(room_name, :autopause, false)
+        Room.set_attr(room_name, :autopause, autopause)
+
+        {room_name, autopause}
+      end)
 
     Endpoint.broadcast("video:#{room_name}", "autopause", autopause)
 

@@ -62,12 +62,12 @@ defmodule GrasstubeWeb.EditRoomLive do
   end
 
   def handle_event("script_set", %{"key" => key, "script" => script}, socket) do
-    Room.set_script(socket.assigns.room, key, script)
+    Room.set_attr(socket.assigns.room, key, script)
     {:noreply, assign(socket, room: get_room(socket))}
   end
 
   def handle_event("script_remove", %{"value" => key}, socket) do
-    Room.remove_script(socket.assigns.room, key)
+    Room.remove_attr(socket.assigns.room, key)
     {:noreply, assign(socket, room: get_room(socket))}
   end
 

@@ -457,7 +457,4 @@ defmodule Grasstube.ChatAgent do
         end
     end
   end
-
-  def get_attr(pid, key) when is_atom(key), do: get_attr(pid, Atom.to_string(key))
-  def get_attr(pid, key), do: Agent.get(pid, & &1.room.attributes[key])
 end

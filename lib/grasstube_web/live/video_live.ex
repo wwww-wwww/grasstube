@@ -42,7 +42,7 @@ defmodule GrasstubeWeb.VideoLive do
       |> assign(video: video)
       |> assign(controls: ChatAgent.controls?(chat, current_user))
       |> assign(users: Presence.list(topic))
-      |> assign(autopause: VideoAgent.autopause?(video))
+      |> assign(autopause: Grasstube.Room.get_attr(chat, :autopause))
 
     if connected?(socket) do
       socket.assigns.video

@@ -3,7 +3,7 @@ defmodule Grasstube.Room do
   import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
 
-  alias Grasstube.{ChatAgent, Repo, Room, RoomsMods, RoomsEmotelists, User}
+  alias Grasstube.{ChatAgent, ProcessRegistry, Repo, Room, RoomsMods, RoomsEmotelists, User}
 
   schema "rooms" do
     field :title, :string
@@ -184,10 +184,16 @@ defmodule Grasstube.Room do
     GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
   end
 
-  def set_script(room, key, value) when is_bitstring(room),
-    do: set_script(get_room(room), key, value)
+  def set_attr(room, key, value) when is_bitstring(room),
+    do: set_attr(get_room(room), key, value)
 
-  def set_script(%Room{title: room_name} = room, key, value) do
+  def set_attr(room, key, value) when not is_bitstring(key),
+    do: set_attr(room, to_string(key), value)
+
+  def set_attr(room, key, value) when not is_bitstring(value),
+    do: set_attr(room, key, to_string(value))
+
+  def set_attr(%Room{title: room_name} = room, key, value) do
     room = Repo.get(Room, room.id)
 
     changeset(room, %{attributes: Map.put(room.attributes || %{}, key, value)})
@@ -197,9 +203,22 @@ defmodule Grasstube.Room do
     GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
   end
 
-  def remove_script(room, key) when is_bitstring(room), do: remove_script(get_room(room), key)
+  def attr("true"), do: true
+  def attr("false"), do: false
+  def attr(val), do: val
 
-  def remove_script(%Room{title: room_name} = room, key) do
+  def get_attr(room, key, default \\ nil) when is_bitstring(room),
+    do: get_attr(ProcessRegistry.lookup(room, :chat), key, default)
+
+  def get_attr(pid, key, default) when not is_bitstring(key),
+    do: get_attr(pid, to_string(key), default)
+
+  def get_attr(pid, key, default),
+    do: Agent.get(pid, &Map.get(&1.room.attributes, key, default)) |> attr()
+
+  def remove_attr(room, key) when is_bitstring(room), do: remove_attr(get_room(room), key)
+
+  def remove_attr(%Room{title: room_name} = room, key) do
     room = Repo.get(Room, room.id)
 
     changeset(room, %{attributes: Map.delete(room.attributes || %{}, key)})
