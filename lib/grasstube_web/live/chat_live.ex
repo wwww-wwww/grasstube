@@ -25,6 +25,7 @@ defmodule GrasstubeWeb.ChatLive do
           end
 
         Presence.track(self(), topic, user_id, meta)
+        GrasstubeWeb.RoomsLive.update()
         user_id
       else
         nil
@@ -51,6 +52,7 @@ defmodule GrasstubeWeb.ChatLive do
 
   def terminate(_reason, socket) do
     Presence.untrack(self(), socket.assigns.topic, socket.assigns.user_id)
+    GrasstubeWeb.RoomsLive.update()
     :ok
   end
 

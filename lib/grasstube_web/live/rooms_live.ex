@@ -17,12 +17,15 @@ defmodule GrasstubeWeb.RoomsLive do
       chat = ProcessRegistry.lookup(name, :chat)
 
       [
-        {name, Grasstube.Presence.list("chat:#{name}") |> Enum.count(),
-         Grasstube.ChatAgent.password?(chat)}
+        %{
+          name: name,
+          users: Grasstube.Presence.list("chat:#{name}") |> Enum.count(),
+          has_password: Grasstube.ChatAgent.password?(chat)
+        }
         | acc
       ]
     end)
-    |> Enum.sort_by(&{-elem(&1, 1), elem(&1, 0)})
+    |> Enum.sort_by(&{-&1.users, &1.name})
   end
 
   def mount(_, _session, socket) do
