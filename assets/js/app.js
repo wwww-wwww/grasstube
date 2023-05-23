@@ -212,8 +212,10 @@ const hooks = {
         this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
         if (!document.hidden) { console.info("video:pong", this.latency_rtt) }
         if (!this.mount_loaded) {
+          // response from ping should always be after setvid
           this.pushEvent("getvid", {}, data => {
             console.log("video:getvid", data)
+            this.mount_loaded = true
             if (Object.keys(data).length == 0) return
             this.setvid(data)
           })
@@ -292,9 +294,6 @@ const hooks = {
       player_state.player.settings.set("catchup", get_cookie("catchup", true))
       player_state.player.add_setting("catchup", "Catchup")
 
-      this.ping()
-      this.ping_interval = setInterval(() => this.ping(), 5000)
-
       this.handleEvent("autopause", data => {
         console.log("video:autopause", data)
         this.pushEvent("buffered", { buffered: last_buffered })
@@ -309,6 +308,9 @@ const hooks = {
         console.log("video:setvid", data)
         this.setvid(data)
       })
+
+      this.ping()
+      this.ping_interval = setInterval(() => this.ping(), 5000)
 
       this.on_playing = data => {
         if (data.playing == undefined) return
