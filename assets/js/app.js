@@ -569,7 +569,7 @@ const hooks = {
         this.unload = scripts.unload
       }
 
-      load_media_directories(this, (get_meta("media_directories") || []).split("\n"))
+      load_media_directories(this, (get_meta("media_directories") || "").split("\n"))
 
       playlist_add.addEventListener("click", () => {
         this.pushEvent("add", {
