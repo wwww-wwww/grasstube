@@ -214,7 +214,7 @@ defmodule Grasstube.Room do
     do: get_attr(pid, to_string(key), default)
 
   def get_attr(pid, key, default),
-    do: Agent.get(pid, &Map.get(&1.room.attributes, key, default)) |> attr()
+    do: Agent.get(pid, &Map.get(&1.room.attributes || %{}, key, default)) |> attr()
 
   def remove_attr(room, key) when is_bitstring(room), do: remove_attr(get_room(room), key)
 
