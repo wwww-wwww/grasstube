@@ -1,5 +1,6 @@
 import { get_cookie, set_cookie } from "./cookies"
-import { create_element, seconds_to_hms } from "./util"
+import { create_element, enter, seconds_to_hms } from "./util"
+import { create_window } from "./window"
 import SubtitlesOctopus from "./subtitles-octopus"
 
 class GrassPlayer {
@@ -112,19 +113,19 @@ class GrassPlayer {
 
     this.overlay = create_element(root, "div", "overlay overlay_hidden")
     this.overlay.addEventListener("contextmenu", e => {
-      if (this.ctxmenu.parentElement) return
+      if (this.contextmenu.parentElement) return
       if (e.target != this.overlay && e.target != this.bottom_shade) return
       e.preventDefault()
-      this.overlay.appendChild(this.ctxmenu)
+      this.overlay.appendChild(this.contextmenu)
 
       this.overlay.style.pointerEvents = "none"
       const overlay_bbox = this.overlay.getBoundingClientRect()
-      const bbox = this.ctxmenu.getBoundingClientRect()
-      this.ctxmenu.style.left = `${e.clientX - overlay_bbox.x}px`
+      const bbox = this.contextmenu.getBoundingClientRect()
+      this.contextmenu.style.left = `${e.clientX - overlay_bbox.x}px`
       if (e.clientY + bbox.height > overlay_bbox.height + overlay_bbox.y) {
-        this.ctxmenu.style.top = `${e.clientY - overlay_bbox.y - bbox.height}px`
+        this.contextmenu.style.top = `${e.clientY - overlay_bbox.y - bbox.height}px`
       } else {
-        this.ctxmenu.style.top = `${e.clientY - overlay_bbox.y}px`
+        this.contextmenu.style.top = `${e.clientY - overlay_bbox.y}px`
       }
     })
     this.overlay.addEventListener("dblclick", e => {
@@ -145,7 +146,7 @@ class GrassPlayer {
 
     this.overlay.tmp = create_element(this.overlay, "div", "overlay_tmp")
 
-    this.create_ctxmenu()
+    this.create_contextmenu()
     this.create_settings()
     this.stats_panel = this.create_stats_panel()
     this.create_capture()
@@ -580,6 +581,7 @@ class GrassPlayer {
     this.btn_play.style.display = controls ? "" : "none"
     this.btn_next.style.display = controls ? "" : "none"
     this.seekbar.classList.toggle("seekbar_controls", controls)
+    this.contextmenu_goto.style.display = controls ? "" : "none"
     this.load_previews()
   }
 
@@ -712,19 +714,19 @@ class GrassPlayer {
     text.textContent = "Click to unmute"
   }
 
-  create_ctxmenu() {
-    this.ctxmenu = create_element(null, "div", "ctxmenu")
-    this.ctxmenu_open = false
+  create_contextmenu() {
+    this.contextmenu = create_element(null, "div", "ctxmenu")
+    this.contextmenu_open = false
     document.addEventListener("click", e => {
-      if (e.target == this.ctxmenu) return
-      if (this.ctxmenu.parentElement) {
-        this.ctxmenu.parentElement.removeChild(this.ctxmenu)
+      if (e.target == this.contextmenu) return
+      if (this.contextmenu.parentElement) {
+        this.contextmenu.parentElement.removeChild(this.contextmenu)
         this.overlay.style.pointerEvents = "all"
         e.preventDefault()
       }
     })
 
-    const fullscreen = create_element(this.ctxmenu, "button")
+    const fullscreen = create_element(this.contextmenu, "button")
     fullscreen.textContent = "Enter Fullscreen"
     fullscreen.addEventListener("click", () => this.toggle_fullscreen())
 
@@ -736,17 +738,60 @@ class GrassPlayer {
       }
     })
 
-    const captions = create_element(this.ctxmenu, "button")
+    const captions = create_element(this.contextmenu, "button")
     captions.textContent = this.cc ? "Hide Captions" : "Show Captions"
     captions.addEventListener("click", () => this.toggle_cc())
     this.on_toggle_cc.push(cc => {
       captions.textContent = cc ? "Hide Captions" : "Show Captions"
     })
+
+    this.contextmenu_goto = create_element(this.contextmenu, "button")
+    this.contextmenu_goto.style.display = this.has_controls ? "" : "none"
+    this.contextmenu_goto.textContent = "Go to"
+
+    this.contextmenu_goto.addEventListener("click", () => {
+      const root = create_window(null, {
+        title: "Go to",
+        root: this.root,
+        show: true,
+        close_on_unfocus: true,
+        invert_x: true,
+        invert_y: true
+      })
+
+      const goto_t = create_element(root, "input")
+      const goto_button = create_element(root, "button")
+      goto_button.textContent = "Go"
+
+      const go = () => {
+        if (!this.has_controls) return
+        if (goto_t.value.length == 0) return
+
+        const t = Number(goto_t.value)
+        const duration = this.duration()
+
+        if (t > duration) {
+          this.show_osd(`Time ${t} exceeds duration of video ${duration}`)
+          return
+        }
+
+        this.on_seek(t)
+        root.close()
+      }
+
+      goto_t.addEventListener("keydown", e => {
+        console.log(e)
+        enter(e, () => go())
+      })
+      goto_button.addEventListener("click", go)
+
+      goto_t.focus()
+    })
   }
 
   create_stats_panel() {
     const stats_panel = create_element(null, "div", "stats")
-    const btn_stats = create_element(this.ctxmenu, "button")
+    const btn_stats = create_element(this.contextmenu, "button")
     btn_stats.textContent = "Stats"
     btn_stats.addEventListener("click", () => {
       this.overlay.appendChild(stats_panel)
@@ -838,7 +883,7 @@ class GrassPlayer {
   create_settings() {
     const settings = create_element(null, "div", "settings")
 
-    const btn_settings = create_element(this.ctxmenu, "button")
+    const btn_settings = create_element(this.contextmenu, "button")
     btn_settings.textContent = "Settings"
     btn_settings.addEventListener("click", () => {
       this.overlay.appendChild(settings)
@@ -1148,13 +1193,13 @@ class GrassPlayer {
   }
 
   create_capture() {
-    const btn_capture = create_element(this.ctxmenu, "button")
+    const btn_capture = create_element(this.contextmenu, "button")
     btn_capture.textContent = "Capture Frame"
     btn_capture.addEventListener("click", () => {
       this.capture_frame(false)
     })
 
-    const btn_capture2 = create_element(this.ctxmenu, "button")
+    const btn_capture2 = create_element(this.contextmenu, "button")
     btn_capture2.textContent = "Capture Frame (Captions)"
     btn_capture2.addEventListener("click", () => {
       this.capture_frame(true)

@@ -30,7 +30,9 @@ class Window {
     }
 
     if (classes != null) {
-      classes.split(" ").forEach(c => this.e.classList.toggle(c, true))
+      classes.split(" ")
+        .filter(x => x.length > 0)
+        .forEach(c => this.e.classList.toggle(c, true))
     }
 
     this.top = create_element(this.e, "div", "window-top")
