@@ -760,6 +760,8 @@ class GrassPlayer {
       })
 
       const goto_t = create_element(root, "input")
+      goto_t.value = this.current_time()
+
       const goto_button = create_element(root, "button")
       goto_button.textContent = "Go"
 
