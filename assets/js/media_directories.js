@@ -6,6 +6,13 @@ function build_hosted_videos(hosted_videos_outer, media_directories, add, fill) 
     const dc = create_element(hosted_videos_outer, "div", "collapsed")
     const drow = create_element(dc, "div", "directory")
 
+    const observer = new IntersectionObserver(
+      ([e]) => e.target.classList.toggle("is-pinned", e.intersectionRatio < 1),
+      { threshold: [1] }
+    )
+
+    observer.observe(drow)
+
     const btn_toggle = create_element(drow, "span", "")
     btn_toggle.textContent = directory
 

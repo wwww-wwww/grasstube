@@ -68,10 +68,6 @@
   gap: 0.5em;
 }
 
-#playlist_btn_show {
-  backdrop-filter: blur(1px);
-}
-
 #playlist_tab1 {
   > div:first-child {
     display: flex;
@@ -136,7 +132,7 @@
       th:nth-child(2) {
         text-align: center;
       }
-  
+
       tr:hover {
         background-color: rgba(255, 255, 255, 0.1);
       }
@@ -146,9 +142,9 @@
       width: 100%;
       display: flex;
       position: sticky;
-      top: 0;
-      backdrop-filter: blur(4px);
+      top: -0.1px;
       padding: 0.25em 0.5em;
+      transition: 0.2s background-color;
 
       > span {
         cursor: pointer;
@@ -175,6 +171,10 @@
       > span::before {
         content: "expand_less";
       }
+    }
+
+    .directory.is-pinned {
+      background-color: rgba(0, 0, 0, 0.7);
     }
   }
 }
