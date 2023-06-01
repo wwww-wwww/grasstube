@@ -36,7 +36,6 @@ defmodule GrasstubeWeb.YTController do
                       channel_id: channel_id
                     }
                   end)
-                  |> Enum.reverse()
 
                 %{success: 1, items: items}
 
