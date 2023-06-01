@@ -537,7 +537,7 @@ const hooks = {
           let column = create_element(video_e, "div")
 
           const video_e_title = create_element(column, "a")
-          video_e_title.textContent = video.title
+          video_e_title.innerHTML = video.title
           video_e_title.href = video_url
 
           const video_e_author = create_element(column, "a")
