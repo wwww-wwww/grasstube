@@ -34,7 +34,7 @@ config :grasstube, GrasstubeWeb.Endpoint,
       ~r"lib/grasstube_web/(live|views)/.*(ex)$",
       ~r"lib/grasstube_web/templates/.*(eex)$",
       ~r"lib/grasstube/.*(ex)$",
-      ~r"lib/grasstube/grasstube/.*(ex)$",
+      ~r"lib/grasstube/grasstube/.*(ex)$"
     ]
   ]
 

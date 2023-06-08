@@ -26,25 +26,26 @@ defmodule Grasstube.MixProject do
 
   defp deps do
     [
-      {:phoenix, "~> 1.6.7"},
+      {:phoenix, "~> 1.7.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.18"},
+      {:phoenix_live_view, "~> 0.19"},
+      {:phoenix_view, "~> 2.0"},
       {:floki, ">= 0.30.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.6"},
-      {:esbuild, "~> 0.4", runtime: Mix.env() == :dev},
+      {:phoenix_live_dashboard, "~> 0.8"},
+      {:esbuild, "~> 0.7", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.18"},
-      {:jason, "~> 1.2"},
-      {:plug_cowboy, "~> 2.5"},
-      {:bcrypt_elixir, "~> 2.0"},
-      {:auto_linker, "~> 0.2.2"},
-      {:httpoison, "~> 2.0"},
-      {:dart_sass, "~> 0.5.1", runtime: Mix.env() == :dev}
+      {:gettext, "~> 0.22"},
+      {:jason, "~> 1.4"},
+      {:plug_cowboy, "~> 2.6"},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:auto_linker, "~> 1.0"},
+      {:httpoison, "~> 2.1"},
+      {:dart_sass, "~> 0.6.0", runtime: Mix.env() == :dev}
     ]
   end
 

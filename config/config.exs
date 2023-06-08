@@ -13,7 +13,7 @@ config :grasstube, GrasstubeWeb.Endpoint,
   live_view: [signing_salt: "PPjU/8aX"]
 
 config :esbuild,
-  version: "0.14.29",
+  version: "0.17.19",
   app: [
     args: ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets),
     cd: Path.expand("../assets", __DIR__),
@@ -21,7 +21,7 @@ config :esbuild,
   ]
 
 config :dart_sass,
-  version: "1.39.0",
+  version: "1.63.2",
   app: [
     args: ~w(css/app.scss ../priv/static/assets/app.css),
     cd: Path.expand("../assets", __DIR__)

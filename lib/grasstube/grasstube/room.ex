@@ -207,7 +207,9 @@ defmodule Grasstube.Room do
   def attr("false"), do: false
   def attr(val), do: val
 
-  def get_attr(room, key, default \\ nil) when is_bitstring(room),
+  def get_attr(room, key, default \\ nil)
+
+  def get_attr(room, key, default) when is_bitstring(room),
     do: get_attr(ProcessRegistry.lookup(room, :chat), key, default)
 
   def get_attr(pid, key, default) when not is_bitstring(key),

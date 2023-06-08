@@ -5,21 +5,31 @@ defmodule GrasstubeWeb.PageView do
     view |> to_string() |> String.split(".") |> Enum.at(-1)
   end
 
-  def render_history(history, assigns) do
+  def history_message(msg, name, last_name) do
+    assigns = %{
+      msg: msg,
+      name: name,
+      last_name: last_name
+    }
+
+    ~H"""
+    <div class="message">
+      <%= if @last_name != @name do %>
+      <span class="message_user"><%= @name %></span>
+      <% end %>
+
+      <div class="message_content"><%= raw(@msg) %></div>
+    </div>
+    """
+  end
+
+  def render_history(history) do
     history
     |> Enum.reverse()
     |> Enum.reduce({[], ""}, fn %{msg: msg, name: name}, {acc, last_name} ->
       {acc ++
          [
-           ~H"""
-           <div class="message">
-             <%= if last_name != name do %>
-             <span class="message_user"><%= name %></span>
-             <% end %>
-
-             <div class="message_content"><%= raw(msg) %></div>
-           </div>
-           """
+           history_message(msg, name, last_name)
            |> Phoenix.HTML.Safe.to_iodata()
            |> List.to_string()
            |> raw()
