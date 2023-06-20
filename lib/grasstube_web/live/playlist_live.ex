@@ -36,6 +36,7 @@ defmodule GrasstubeWeb.PlaylistLive do
 
     duration =
       playlist_items
+      |> Enum.filter(& &1 != :nothing)
       |> Enum.map(& &1.duration)
       |> Enum.filter(&is_number(&1))
       |> Enum.sum()
