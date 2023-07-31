@@ -2,8 +2,7 @@ defmodule GrasstubeWeb.YTController do
   use GrasstubeWeb, :controller
 
   def search(query) do
-    Application.get_env(:grasstube, :youtube_api_keys)
-    |> case do
+    case Application.get_env(:grasstube, :youtube_api_keys) do
       [] ->
         %{success: 0, response: "No API keys configured"}
 

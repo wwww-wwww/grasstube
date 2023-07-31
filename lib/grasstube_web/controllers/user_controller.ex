@@ -148,8 +148,7 @@ defmodule GrasstubeWeb.UserController do
         put_flash(conn, :error, "You must be logged in to do this.")
 
       user ->
-        ProcessRegistry.create_room(user, room_name, room_password)
-        |> case do
+        case ProcessRegistry.create_room(user, room_name, room_password) do
           {:ok, room} ->
             redirect(conn, to: Routes.live_path(conn, GrasstubeWeb.RoomLive, room))
 

@@ -38,8 +38,7 @@ defmodule Grasstube.Emote do
   end
 
   defp check(%__MODULE__{url: url}) do
-    HTTPoison.options(url)
-    |> case do
+    case HTTPoison.options(url) do
       {:ok, %HTTPoison.Response{headers: headers, status_code: 200}} ->
         content_type =
           headers
@@ -84,8 +83,7 @@ defmodule Grasstube.Emote do
   def download(%__MODULE__{url: url} = e) do
     case check(e) do
       :ok ->
-        HTTPoison.get(url)
-        |> case do
+        case HTTPoison.get(url) do
           {:ok, %HTTPoison.Response{body: body, headers: headers}} ->
             headers
             |> Enum.filter(&(elem(&1, 0) == "Content-Type"))
@@ -112,8 +110,7 @@ defmodule Grasstube.Emote do
     Grasstube.Repo.all(Grasstube.Emote)
     |> Enum.filter(&(&1.data == nil))
     |> Enum.map(fn e ->
-      download(e)
-      |> case do
+      case download(e) do
         {:ok, cs} -> Repo.update(cs)
         err -> {e, err}
       end

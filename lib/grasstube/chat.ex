@@ -24,7 +24,8 @@ defmodule Grasstube.ChatAgent do
     "motd",
     "clear_motd",
     "speed",
-    "autopause"
+    "autopause",
+    "untrack"
   ]
 
   defstruct history: [],
@@ -191,8 +192,7 @@ defmodule Grasstube.ChatAgent do
   defp command("deop " <> username, :admin, channel, socket) do
     username = String.downcase(username)
 
-    Room.remove_mod(get_room(channel), username)
-    |> case do
+    case Room.remove_mod(get_room(channel), username) do
       :ok ->
         push(socket, "chat", %ChatMessage{content: "de-opped #{username}"})
 
@@ -221,8 +221,7 @@ defmodule Grasstube.ChatAgent do
        when level in [:mod, :admin] do
     username = username |> String.downcase()
 
-    Room.remove_emotelist(get_room(channel), username)
-    |> case do
+    case Room.remove_emotelist(get_room(channel), username) do
       :ok ->
         push(socket, "chat", %ChatMessage{content: "removed #{username} from emotelists"})
 
@@ -318,6 +317,22 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
+  defp command("untrack " <> name, level, channel, socket) when level in [:mod, :admin] do
+    room = get_room(channel)
+
+    if GrasstubeWeb.VideoLive.untrack(room.title, name) == :ok do
+      push(socket, "chat", %ChatMessage{
+        name: room.title,
+        content: "untracked " <> name
+      })
+    else
+      push(socket, "chat", %ChatMessage{
+        name: room.title,
+        content: "unable to untrack " <> name
+      })
+    end
+  end
+
   defp command(cmd, _level, _channel, socket) do
     push(socket, "chat", %ChatMessage{content: "No command #{cmd}"})
   end
@@ -352,6 +367,8 @@ defmodule Grasstube.ChatAgent do
   end
 
   def get_history(pid), do: Agent.get(pid, & &1.history)
+
+  def admin(pid), do: Agent.get(pid, & &1.room.user)
 
   def mod?(_, "$" <> _id), do: false
 
@@ -431,8 +448,7 @@ defmodule Grasstube.ChatAgent do
   def password?(:not_found), do: false
 
   def password?(pid) do
-    Agent.get(pid, & &1.room.password)
-    |> case do
+    case Agent.get(pid, & &1.room.password) do
       nil -> false
       password -> String.length(password) > 0
     end

@@ -30,6 +30,8 @@ defmodule GrasstubeWeb.VideoLive do
         nil
       end
 
+    GrasstubeWeb.Endpoint.subscribe("user_video:#{room}:#{user_id}")
+
     video = ProcessRegistry.lookup(room, :video)
 
     socket =
@@ -45,9 +47,7 @@ defmodule GrasstubeWeb.VideoLive do
       |> assign(autopause: Grasstube.Room.get_attr(chat, :autopause))
 
     if connected?(socket) do
-      socket.assigns.video
-      |> VideoAgent.get_status()
-      |> case do
+      case VideoAgent.get_status(socket.assigns.video) do
         %{video: :nothing} ->
           nil
 
@@ -72,8 +72,63 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def terminate(_reason, socket) do
-    Presence.untrack(self(), socket.assigns.topic, socket.assigns.user_id)
+    untrack(self(), socket.assigns.room, socket.assigns.topic, socket.assigns.user_id)
     :ok
+  end
+
+  def update_autoplay_min(room) do
+    video = ProcessRegistry.lookup(room, :video)
+    topic = "video:#{room}"
+
+    time =
+      Presence.list(topic)
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.map(& &1.metas)
+      |> List.flatten()
+      |> Enum.map(& &1.buffered)
+      |> case do
+        [] -> 0
+        times -> Enum.min(times)
+      end
+
+    VideoAgent.set_autopause_time(video, time)
+  end
+
+  def untrack(room, name) do
+    user_id =
+      Presence.list("video:#{room}")
+      |> Enum.filter(fn {username, _} ->
+        case username do
+          ^name ->
+            true
+
+          "$" <> n ->
+            case name do
+              "anon" <> n2 -> n == n2
+              _ -> false
+            end
+
+          _ ->
+            false
+        end
+      end)
+      |> case do
+        [_user1, _] -> nil
+        [{user_id, _}] -> user_id
+        _ -> nil
+      end
+
+    if !is_nil(user_id) do
+      GrasstubeWeb.Endpoint.broadcast("user_video:#{room}:#{user_id}", "untrack", nil)
+    end
+  end
+
+  defp untrack(pid, room, topic, user_id) do
+    Presence.untrack(pid, topic, user_id)
+
+    if VideoAgent.can_autopause?(ProcessRegistry.lookup(room, :video)) do
+      update_autoplay_min(room)
+    end
   end
 
   def handle_event("play", %{"offset" => offset}, socket) do
@@ -129,28 +184,18 @@ defmodule GrasstubeWeb.VideoLive do
 
   def handle_event("buffered", %{"buffered" => buffered}, socket) do
     if VideoAgent.can_autopause?(socket.assigns.video) do
-      Grasstube.Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
+      Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
         buffered: buffered
       })
 
-      time =
-        Presence.list(socket.assigns.topic)
-        |> Enum.map(&elem(&1, 1))
-        |> Enum.map(& &1.metas)
-        |> List.flatten()
-        |> Enum.map(& &1.buffered)
-        |> Enum.min()
-
-      VideoAgent.set_autopause_time(socket.assigns.video, time)
+      update_autoplay_min(socket.assigns.room)
     end
 
     {:noreply, socket}
   end
 
   def handle_event("getvid", _, socket) do
-    socket.assigns.video
-    |> VideoAgent.get_status()
-    |> case do
+    case VideoAgent.get_status(socket.assigns.video) do
       %{video: :nothing} ->
         {:reply, %{}, socket}
 
@@ -207,5 +252,10 @@ defmodule GrasstubeWeb.VideoLive do
 
   def handle_info(%{event: "presence_diff"}, socket) do
     {:noreply, assign(socket, users: Presence.list(socket.assigns.topic))}
+  end
+
+  def handle_info(%{event: "untrack", topic: "user_video:" <> _}, socket) do
+    untrack(self(), socket.assigns.room, socket.assigns.topic, socket.assigns.user_id)
+    {:noreply, socket}
   end
 end

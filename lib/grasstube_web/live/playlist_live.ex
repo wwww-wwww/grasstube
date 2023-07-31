@@ -27,16 +27,14 @@ defmodule GrasstubeWeb.PlaylistLive do
     playlist_items = PlaylistAgent.get_playlist(playlist)
 
     current_video =
-      video
-      |> VideoAgent.get_current_video()
-      |> case do
+      case VideoAgent.get_current_video(video) do
         :nothing -> nil
         current -> current.id
       end
 
     duration =
       playlist_items
-      |> Enum.filter(& &1 != :nothing)
+      |> Enum.filter(&(&1 != :nothing))
       |> Enum.map(& &1.duration)
       |> Enum.filter(&is_number(&1))
       |> Enum.sum()

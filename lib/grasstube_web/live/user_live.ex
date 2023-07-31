@@ -138,8 +138,7 @@ defmodule GrasstubeWeb.CreateRoomLive do
 
   def handle_event("create", %{"name" => name, "password" => password}, socket) do
     socket =
-      Grasstube.ProcessRegistry.create_room(socket.assigns.current_user, name, password)
-      |> case do
+      case Grasstube.ProcessRegistry.create_room(socket.assigns.current_user, name, password) do
         {:ok, room} ->
           push_navigate(socket, to: Routes.live_path(socket, GrasstubeWeb.RoomLive, room))
 

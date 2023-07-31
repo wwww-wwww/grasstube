@@ -10,9 +10,7 @@ defmodule GrasstubeWeb.RoomsLive do
   end
 
   def get_rooms() do
-    room_names = ProcessRegistry.list_rooms()
-
-    room_names
+    ProcessRegistry.list_rooms()
     |> Enum.reduce([], fn name, acc ->
       chat = ProcessRegistry.lookup(name, :chat)
 
