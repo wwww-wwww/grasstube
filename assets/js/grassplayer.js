@@ -95,6 +95,7 @@ class GrassPlayer {
     this.speed = 1
 
     this.video = create_element(root, "video")
+    this.video.crossOrigin = "anonymous"
     this.video.style.display = "none"
     this.video.volume = this.get_volume()
 
