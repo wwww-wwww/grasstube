@@ -1,57 +1,43 @@
 import { create_element } from "./util"
 
 function build_hosted_videos(hosted_videos_outer, media_directories, add, fill) {
-  media_directories.forEach(directory => {
-    if (directory.length == 0) return
-    const dc = create_element(hosted_videos_outer, "div", "collapsed")
-    const drow = create_element(dc, "div", "directory")
+  media_directories.forEach(async root_directory => {
+    await scan(root_directory)
+      .then(folders => {
+        folders.forEach(({ folder: directory, files: files }) => {
+          if (directory.length == 0) return
+          const dc = create_element(hosted_videos_outer, "div", "collapsed")
+          const drow = create_element(dc, "div", "directory")
 
-    const observer = new IntersectionObserver(
-      ([e]) => e.target.classList.toggle("is-pinned", e.intersectionRatio < 1),
-      { threshold: [1] }
-    )
+          const observer = new IntersectionObserver(
+            ([e]) => e.target.classList.toggle("is-pinned", e.intersectionRatio < 1),
+            { threshold: [1] }
+          )
 
-    observer.observe(drow)
+          observer.observe(drow)
 
-    const btn_toggle = create_element(drow, "span", "")
-    btn_toggle.textContent = directory
+          const url = new URL(root_directory)
+          url.pathname = directory
 
-    const btn_refresh = create_element(drow, "button", "icon")
-    btn_refresh.textContent = "refresh"
+          const btn_toggle = create_element(drow, "span", "")
+          btn_toggle.textContent = url.href
 
-    const table_outer = create_element(dc, "div", "table_outer")
-    const table = create_element(table_outer, "table")
+          const btn_refresh = create_element(drow, "button", "icon")
+          btn_refresh.textContent = "refresh"
 
-    btn_toggle.addEventListener("click", () => dc.classList.toggle("collapsed"))
+          const table_outer = create_element(dc, "div", "table_outer")
+          const table = create_element(table_outer, "table")
 
-    async function refresh() {
-      await scan(directory)
-        .then(files => {
-          while (table.firstChild) table.removeChild(table.firstChild)
-          files = files.map(url => {
-            return {
-              path: url,
-              filename: decodeURIComponent(url.split("\\").pop().split("/").pop())
+          btn_toggle.addEventListener("click", () => dc.classList.toggle("collapsed"))
+
+          async function refresh(get) {
+            if (get) {
+              files = await scan(url)
+              files = files[0].files
             }
-          })
-          files
-            .filter(x => video_exts.some(e => x.filename.toLowerCase().endsWith(e)))
-            .map(video => {
-              const sub_names = [
-                video.filename + ".ass",
-                pairroot(video.filename) + ".ass",
-              ]
 
-              const subs = files.filter(file => sub_names.some(x => file.filename == x))
-
-              return {
-                title: video.filename,
-                path: video.path,
-                filename: video.filename,
-                subs: subs
-              }
-            })
-            .forEach(video => {
+            while (table.firstChild) table.removeChild(table.firstChild)
+            files.forEach(video => {
               const row = create_element(table, "tr")
               const filename = create_element(row, "td")
               filename.textContent = video.title
@@ -65,16 +51,17 @@ function build_hosted_videos(hosted_videos_outer, media_directories, add, fill) 
               btn_add.textContent = "add"
               btn_add.addEventListener("click", () => add(video.path, video.subs.length > 0 ? video.subs[0].path : "", {}))
             })
-        })
-    }
+          }
 
-    refresh()
-    btn_refresh.addEventListener("click", () => {
-      btn_refresh.disabled = true
-      refresh().finally(() => {
-        btn_refresh.disabled = false
+          refresh(false)
+          btn_refresh.addEventListener("click", () => {
+            btn_refresh.disabled = true
+            refresh(true).finally(() => {
+              btn_refresh.disabled = false
+            })
+          })
+        })
       })
-    })
   })
 }
 
@@ -89,7 +76,7 @@ async function scan(url, limit = 2) {
   if (limit == 0) return
 
   url = new URL(url)
-  const files = []
+  let files = []
   let folders = []
   await fetch(url).then(res => res.text())
     .then(t => {
@@ -104,13 +91,34 @@ async function scan(url, limit = 2) {
       folders.push(...urls.filter(x => x.endsWith("/")))
     })
 
+  files = files.map(url => {
+    return {
+      path: url,
+      filename: decodeURIComponent(url.split("\\").pop().split("/").pop())
+    }
+  })
+
+  files = files.filter(x => video_exts.some(e => x.filename.toLowerCase().endsWith(e)))
+    .map(video => {
+      const sub_names = [
+        video.filename + ".ass",
+        pairroot(video.filename) + ".ass",
+      ]
+
+      const subs = files.filter(file => sub_names.some(x => file.filename == x))
+
+      return {
+        title: video.filename,
+        path: video.path,
+        filename: video.filename,
+        subs: subs
+      }
+    })
+
   folders = folders.filter(x => !dir_filter.some(e => new URL(x).pathname.split("/").at(-2).toLowerCase() == e))
+  folders = await Promise.all(folders.map(folder => scan(folder, limit - 1)))
 
-  for (const folder of folders) {
-    files.push(...await scan(folder, limit - 1))
-  }
-
-  return files
+  return [{ folder: url.pathname, files: files }, ...folders.flat()]
 }
 
 export default (view, media_directories) => {
