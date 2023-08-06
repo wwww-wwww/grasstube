@@ -24,6 +24,8 @@ defmodule GrasstubeWeb.PollsChannel do
     end
   end
 
+  def join(topic, %{}, socket), do: join(topic, %{"password" => ""}, socket)
+
   def handle_info({:after_join, _}, socket) do
     "polls:" <> room_name = socket.topic
 

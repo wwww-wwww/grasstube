@@ -25,6 +25,8 @@ defmodule GrasstubeWeb.VideoChannel do
     end
   end
 
+  def join(topic, %{}, socket), do: join(topic, %{"password" => ""}, socket)
+
   def handle_info({:after_join, _}, socket) do
     "video:" <> room_name = socket.topic
 

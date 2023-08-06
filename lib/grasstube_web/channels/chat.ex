@@ -24,6 +24,8 @@ defmodule GrasstubeWeb.ChatChannel do
     end
   end
 
+  def join(topic, %{}, socket), do: join(topic, %{"password" => ""}, socket)
+
   def handle_info({:after_join, _}, socket) do
     "chat:" <> room_name = socket.topic
     chat = Grasstube.ProcessRegistry.lookup(room_name, :chat)
