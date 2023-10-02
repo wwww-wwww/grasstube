@@ -224,22 +224,27 @@ defmodule Grasstube.PlaylistAgent do
 
   def get_yt_playlist(id) do
     case System.cmd(Application.get_env(:grasstube, :ytdl), ["-j", "--flat-playlist", id]) do
-      {output, 0} ->
-        results =
-          output
-          |> String.trim()
-          |> String.split("\n")
-          |> Enum.map(&Jason.decode(&1))
-          |> Enum.map(&elem(&1, 1))
-          |> Enum.map(
-            &%{
-              id: &1["id"],
-              duration: &1["duration"],
-              title: &1["title"]
-            }
-          )
+      {output, _} ->
+        output
+        |> String.trim()
+        |> String.split("\n")
+        |> Stream.map(&Jason.decode(&1))
+        |> Stream.filter(&(elem(&1, 0) == :ok))
+        |> Stream.map(&elem(&1, 1))
+        |> Enum.map(
+          &%{
+            id: &1["id"],
+            duration: &1["duration"],
+            title: &1["title"]
+          }
+        )
+        |> case do
+          [] ->
+            :error
 
-        {:ok, results}
+          results ->
+            {:ok, results}
+        end
 
       _ ->
         :error
@@ -258,11 +263,14 @@ defmodule Grasstube.PlaylistAgent do
          ]) do
       {output, 0} ->
         output
+        |> IO.inspect()
         |> String.trim()
         |> Float.parse()
         |> elem(0)
+        |> IO.inspect()
 
-      _ ->
+      err ->
+        IO.inspect(err)
         :error
     end
   end
@@ -270,7 +278,7 @@ defmodule Grasstube.PlaylistAgent do
   def queue_lookup(pid, room, video, custom_title, url, sub, alts) do
     case URI.parse(url) do
       %URI{host: nil} ->
-        update_queue_item(pid, video, %{title: "failed", ready: :failed})
+        update_queue_item(pid, video, %{title: "bad uri", ready: false})
         false
 
       %URI{host: host, query: query} ->
@@ -305,7 +313,7 @@ defmodule Grasstube.PlaylistAgent do
                     true
 
                   _ ->
-                    update_queue_item(pid, video, %{title: "failed", ready: :failed})
+                    update_queue_item(pid, video, %{title: "failed", ready: false})
                     false
                 end
 
@@ -328,7 +336,7 @@ defmodule Grasstube.PlaylistAgent do
                     true
 
                   _ ->
-                    update_queue_item(pid, video, %{title: "failed", ready: :failed})
+                    update_queue_item(pid, video, %{title: "failed", ready: false})
                     false
                 end
             end
@@ -352,7 +360,7 @@ defmodule Grasstube.PlaylistAgent do
                 true
 
               _ ->
-                update_queue_item(pid, video, %{title: "failed", ready: :failed})
+                update_queue_item(pid, video, %{title: "failed", ready: false})
                 false
             end
 
@@ -378,8 +386,8 @@ defmodule Grasstube.PlaylistAgent do
 
                 true
 
-              _ ->
-                update_queue_item(pid, video, %{title: "failed"})
+              err ->
+                update_queue_item(pid, video, %{title: inspect(err)})
                 false
             end
         end
