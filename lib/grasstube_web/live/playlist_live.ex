@@ -41,6 +41,7 @@ defmodule GrasstubeWeb.PlaylistLive do
 
     current_index =
       Enum.with_index(playlist_items, 1)
+      |> Enum.filter(&(&1 != :nothing))
       |> Enum.filter(&(elem(&1, 0).id == current_video))
       |> Enum.map(&elem(&1, 1))
       |> Enum.at(0)
