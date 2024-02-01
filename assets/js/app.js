@@ -51,7 +51,40 @@ class Message {
 const chat_state = {
   unread_messages: 0,
   last_chat_user: "",
-  on_message: [],
+  on_message: [["chat", data => {
+    const msg = new Message(data)
+    if (chat_state.autohide) autohide(msg.e, 5000)
+
+    chat_messages.prepend(msg.e)
+
+    if (data.sender != "sys") {
+      //notify browser title
+      if (!document.hasFocus()) {
+        chat_state.unread_messages = chat_state.unread_messages + 1
+        document.title = `${chat_state.unread_messages} • ${room_name}`
+      }
+    }
+
+    if (data.name != chat_state.last_chat_user) {
+      if (chat_state.last_chat_user.length != 0) {
+        msg.e.style.marginTop = "0.5em"
+      }
+
+      if (data.sender != "sys") {
+        msg.insert_name()
+        const d = new Date()
+        const timestamp = create_element(null, "span")
+        timestamp.className = "message_timestamp"
+        timestamp.textContent = "["
+          + pad(d.getHours(), 2) + ":"
+          + pad(d.getMinutes(), 2) + ":"
+          + pad(d.getSeconds(), 2) + "] "
+        msg.e.prepend(timestamp)
+      }
+      chat_state.last_chat_user = data.name
+    }
+    return true
+  }]],
   chat: null,
   emotes_modal: null,
   on_load: null,
@@ -91,38 +124,6 @@ const hooks = {
 
         for (const i in chat_state.on_message) {
           if (!chat_state.on_message[i][1](data)) return
-        }
-
-        const msg = new Message(data)
-        if (chat_state.autohide) autohide(msg.e, 5000)
-
-        chat_messages.prepend(msg.e)
-
-        if (data.sender != "sys") {
-          //notify browser title
-          if (!document.hasFocus()) {
-            chat_state.unread_messages = chat_state.unread_messages + 1
-            document.title = `${chat_state.unread_messages} • ${room_name}`
-          }
-        }
-
-        if (data.name != chat_state.last_chat_user) {
-          if (chat_state.last_chat_user.length != 0) {
-            msg.e.style.marginTop = "0.5em"
-          }
-
-          if (data.sender != "sys") {
-            msg.insert_name()
-            const d = new Date()
-            const timestamp = create_element(null, "span")
-            timestamp.className = "message_timestamp"
-            timestamp.textContent = "["
-              + pad(d.getHours(), 2) + ":"
-              + pad(d.getMinutes(), 2) + ":"
-              + pad(d.getSeconds(), 2) + "] "
-            msg.e.prepend(timestamp)
-          }
-          chat_state.last_chat_user = data.name
         }
       })
 
@@ -739,7 +740,7 @@ const hooks = {
         this.unload = null
       }
       chat_state.autohide = false
-      chat_state.on_message = []
+      chat_state.on_message = chat_state.on_message.filter(x => x[0] != "danmaku")
       destroy_drag()
       delete document.windows["Settings"]
       delete document.windows["chat_emotes2"]
