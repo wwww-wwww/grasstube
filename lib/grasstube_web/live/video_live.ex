@@ -7,8 +7,14 @@ defmodule GrasstubeWeb.VideoLive do
     GrasstubeWeb.PageView.render("video_live.html", assigns)
   end
 
-  def mount(_params, %{"room" => room, "current_user" => current_user, "chat" => chat}, socket) do
+  def mount(
+        _params,
+        %{"room" => room, "current_user" => current_user, "chat" => chat} = assigns,
+        socket
+      ) do
     topic = "video:#{room}"
+
+    geo = Map.get(assigns, "geo")
 
     user_id =
       if connected?(socket) do
@@ -24,7 +30,7 @@ defmodule GrasstubeWeb.VideoLive do
               current_user
           end
 
-        Presence.track(self(), topic, user_id, %{buffered: 0})
+        Presence.track(self(), topic, user_id, %{buffered: 0, geo: geo})
         user_id
       else
         nil
@@ -45,6 +51,7 @@ defmodule GrasstubeWeb.VideoLive do
       |> assign(controls: ChatAgent.controls?(chat, current_user))
       |> assign(users: Presence.list(topic))
       |> assign(autopause: Grasstube.Room.get_attr(chat, :autopause))
+      |> assign(geo: geo)
 
     if connected?(socket) do
       case VideoAgent.get_status(socket.assigns.video) do
@@ -185,6 +192,7 @@ defmodule GrasstubeWeb.VideoLive do
   def handle_event("buffered", %{"buffered" => buffered}, socket) do
     if VideoAgent.can_autopause?(socket.assigns.video) do
       Presence.update(self(), socket.assigns.topic, socket.assigns.user_id, %{
+        geo: socket.assigns.geo,
         buffered: buffered
       })
 

@@ -160,4 +160,56 @@ defmodule GrasstubeWeb.UserAuth do
   defp maybe_store_return_to(conn), do: conn
 
   defp signed_in_path(_conn), do: "/"
+
+  def fetch_geo(conn, _opts) do
+    geo =
+      conn.req_headers
+      |> Enum.filter(&(elem(&1, 0) == "cf-connecting-ip"))
+      |> case do
+        [{"cf-connecting-ip", ip}] ->
+          [_, ip_b, ip_c, ip_d] = String.split(ip, ".") |> Enum.map(&Integer.parse(&1))
+
+          case File.read("asn-country-ipv4.csv") do
+            {:ok, content} ->
+              content
+              |> String.split("\n")
+              |> Enum.filter(&String.starts_with?(&1, String.slice(ip, 0..3)))
+              |> Enum.map(&String.split(&1, ","))
+              |> Enum.filter(fn [ip1, ip2, country] ->
+                [_, ip1_b, ip1_c, ip1_d] = String.split(ip1, ".") |> Enum.map(&Integer.parse(&1))
+
+                ip_b >= ip1_b and ip_c >= ip1_c and ip_d >= ip1_d
+              end)
+              |> Enum.filter(fn [ip1, ip2, country] ->
+                [_, ip2_b, ip2_c, ip2_d] = String.split(ip2, ".") |> Enum.map(&Integer.parse(&1))
+
+                ip_b <= ip2_b and ip_c <= ip2_c and ip_d <= ip2_d
+              end)
+              |> case do
+                [[_, _, cc] | _] -> cc
+                _ -> nil
+              end
+
+            _ ->
+              nil
+          end
+
+        _ ->
+          nil
+      end
+
+    conn = put_session(conn, :geo, geo)
+
+    ua =
+      conn.req_headers
+      |> Enum.filter(&(elem(&1, 0) == "user-agent"))
+      |> case do
+        [{"user-agent", ua}] -> ua
+        _ -> nil
+      end
+
+    conn = put_session(conn, :ua, ua)
+
+    conn
+  end
 end

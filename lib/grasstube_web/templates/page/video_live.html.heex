@@ -19,7 +19,8 @@
       <% end %>
     </span>
     <span class="info">
-      <%= for %{buffered: buffered} <- user.metas do %>
+      <%= for %{buffered: buffered, geo: geo} <- user.metas do %>
+        <span><%= to_flag_emoji(geo) %></span>
         <span><%= buffered %></span>
       <% end %>
     </span>

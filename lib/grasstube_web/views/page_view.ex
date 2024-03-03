@@ -62,4 +62,14 @@ defmodule GrasstubeWeb.PageView do
       :none -> gettext("none")
     end
   end
+
+  def to_flag_emoji(nil), do: nil
+
+  def to_flag_emoji(code) do
+    code
+    |> String.upcase()
+    |> String.to_charlist()
+    |> Enum.map(&(&1 + 127_397))
+    |> to_string()
+  end
 end
