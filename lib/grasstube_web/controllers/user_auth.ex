@@ -161,41 +161,61 @@ defmodule GrasstubeWeb.UserAuth do
 
   defp signed_in_path(_conn), do: "/"
 
+  @ip_headers ["cf-connecting-ip", "x-forwarded-for"]
+
   def fetch_geo(conn, _opts) do
     geo =
       conn.req_headers
-      |> Enum.filter(&(elem(&1, 0) == "cf-connecting-ip"))
+      |> Enum.filter(&(elem(&1, 0) == "cf-ipcountry"))
       |> case do
-        [{"cf-connecting-ip", ip}] ->
-          [_, ip_b, ip_c, ip_d] = String.split(ip, ".") |> Enum.map(&Integer.parse(&1))
-
-          case File.read("asn-country-ipv4.csv") do
-            {:ok, content} ->
-              content
-              |> String.split("\n")
-              |> Enum.filter(&String.starts_with?(&1, String.slice(ip, 0..3)))
-              |> Enum.map(&String.split(&1, ","))
-              |> Enum.filter(fn [ip1, ip2, country] ->
-                [_, ip1_b, ip1_c, ip1_d] = String.split(ip1, ".") |> Enum.map(&Integer.parse(&1))
-
-                ip_b >= ip1_b and ip_c >= ip1_c and ip_d >= ip1_d
-              end)
-              |> Enum.filter(fn [ip1, ip2, country] ->
-                [_, ip2_b, ip2_c, ip2_d] = String.split(ip2, ".") |> Enum.map(&Integer.parse(&1))
-
-                ip_b <= ip2_b and ip_c <= ip2_c and ip_d <= ip2_d
-              end)
-              |> case do
-                [[_, _, cc] | _] -> cc
-                _ -> nil
-              end
-
-            _ ->
-              nil
-          end
+        [{"cf-ipcountry", cc}] ->
+          cc
 
         _ ->
-          nil
+          conn.req_headers
+          |> Enum.filter(&Enum.member?(@ip_headers, elem(&1, 0)))
+          |> Enum.reduce_while(nil, fn {_, ip}, _ ->
+            ipv4_segments = String.split(ip, ".")
+
+            if length(ipv4_segments) == 4 do
+              [ip_a, ip_b, ip_c, ip_d] =
+                String.split(ip, ".") |> Enum.map(&elem(Integer.parse(&1), 0))
+
+              case File.read("asn-country-ipv4.csv") do
+                {:ok, content} ->
+                  content
+                  |> String.split("\n")
+                  |> Enum.filter(&String.starts_with?(&1, "#{ip_a}."))
+                  |> Enum.map(&String.split(&1, ","))
+                  |> Enum.filter(fn [ip1, ip2, country] ->
+                    [_, ip1_b, ip1_c, ip1_d] =
+                      String.split(ip1, ".") |> Enum.map(&elem(Integer.parse(&1), 0))
+
+                    ip_b > ip1_b or
+                      (ip_b == ip1_b and ip_c > ip1_c) or
+                      (ip_b == ip1_b and ip_c == ip1_c and ip_d >= ip1_d)
+                  end)
+                  |> Enum.filter(fn [ip1, ip2, country] ->
+                    [ip2_a, ip2_b, ip2_c, ip2_d] =
+                      String.split(ip2, ".") |> Enum.map(&elem(Integer.parse(&1), 0))
+
+                    ip_a < ip2_a or
+                      (ip_a == ip2_a and ip_b < ip2_b) or
+                      (ip_a == ip2_a and ip_b == ip2_b and ip_c < ip2_c) or
+                      (ip_a == ip2_a and ip_b == ip2_b and ip_c == ip2_c and ip_d <= ip2_d)
+                  end)
+                  |> case do
+                    [[_, _, cc] | _] -> {:halt, cc}
+                    _ -> {:cont, nil}
+                  end
+
+                _ ->
+                  {:cont, nil}
+              end
+            else
+              {:cont, nil}
+            end
+          end)
       end
 
     conn = put_session(conn, :geo, geo)
