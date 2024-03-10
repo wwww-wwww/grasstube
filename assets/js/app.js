@@ -1,4 +1,4 @@
-import { Socket } from "phoenix"
+import { Socket, Presence } from "phoenix"
 import { LiveSocket } from "phoenix_live_view"
 import { create_element, enter, get_meta, pad, seconds_to_hms } from "./util"
 import { create_window } from "./window"
@@ -9,6 +9,8 @@ import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
 import topbar from "../vendor/topbar"
 import load_media_directories from "./media_directories"
+
+import { ready } from "./ready"
 
 function autohide(msg, duration) {
   msg.classList.toggle("visible", true)
@@ -100,6 +102,7 @@ window.player_state = player_state
 
 const hooks = {
   chat: {
+    user_id: null,
     focus: null,
     send(message) {
       this.pushEvent("chat", { message: message })
@@ -122,6 +125,8 @@ const hooks = {
       this.handleEvent("chat", data => {
         console.log("chat:chat", data)
 
+        if (!ready(data, this)) return
+
         for (const i in chat_state.on_message) {
           if (!chat_state.on_message[i][1](data)) return
         }
@@ -132,6 +137,11 @@ const hooks = {
         while (chat_messages.firstChild) {
           chat_messages.removeChild(chat_messages.firstChild)
         }
+      })
+
+      this.handleEvent("user", data => {
+        console.log("chat:user", data)
+        this.user_id = data.user_id
       })
 
       chat_state.emotes_modal = create_window("chat_emotes", {

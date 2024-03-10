@@ -9,7 +9,7 @@
       Autopausing disabled
     <% end %>
   </div>
-  <%= for {_id, user} <- @users do %>
+  <%= for {id, user} <- @users do %>
   <div>
     <span class="name">
       <%= if user.member do %>
@@ -19,8 +19,8 @@
       <% end %>
     </span>
     <span class="info">
-      <%= for %{buffered: buffered, geo: geo} <- user.metas do %>
-        <span><%= to_flag_emoji(geo) %></span>
+      <%= for {%{buffered: buffered}, i} <- Enum.with_index(user.metas) do %>
+        <span><%= to_flag_emoji(Map.get(@users_geo, id).metas |> Enum.at(i) |> Map.get(:geo)) %></span>
         <span><%= buffered %></span>
       <% end %>
     </span>

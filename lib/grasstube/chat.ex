@@ -3,14 +3,14 @@ defmodule Grasstube.ChatAgent do
 
   alias GrasstubeWeb.Endpoint
 
-  alias Grasstube.{ProcessRegistry, Repo, Room}
+  alias Grasstube.{ProcessRegistry, Repo, Room, VideoAgent}
 
   alias Phoenix.HTML
 
   require Logger
   require AutoLinker
 
-  @public_commands ["help", "nick", "emotelists"]
+  @public_commands ["help", "nick", "emotelists", "ready"]
   @admin_commands [
     "op",
     "deop",
@@ -29,11 +29,13 @@ defmodule Grasstube.ChatAgent do
   ]
 
   defstruct history: [],
-            room: nil
+            room: nil,
+            last_ready: nil,
+            ready_members: %{}
 
   defmodule ChatMessage do
     @derive Jason.Encoder
-    defstruct sender: "sys", name: "System", content: ""
+    defstruct sender: "sys", name: "System", content: "", extra_data: nil
   end
 
   @command_prefix "/"
@@ -331,6 +333,88 @@ defmodule Grasstube.ChatAgent do
         content: "unable to untrack " <> name
       })
     end
+  end
+
+  defp command("ready", level, channel, socket) do
+    Agent.update(channel, fn state ->
+      current_time = DateTime.utc_now(:microsecond)
+
+      user_id = get_socket(socket).assigns.user_id
+
+      if state.last_ready == nil or
+           DateTime.diff(current_time, state.last_ready, :microsecond) / 1_000_000 > 10 do
+        if state.room.public_controls or level in [:mod, :admin] do
+          users = Grasstube.Presence.list("geo:" <> topic(socket))
+
+          if length(Map.keys(users)) < 2 do
+            push(socket, "chat", %ChatMessage{content: "Not enough users to user ready"})
+            state
+          else
+            Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
+              content: "ready",
+              extra_data: %{
+                command: "create",
+                id: DateTime.to_string(current_time),
+                members:
+                  users
+                  |> Enum.map(fn {id, %{metas: metas}} ->
+                    {id, %{geo: Enum.at(metas, 0) |> Map.get(:geo)}}
+                  end)
+                  |> Map.new()
+              }
+            })
+
+            state = %{
+              state
+              | ready_members:
+                  users |> Enum.map(fn {id, _} -> {id, id == user_id} end) |> Map.new()
+            }
+
+            Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
+              content: "ready",
+              extra_data: %{
+                command: "ready",
+                id: DateTime.to_string(current_time),
+                user_id: user_id
+              }
+            })
+
+            %{state | last_ready: current_time}
+          end
+        else
+          push(socket, "chat", %ChatMessage{content: "You can't start a ready"})
+          state
+        end
+      else
+        Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
+          content: "ready",
+          extra_data: %{
+            command: "ready",
+            id: DateTime.to_string(state.last_ready),
+            user_id: user_id
+          }
+        })
+
+        ready_members = state.ready_members |> Map.put(user_id, true)
+
+        ready_members
+        |> Enum.map(&elem(&1, 1))
+        |> Enum.all?()
+        |> if do
+          ProcessRegistry.lookup(state.room.title, :video)
+          |> VideoAgent.set_playing(true)
+
+          Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
+            content: "ready",
+            extra_data: %{command: "close", id: DateTime.to_string(state.last_ready)}
+          })
+
+          %{state | last_ready: nil}
+        else
+          %{state | ready_members: ready_members}
+        end
+      end
+    end)
   end
 
   defp command(cmd, _level, _channel, socket) do

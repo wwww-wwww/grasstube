@@ -9,10 +9,12 @@ defmodule GrasstubeWeb.ChatLive do
 
   def mount(
         _params,
-        %{"room" => room, "current_user" => current_user, "chat" => chat},
+        %{"room" => room, "current_user" => current_user, "chat" => chat} = assigns,
         socket
       ) do
     topic = "chat:#{room}"
+
+    geo = Map.get(assigns, "geo")
 
     user_id =
       if connected?(socket) do
@@ -24,7 +26,10 @@ defmodule GrasstubeWeb.ChatLive do
             "$" <> user_id -> {current_user, %{nickname: "anon#{user_id}"}}
           end
 
+        # meta = %{meta | geo: geo}
+
         Presence.track(self(), topic, user_id, meta)
+        Presence.track(self(), "geo:" <> topic, user_id, %{geo: geo})
         GrasstubeWeb.RoomsLive.update()
         user_id
       else
@@ -42,6 +47,8 @@ defmodule GrasstubeWeb.ChatLive do
       |> assign(emotes: ChatAgent.get_emotes(chat))
       |> assign(users: Presence.list_with_nicknames(topic))
 
+    send(self(), %{event: "user", payload: %{user_id: user_id}})
+
     case ChatAgent.get_motd(chat, true) do
       "" -> nil
       motd -> send(self(), %{event: "chat", payload: %{sender: "sys", name: room, content: motd}})
@@ -52,6 +59,7 @@ defmodule GrasstubeWeb.ChatLive do
 
   def terminate(_reason, socket) do
     Presence.untrack(self(), socket.assigns.topic, socket.assigns.user_id)
+    Presence.untrack(self(), "geo" <> socket.assigns.topic, socket.assigns.user_id)
     GrasstubeWeb.RoomsLive.update()
     :ok
   end
@@ -76,5 +84,9 @@ defmodule GrasstubeWeb.ChatLive do
 
   def handle_info(%{event: "clear"}, socket) do
     {:noreply, push_event(socket, "clear", %{})}
+  end
+
+  def handle_info(%{event: "user", payload: payload}, socket) do
+    {:noreply, push_event(socket, "user", payload)}
   end
 end

@@ -30,7 +30,8 @@ defmodule GrasstubeWeb.VideoLive do
               current_user
           end
 
-        Presence.track(self(), topic, user_id, %{buffered: 0, geo: geo})
+        Presence.track(self(), topic, user_id, %{buffered: 0})
+        Presence.track(self(), "geo:" <> topic, user_id, %{geo: geo})
         user_id
       else
         nil
@@ -50,6 +51,7 @@ defmodule GrasstubeWeb.VideoLive do
       |> assign(video: video)
       |> assign(controls: ChatAgent.controls?(chat, current_user))
       |> assign(users: Presence.list(topic))
+      |> assign(users_geo: Presence.list("geo:" <> topic))
       |> assign(autopause: Grasstube.Room.get_attr(chat, :autopause))
       |> assign(geo: geo)
 
@@ -80,6 +82,7 @@ defmodule GrasstubeWeb.VideoLive do
 
   def terminate(_reason, socket) do
     untrack(self(), socket.assigns.room, socket.assigns.topic, socket.assigns.user_id)
+    Presence.untrack(self(), "geo" <> socket.assigns.topic, socket.assigns.user_id)
     :ok
   end
 
@@ -259,7 +262,10 @@ defmodule GrasstubeWeb.VideoLive do
   end
 
   def handle_info(%{event: "presence_diff"}, socket) do
-    {:noreply, assign(socket, users: Presence.list(socket.assigns.topic))}
+    {:noreply,
+     socket
+     |> assign(users: Presence.list(socket.assigns.topic))
+     |> assign(users_geo: Presence.list("geo:" <> socket.assigns.topic))}
   end
 
   def handle_info(%{event: "untrack", topic: "user_video:" <> _}, socket) do

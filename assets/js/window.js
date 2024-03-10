@@ -275,6 +275,11 @@ function create_window(title, opts) {
   document.windows[title] = new Window(opts)
   return document.windows[title]
 }
+function get_window(title) {
+  if (document.windows == undefined) return null
+  if (document.windows[title]) return document.windows[title]
+  return null
+}
 
 export default Window
-export { Modal, create_window }
+export { Modal, create_window, get_window }
