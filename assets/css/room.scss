@@ -68,6 +68,12 @@
   #bottom {
     display: flex;
     justify-content: space-between;
+
+    > .col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+    }
   }
 
   #dragbar_v {
