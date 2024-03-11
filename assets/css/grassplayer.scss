@@ -19,8 +19,13 @@
   height: 100%;
   overflow: hidden;
   position: relative;
-  background-color: black;
+  /*background-color: black;*/
   font-family: "Roboto", sans-serif;
+
+  background-image: url("https://res.cloudinary.com/grass/image/upload/v1710129082/icon.ico");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 140px;
 
   button {
     font-family: "Roboto", sans-serif;
