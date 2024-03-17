@@ -9,14 +9,14 @@ function ready(data, chat) {
   if (data.content != "ready") return true
 
   if (data.extra_data.command == "create") {
-    const window_ready = create_window(data.extra_data.id, { can_close: false, classes: "window_ready", title: null })
+    console.log(maincontent)
+    const window_ready = create_window(data.extra_data.id, { root: maincontent, can_close: false, classes: "window_ready", title: null })
     window_ready.members = {}
 
     const title = create_element(window_ready, "div", "title")
     title.textContent = "Match found!"
 
     const members_el = create_element(window_ready, "div", "members")
-
 
     const members = data.extra_data.members
     for (const id in members) {
@@ -81,7 +81,6 @@ function ready(data, chat) {
     if (!(user_id in window_ready.members)) return false
 
     if (user_id == chat.user_id) {
-      console.log("disable btn")
       window_ready.btn_ready.disabled = true
     }
 
