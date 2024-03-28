@@ -347,7 +347,7 @@ defmodule Grasstube.ChatAgent do
           users = Grasstube.Presence.list("geo:" <> topic(socket))
 
           if length(Map.keys(users)) < 2 do
-            push(socket, "chat", %ChatMessage{content: "Not enough users to user ready"})
+            push(socket, "chat", %ChatMessage{content: "Not enough users to ready"})
             state
           else
             Endpoint.broadcast(topic(socket), "chat", %ChatMessage{
