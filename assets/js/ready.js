@@ -1,53 +1,59 @@
 import { create_window, get_window } from "./window"
 import { create_element } from "./util"
 
-const sound = new Audio("https://res.cloudinary.com/grass/video/upload/v1710065534/ready.ogg")
+const sound = new Audio("https://res.cloudinary.com/grass/video/upload/tube/ready.ogg")
 sound.preload = "auto"
+
+function geo(cc) {
+  return [...cc.toUpperCase()]
+    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .reduce((a, b) => `${a}${b}`)
+}
 
 function ready(data, chat) {
   if (data.sender != "sys") return true
   if (data.content != "ready") return true
 
   if (data.extra_data.command == "create") {
-    console.log(maincontent)
     const window_ready = create_window(data.extra_data.id, { root: maincontent, can_close: false, classes: "window_ready", title: null })
-    window_ready.members = {}
+    window_ready.members = new Map()
+    const members_el = []
 
-    const title = create_element(window_ready, "div", "title")
-    title.textContent = "Match found!"
+    const title_bg = create_element(window_ready, "div", "title")
+    window_ready.title = create_element(title_bg, "span", "title")
+    window_ready.title.textContent = "Match found!"
 
-    const members_el = create_element(window_ready, "div", "members")
+    const timer_pie = create_element(window_ready, "div", "timer_pie")
+
+    window_ready.members_el = create_element(window_ready, "div", "members")
+    window_ready.members_el.style.display = "none"
 
     const members = data.extra_data.members
     for (const id in members) {
-      let username = id;
       const info = members[id]
       if (id[0] == "$") {
-        username = "anon" + id.slice(1)
+        info.username = "anon" + id.slice(1)
+      } else {
+        info.username = id
       }
-      const geo = info.geo
-      const member = create_element(members_el, "div")
-      const member_title = create_element(member, "div", "member_title")
-      const member_name = create_element(member_title, "span")
-      member_name.textContent = username
-      const member_geo = create_element(member_title, "span")
-      member_geo.textContent = [...geo.toUpperCase()]
-        .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
-        .reduce((a, b) => `${a}${b}`)
 
-      const member_ready = create_element(member, "div")
-      member_ready.textContent = "✘"
+      const member = create_element(window_ready.members_el, "img")
+      member.src = "https://res.cloudinary.com/grass/image/upload/tube/unready.png"
 
-      window_ready.members[id] = {
+      members_el.push(member)
+      window_ready.members.set(id, {
+        is_ready: false,
+        info: info,
         ready: () => {
-          member_ready.textContent = "✔"
+          window_ready.members.get(id).is_ready = true
+          member.src = "https://res.cloudinary.com/grass/image/upload/tube/ready.png"
+          members_el.sort((a, _) => a.src.includes("unready"))
+          members_el.forEach(a => window_ready.members_el.appendChild(a))
         }
-      }
+      })
     }
 
     const start_time = Date.now()
-
-    const timer_pie = create_element(window_ready, "div", "timer_pie")
 
     window_ready.btn_ready = create_element(window_ready, "button")
     window_ready.btn_ready.textContent = "Accept"
@@ -67,9 +73,21 @@ function ready(data, chat) {
 
     window_ready.show()
 
-    setTimeout(() => {
+    window_ready.timeout = setTimeout(() => {
       window_ready.close()
       clearInterval(interval)
+
+      const members = [...window_ready.members.values()]
+        .filter(a => !a.is_ready)
+        .map(a => `${a.info.username} ${geo(a.info.geo)}`)
+        .join(", ")
+
+      const notify = create_element(maincontent, "div", "notification")
+      notify.textContent = `${members} has declined the ready check.`
+
+      setTimeout(() => {
+        notify.parentElement.removeChild(notify)
+      }, 3000)
     }, 10000)
   }
 
@@ -78,18 +96,22 @@ function ready(data, chat) {
     if (window_ready == null) return false
 
     const user_id = data.extra_data.user_id
-    if (!(user_id in window_ready.members)) return false
+    if (!window_ready.members.has(user_id)) return false
 
     if (user_id == chat.user_id) {
-      window_ready.btn_ready.disabled = true
+      window_ready.btn_ready.style.display = "none"
+
+      window_ready.members_el.style.display = ""
+      window_ready.title.textContent = "Waiting for other players..."
     }
 
-    window_ready.members[user_id].ready()
+    window_ready.members.get(user_id).ready()
   }
 
   if (data.extra_data.command == "close") {
     const window_ready = get_window(data.extra_data.id)
     window_ready.close()
+    clearTimeout(window_ready.timeout)
     sound.pause()
     sound.currentTime = 0
   }
