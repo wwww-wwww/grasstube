@@ -342,7 +342,7 @@ defmodule Grasstube.ChatAgent do
       user_id = get_socket(socket).assigns.user_id
 
       if state.last_ready == nil or
-           DateTime.diff(current_time, state.last_ready, :microsecond) / 1_000_000 > 10 do
+           DateTime.diff(current_time, state.last_ready, :microsecond) / 1_000_000 > 11 do
         if state.room.public_controls or level in [:mod, :admin] do
           users = Grasstube.Presence.list("geo:" <> topic(socket))
 
