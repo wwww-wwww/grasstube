@@ -31,7 +31,7 @@ defmodule GrasstubeWeb.UserController do
         errors =
           Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
             Enum.reduce(opts, msg, fn {key, value}, acc ->
-              String.replace(acc, "%{#{key}}", to_string(value))
+              String.replace(acc, "%{#{key}}", inspect(value))
             end)
           end)
           |> Enum.map(fn {k, v} -> "#{k} #{v}" end)
