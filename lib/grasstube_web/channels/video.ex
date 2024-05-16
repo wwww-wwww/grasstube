@@ -44,6 +44,7 @@ defmodule GrasstubeWeb.VideoChannel do
 
       %{video: video, time: time, playing: playing} ->
         push(socket, "setvid", %{
+          title: video.title,
           id: video.id,
           type: video.type,
           url: video.url,

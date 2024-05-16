@@ -65,6 +65,7 @@ defmodule GrasstubeWeb.VideoLive do
             event: "setvid",
             payload: %{
               id: video.id,
+              title: video.title,
               type: video.type,
               url: video.url,
               sub: video.sub,
@@ -213,6 +214,7 @@ defmodule GrasstubeWeb.VideoLive do
       %{video: video, time: time, playing: playing} ->
         {:reply,
          %{
+           title: video.title,
            id: video.id,
            type: video.type,
            url: video.url,

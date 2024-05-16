@@ -1,3 +1,4 @@
+
 defmodule Grasstube.VideoAgent do
   use Agent
 
@@ -125,6 +126,7 @@ defmodule Grasstube.VideoAgent do
 
     if next == :nothing do
       Endpoint.broadcast("video:#{room_name}", "setvid", %{
+        title: nil,
         id: -1,
         type: "default",
         url: "",
@@ -137,6 +139,7 @@ defmodule Grasstube.VideoAgent do
       VideoScheduler.stop_timer(scheduler)
     else
       Endpoint.broadcast("video:#{room_name}", "setvid", %{
+        title: next.title,
         id: next.id,
         type: next.type,
         url: next.url,

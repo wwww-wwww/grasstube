@@ -25,6 +25,8 @@ return {
   },
   unload: () => {
     document.removeEventListener("keydown", keydown)
-  }
+  },
+  on_message: (data) => {},
+  on_set_video: (data) => {},
 }
 ```

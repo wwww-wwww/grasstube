@@ -50,43 +50,19 @@ class Message {
   }
 }
 
+
+const room = {
+  script: null,
+}
+window.room = room
+
+window.create_window = create_window
+window.create_element = create_element
+
 const chat_state = {
   unread_messages: 0,
   last_chat_user: "",
-  on_message: [["chat", data => {
-    const msg = new Message(data)
-    if (chat_state.autohide) autohide(msg.e, 5000)
-
-    chat_messages.prepend(msg.e)
-
-    if (data.sender != "sys") {
-      //notify browser title
-      if (!document.hasFocus()) {
-        chat_state.unread_messages = chat_state.unread_messages + 1
-        document.title = `${chat_state.unread_messages} • ${room_name}`
-      }
-    }
-
-    if (data.name != chat_state.last_chat_user) {
-      if (chat_state.last_chat_user.length != 0) {
-        msg.e.style.marginTop = "0.5em"
-      }
-
-      if (data.sender != "sys") {
-        msg.insert_name()
-        const d = new Date()
-        const timestamp = create_element(null, "span")
-        timestamp.className = "message_timestamp"
-        timestamp.textContent = "["
-          + pad(d.getHours(), 2) + ":"
-          + pad(d.getMinutes(), 2) + ":"
-          + pad(d.getSeconds(), 2) + "] "
-        msg.e.prepend(timestamp)
-      }
-      chat_state.last_chat_user = data.name
-    }
-    return true
-  }]],
+  on_message: null,
   chat: null,
   emotes_modal: null,
   on_load: null,
@@ -127,8 +103,46 @@ const hooks = {
 
         if (!ready(data, this)) return
 
-        for (const i in chat_state.on_message) {
-          if (!chat_state.on_message[i][1](data)) return
+        let script_message = 0
+
+        if (room.script && room.script.on_message) {
+          script_message = room.script.on_message(data)
+        }
+
+        if (script_message < 1 && chat_state.on_message) chat_state.on_message(data)
+
+        if (script_message < 2) {
+          const msg = new Message(data)
+          if (chat_state.autohide) autohide(msg.e, 5000)
+
+          chat_messages.prepend(msg.e)
+
+          if (data.sender != "sys") {
+            //notify browser title
+            if (!document.hasFocus()) {
+              chat_state.unread_messages = chat_state.unread_messages + 1
+              document.title = `${chat_state.unread_messages} • ${room_name}`
+            }
+          }
+
+          if (data.name != chat_state.last_chat_user) {
+            if (chat_state.last_chat_user.length != 0) {
+              msg.e.style.marginTop = "0.5em"
+            }
+
+            if (data.sender != "sys") {
+              msg.insert_name()
+              const d = new Date()
+              const timestamp = create_element(null, "span")
+              timestamp.className = "message_timestamp"
+              timestamp.textContent = "["
+                + pad(d.getHours(), 2) + ":"
+                + pad(d.getMinutes(), 2) + ":"
+                + pad(d.getSeconds(), 2) + "] "
+              msg.e.prepend(timestamp)
+            }
+            chat_state.last_chat_user = data.name
+          }
         }
       })
 
@@ -228,12 +242,17 @@ const hooks = {
             console.log("video:getvid", data)
             this.mount_loaded = true
             if (Object.keys(data).length == 0) return
-            this.setvid(data)
+            this.set_video(data)
           })
         }
       })
     },
-    setvid(data) {
+    set_video(data) {
+      if (room.script) {
+        if (room.script.on_set_video) {
+          room.script.on_set_video(data)
+        }
+      }
       this.mount_loaded = true
       if (this.current_video == data) return
       this.current_video = data
@@ -317,7 +336,7 @@ const hooks = {
 
       this.handleEvent("setvid", data => {
         console.log("video:setvid", data)
-        this.setvid(data)
+        this.set_video(data)
       })
 
       this.ping()
@@ -577,9 +596,8 @@ const hooks = {
       const script = get_meta("playlist_script")
 
       if (script) {
-        const scripts = new Function(script)()
-        scripts.load(this)
-        this.unload = scripts.unload
+        room.script = new Function(script)()
+        room.script.load(this)
       }
 
       load_media_directories(this, (get_meta("media_directories") || "").split("\n"))
@@ -623,9 +641,8 @@ const hooks = {
       this.el.addEventListener("touchstart", e => this.start_drag(e))
     },
     destroyed() {
-      if (this.unload) {
-        this.unload()
-        this.unload = null
+      if (room.script && room.script.unload) {
+        room.script.unload()
       }
       window.__playlist = null
       delete document.windows["playlist"]
@@ -649,10 +666,10 @@ const hooks = {
         autohide(msg, 5000)
       }
 
-      chat_state.on_message.push(["danmaku", (msg) => {
+      chat_state.on_message = (msg) => {
         new Text(chat_danmaku, msg)
         return true
-      }])
+      }
 
       this.on_keydown = e => {
         const chat_open = !view_chat.classList.contains("hidden")
@@ -727,9 +744,8 @@ const hooks = {
       const script = get_meta("room_script")
 
       if (script) {
-        const scripts = new Function(script)()
-        scripts.load(this)
-        this.unload = scripts.unload
+        room.script = new Function(script)()
+        room.script.load(this)
       }
 
       if (player_state.player) {
@@ -745,12 +761,11 @@ const hooks = {
       }
     },
     destroyed() {
-      if (this.unload) {
-        this.unload()
-        this.unload = null
+      if (room.script && room.script.unload) {
+        room.script.unload()
       }
       chat_state.autohide = false
-      chat_state.on_message = chat_state.on_message.filter(x => x[0] != "danmaku")
+      chat_state.on_message = null
       destroy_drag()
       delete document.windows["Settings"]
       delete document.windows["chat_emotes2"]
