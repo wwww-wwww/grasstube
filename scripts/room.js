@@ -29,6 +29,8 @@ function keydown(e) {
     window.__chat.send(":yuri:")
   } else if (e.key == "Y" && !chat_open) {
     window.__chat.send("/!r:yuri:")
+  } else if (e.key == "d" && !chat_open) {
+    window.__chat.send(":cringe:")
   } else {
     nothing = true
   }
@@ -135,7 +137,7 @@ return {
       opacity: 0;
       overflow-y: scroll;
       background: rgba(0, 0, 0, 0.5);
-      height: 100%;
+      height: calc(100% - 5em);
     }
 
     .anilist:hover {
@@ -221,7 +223,7 @@ return {
       if (j.errors && j.errors.length > 0) return
       this.anilist.e_title.textContent = j.data.Media.title.romaji
       this.anilist.e_title.href = j.data.Media.siteUrl
-
+      const edges = j.data.Media.characters.edges.sort((a, b) => a.role == "MAIN" ? -1 : b.role == "MAIN" ? 1 : 0)
       for (const edge of j.data.Media.characters.edges) {
         const e = create_element(this.anilist.e_content, "div")
         const image = create_element(e, "img")
