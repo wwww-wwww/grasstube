@@ -1,7 +1,7 @@
 import { create_window, get_window } from "./window"
 import { create_element } from "./util"
 
-const sound = new Audio("https://res.cloudinary.com/grass/video/upload/tube/ready.ogg")
+const sound = new Audio("https://r2tube.grass.moe/ready/ready.ogg")
 sound.preload = "auto"
 
 function geo(cc) {
@@ -38,7 +38,7 @@ function ready(data, chat) {
       }
 
       const member = create_element(window_ready.members_el, "img")
-      member.src = "https://res.cloudinary.com/grass/image/upload/tube/unready.png"
+      member.src = "https://r2tube.grass.moe/ready/unready.png"
 
       members_el.push(member)
       window_ready.members.set(id, {
@@ -46,7 +46,7 @@ function ready(data, chat) {
         info: info,
         ready: () => {
           window_ready.members.get(id).is_ready = true
-          member.src = "https://res.cloudinary.com/grass/image/upload/tube/ready.png"
+          member.src = "https://r2tube.grass.moe/ready/ready.png"
           members_el.sort((a, _) => a.src.includes("unready"))
           members_el.forEach(a => window_ready.members_el.appendChild(a))
         }
