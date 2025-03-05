@@ -15,7 +15,10 @@ defmodule GrasstubeWeb.UserAuth do
   def on_mount(:default, _, %{"user_token" => token}, socket) do
     {:cont,
      Phoenix.Component.assign_new(socket, :current_user, fn ->
-       Accounts.get_user_by_session_token(token)
+       case Accounts.get_user_by_session_token(token) do
+         nil -> "$" <> GrasstubeWeb.UserSocket.new_id()
+         user -> user
+       end
      end)}
   end
 
