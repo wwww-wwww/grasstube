@@ -5,7 +5,11 @@ defmodule Grasstube.Application do
     children = [
       Grasstube.Repo,
       GrasstubeWeb.Endpoint,
-      {Phoenix.PubSub, [name: Grasstube.PubSub, adapter: Phoenix.PubSub.PG2]},
+      {Phoenix.PubSub,
+       name: Grasstube.PubSub,
+       adapter: Phoenix.PubSub.Redis,
+       host: "127.0.0.1",
+       node_name: "grasstube"},
       {Task.Supervisor, name: Tasks},
       GrasstubeWeb.Counter,
       Grasstube.YTCounter,

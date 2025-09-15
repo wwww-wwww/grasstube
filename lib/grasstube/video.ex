@@ -1,9 +1,9 @@
-
 defmodule Grasstube.VideoAgent do
   use Agent
 
   alias Grasstube.{PlaylistAgent, Room, VideoScheduler}
   alias GrasstubeWeb.Endpoint
+  alias Phoenix.PubSub
 
   defstruct current_video: :nothing,
             playing: false,
@@ -125,6 +125,9 @@ defmodule Grasstube.VideoAgent do
     Endpoint.broadcast("video:#{room_name}", "sync", %{playing: false})
 
     if next == :nothing do
+      IO.inspect("broadcast on evideo:#{room_name}")
+      PubSub.broadcast(Grasstube.PubSub, "evideo:#{room_name}", :stop)
+
       Endpoint.broadcast("video:#{room_name}", "setvid", %{
         title: nil,
         id: -1,
@@ -138,6 +141,9 @@ defmodule Grasstube.VideoAgent do
       Endpoint.broadcast("playlist:#{room_name}", "current", %{id: -1})
       VideoScheduler.stop_timer(scheduler)
     else
+      IO.inspect("broadcast on evideo:#{room_name}")
+      PubSub.broadcast(Grasstube.PubSub, "evideo:#{room_name}", {:playing, next.title})
+
       Endpoint.broadcast("video:#{room_name}", "setvid", %{
         title: next.title,
         id: next.id,

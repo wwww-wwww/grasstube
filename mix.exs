@@ -45,7 +45,8 @@ defmodule Grasstube.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:auto_linker, "~> 1.0"},
       {:httpoison, "~> 2.1"},
-      {:dart_sass, "~> 0.6.0", runtime: Mix.env() == :dev}
+      {:dart_sass, "~> 0.6.0", runtime: Mix.env() == :dev},
+      {:phoenix_pubsub_redis, "~> 3.0"}
     ]
   end
 
