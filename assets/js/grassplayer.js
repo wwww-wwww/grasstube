@@ -32,6 +32,8 @@ class GrassPlayer {
   seeking = false
   seeking_playing = false
 
+  subtitles
+
   octopusInstance = null
   availableFonts
 
@@ -113,6 +115,7 @@ class GrassPlayer {
     this.video2.style.display = "none"
 
     this.overlay = create_element(root, "div", "overlay overlay_hidden")
+    this.overlay.id = "player_overlay"
     this.overlay.addEventListener("contextmenu", e => {
       if (this.contextmenu.parentElement) return
       if (e.target != this.overlay && e.target != this.bottom_shade) return
@@ -153,6 +156,7 @@ class GrassPlayer {
     this.create_capture()
     this.create_controls()
     this.create_seekbar(controls)
+    this.create_subtitles()
 
     this.stats.volume.textContent = `${Math.round(this.get_volume() * 100)}% / ${this.settings.video_volume}%`
 
@@ -426,6 +430,20 @@ class GrassPlayer {
     }
 
     if (subs == null || subs.length == 0) return
+
+    fetch(subs).then(r => r.text()).then(text => {
+      const lines = text.substring(text.indexOf("[Events]")).split("\n").slice(2).filter(t => t.startsWith("Dialogue:")).map(t => {
+        const d = t.substring(9).trim().split(",")
+        const text = d
+          .slice(9)
+          .join(",")
+          .split("\\N")
+          .map(t => t.trim())
+          .join(" ")
+        return { time: d[1], text: text }
+      })
+      this.subtitles.set_lines(lines)
+    })
 
     this.stats.subs.textContent = subs
 
@@ -761,7 +779,7 @@ class GrassPlayer {
       })
 
       const goto_t = create_element(root, "input")
-      goto_t.value = this.current_time()
+      goto_t.value = seconds_to_hms(this.current_time(), true)
 
       const goto_button = create_element(root, "button")
       goto_button.textContent = "Go"
@@ -770,7 +788,15 @@ class GrassPlayer {
         if (!this.has_controls) return
         if (goto_t.value.length == 0) return
 
-        const t = Number(goto_t.value)
+        let t = 0
+
+        if (goto_t.value.includes(":")) {
+          const s = goto_t.value.split(":").reverse().map(t => Number(t))
+          t = s[0] + s[1] * 60 + s[2] * 3600
+        } else {
+          t = Number(goto_t.value)
+        }
+
         const duration = this.duration()
 
         if (t > duration) {
@@ -1206,6 +1232,41 @@ class GrassPlayer {
     btn_capture2.textContent = "Capture Frame (Captions)"
     btn_capture2.addEventListener("click", () => {
       this.capture_frame(true)
+    })
+  }
+
+  create_subtitles() {
+    this.subtitles = create_window("subtitles", {
+      title: "Subtitles",
+      root: this.root,
+      show: false,
+      close_on_unfocus: false,
+    })
+    const subtitles_body = create_element(this.subtitles, "table")
+    this.subtitles.set_lines = lines => {
+      while (subtitles_body.firstChild) subtitles_body.removeChild(subtitles_body.firstChild)
+      for (const line of lines) {
+        const row = subtitles_body.insertRow()
+        row.addEventListener("click", () => {
+          const s = line.time.split(":").reverse().map(t => Number(t))
+          const t = s[0] + s[1] * 60 + s[2] * 3600
+          this.on_seek(t)
+        })
+        const col1 = row.insertCell()
+        col1.textContent = line.time
+        const col2 = row.insertCell()
+        col2.textContent = line.text
+      }
+    }
+
+    const btn = create_element(this.overlay.tmp, "button", "icon floating")
+    btn.style.fontSize = "2em";
+    btn.style.position = "absolute";
+    btn.style.top = "0";
+    btn.style.right = "0";
+    btn.textContent = "article_shortcut"
+    btn.addEventListener("click", () => {
+      this.subtitles.show()
     })
   }
 

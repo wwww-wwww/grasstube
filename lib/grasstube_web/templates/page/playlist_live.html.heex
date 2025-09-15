@@ -18,10 +18,6 @@
   </div>
 </div>
 
-<%= if @script do %>
-<meta name="playlist_script" content={@script}>
-<% end %>
-
 <%= if @media_directories do %>
 <meta name="media_directories" content={@media_directories}>
 <% end %>
@@ -61,7 +57,7 @@
 
     <%= if @controls do %>
     <button value={item.id} phx-click="set">Set</button>
-    <button class="playlist_drag icon">menu</button>
+    <button class="playlist_drag icon">drag_handle</button>
     <% end %>
   </div>
   <% end %>

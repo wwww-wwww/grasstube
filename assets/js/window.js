@@ -275,6 +275,7 @@ function create_window(title, opts) {
   document.windows[title] = new Window(opts)
   return document.windows[title]
 }
+
 function get_window(title) {
   if (document.windows == undefined) return null
   if (document.windows[title]) return document.windows[title]

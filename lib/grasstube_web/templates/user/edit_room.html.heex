@@ -93,19 +93,6 @@
       </div>
     </form>
   </div>
-  <div>
-    <h3>Playlist script</h3>
-    <form phx-submit="script_set">
-      <div>
-        <%= tag(:input, type: "hidden", name: "key", value: "playlist") %>
-        <textarea name="script"><%= Map.get(@room.attributes || %{}, "playlist", "") %></textarea>
-        <span>
-          <%= submit("save", class: "icon square") %>
-          <button form="" class="icon square" phx-click="script_remove" value="playlist">clear</button>
-        </span>
-      </div>
-    </form>
-  </div>
   <%= for {key, script} <- (@room.attributes || %{}) |> Enum.filter(& elem(&1, 0) not in ["room", "playlist", "media_directories"]) do %>
   <div>
     <h3><%= key %></h3>

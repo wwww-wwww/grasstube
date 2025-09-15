@@ -53,7 +53,31 @@ class Message {
 
 const room = {
   script: null,
+  room: null,
+  video: null,
 }
+
+function load_script() {
+  console.log("load_script")
+  const script = get_meta("room_script")
+
+  if (script) {
+    room.script = new Function(script)()
+    if (room.room) {
+      if (room.script.room_load) {
+        room.script.room_load(room.room)
+      }
+      room.room = null
+    }
+    if (room.video) {
+      if (room.script.video_load) {
+        room.script.video_load(room.video)
+      }
+      room.video = null
+    }
+  }
+}
+
 window.room = room
 
 window.create_window = create_window
@@ -219,6 +243,7 @@ const hooks = {
     set_video_on_ready: null,
     ping_time: null,
     latency_rtt: 0,
+    last_ping: 0,
     ping_interval: null,
     stats_latency: null,
     catchup_mul: 1,
@@ -232,10 +257,10 @@ const hooks = {
       this.ping_time = Date.now()
       if (!document.hidden) { console.info("video:ping") }
       this.pushEvent("ping", {}, () => {
-        const latency = (Date.now() - this.ping_time)
-        this.latency_rtt = latency * 0.75 + (this.latency_rtt || latency) * 0.25
+        this.last_ping = (Date.now() - this.ping_time) * 10
+        this.latency_rtt = this.last_ping * 0.25 + (this.latency_rtt || this.last_ping) * 0.75
         this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
-        if (!document.hidden) { console.info("video:pong", this.latency_rtt) }
+        if (!document.hidden) { console.info("video:pong", this.last_ping) }
         if (!this.mount_loaded) {
           // response from ping should always be after setvid
           this.pushEvent("getvid", {}, data => {
@@ -340,7 +365,7 @@ const hooks = {
       })
 
       this.ping()
-      this.ping_interval = setInterval(() => this.ping(), 5000)
+      this.ping_interval = setInterval(() => this.ping(), 2000)
 
       this.on_playing = data => {
         if (data.playing == undefined) return
@@ -380,6 +405,7 @@ const hooks = {
         if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
           player_state.player.show_osd("CHECK THE CONSOLE")
           console.error("something went horribly wrong", {
+            last_ping: this.last_ping,
             latency: this.latency_rtt / 1000,
             data: data,
             offset_time: offset_time,
@@ -443,7 +469,7 @@ const hooks = {
           return
 
         console.log("video:seek", data)
-        player_state.player.show_osd(`${seconds_to_hms(data.t, true)}`)
+        player_state.player.show_osd(seconds_to_hms(data.t, true))
         player_state.player.seek(offset_time)
 
         if (player_state.player.playing) {
@@ -475,8 +501,14 @@ const hooks = {
             player_state.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
           }
         })
+
+      room.video = this
+      load_script()
     },
     destroyed() {
+      if (room.script && room.script.video_unload) {
+        room.script.video_unload()
+      }
       clearInterval(this.ping_interval)
       clearTimeout(this.catchup_timeout)
       clearInterval(this.catchup_interval)
@@ -593,13 +625,6 @@ const hooks = {
     mounted() {
       window.__playlist = this
 
-      const script = get_meta("playlist_script")
-
-      if (script) {
-        room.script = new Function(script)()
-        room.script.load(this)
-      }
-
       load_media_directories(this, (get_meta("media_directories") || "").split("\n"))
 
       playlist_add.addEventListener("click", () => {
@@ -641,9 +666,6 @@ const hooks = {
       this.el.addEventListener("touchstart", e => this.start_drag(e))
     },
     destroyed() {
-      if (room.script && room.script.unload) {
-        room.script.unload()
-      }
       window.__playlist = null
       delete document.windows["playlist"]
     }
@@ -741,13 +763,6 @@ const hooks = {
       init_settings()
       init_drag()
 
-      const script = get_meta("room_script")
-
-      if (script) {
-        room.script = new Function(script)()
-        room.script.load(this)
-      }
-
       if (player_state.player) {
         player_state.player.fullscreen_element = this.el
       } else {
@@ -759,10 +774,13 @@ const hooks = {
       } else {
         chat_state.on_load = () => this.load()
       }
+
+      room.room = this
+      load_script()
     },
     destroyed() {
-      if (room.script && room.script.unload) {
-        room.script.unload()
+      if (room.script && room.script.room_unload) {
+        room.script.room_unload()
       }
       chat_state.autohide = false
       chat_state.on_message = null

@@ -24,6 +24,8 @@ function keydown(e) {
   } else if (e.key == "g" && !chat_open) {
     window.__chat.send(":gayge:")
   } else if (e.key == "k" && !chat_open) {
+    window.__chat.send(":kino:")
+  } else if (e.key == "K" && !chat_open) {
     window.__chat.send("/!kino")
   } else if (e.key == "y" && !chat_open) {
     window.__chat.send(":yuri:")
@@ -31,6 +33,12 @@ function keydown(e) {
     window.__chat.send("/!r:yuri:")
   } else if (e.key == "d" && !chat_open) {
     window.__chat.send(":cringe:")
+  } else if (e.key == "h" && !chat_open) {
+    window.__chat.send(":pepehands:")
+  } else if (e.key == "c" && !chat_open) {
+    window.__chat.send(":clueless:")
+  } else if (e.key == "F" && !chat_open) {
+    window.__chat.send(":faker:")
   } else {
     nothing = true
   }
@@ -93,7 +101,7 @@ query ($title: String) {
 
 
 return {
-  load: (_view) => {
+  video_load: (_view) => {
     const style = document.createElement("style")
     style.innerHTML = `.bullet-r {
       font-size: 2em;
@@ -129,19 +137,33 @@ return {
       }
     }
 
+    .anilist_hover {
+      right: 0;
+      bottom: 4em;
+      position: absolute;
+      z-index: 101;
+      width: 5em;
+      height: 5em;
+    }
+
     .anilist {
       right: 0;
       top: 0;
       position: absolute;
       z-index: 100;
-      opacity: 0;
+      display: none;
       overflow-y: scroll;
       background: rgba(0, 0, 0, 0.5);
       height: calc(100% - 5em);
+      max-width: 24em;
+    }
+
+    .anilist_hover:hover ~ .anilist {
+      display: block;
     }
 
     .anilist:hover {
-      opacity: 1;
+      display: block;
     }
 
     .anilist > a {
@@ -187,15 +209,22 @@ return {
 
     document.addEventListener("keydown", keydown)
 
+    const overlay = document.getElementById("player_overlay")
+    console.log("load!!!")
+    console.log(overlay)
+
     this.last_video = null
-    this.anilist = create_element(maincontent, "div", "anilist")
+    this.hover_e = create_element(overlay, "div", "anilist_hover")
+    this.anilist = create_element(overlay, "div", "anilist")
     this.anilist.e_title = create_element(this.anilist, "a")
     this.anilist.e_content = create_element(this.anilist, "div")
   },
-  unload: () => {
+  video_unload: () => {
     document.removeEventListener("keydown", keydown)
-    if (this.anilist.parentElement == maincontent)
-      maincontent.removeChild(this.anilist)
+    if (this.anilist.parentElement == overlay)
+      overlay.removeChild(this.anilist)
+    if (this.hover_e.parentElement == overlay)
+      overlay.removeChild(this.hover_e)
   },
   on_set_video: data => {
     if (this.last_video == data["title"]) return
@@ -209,14 +238,24 @@ return {
     if (!data["title"]) return
 
     let title = decodeURIComponent(data["title"])
-    if (title.lastIndexOf(".") != -1)
-      title = title.substring(0, title.lastIndexOf("."))
+      .replaceAll(".", " ")
+
+    if (title.lastIndexOf("S0") != -1)
+      title = title.substring(0, title.lastIndexOf("S0"))
+    if (title.lastIndexOf("- 0") != -1)
+      title = title.substring(0, title.lastIndexOf("- 0"))
+    if (title.lastIndexOf("- 1") != -1)
+      title = title.substring(0, title.lastIndexOf("- 1"))
+    if (title.lastIndexOf("- 2") != -1)
+      title = title.substring(0, title.lastIndexOf("- 2"))
+
     title = title
       .substring(title.lastIndexOf("/") + 1)
       .replaceAll(/\[.+?\]/g, "")
       .replaceAll(/\(.+?\)/g, "")
       .replaceAll(/- *[0-9]+/g, "")
       .replaceAll("  ", " ")
+      .replaceAll(".", " ")
       .trim()
 
     anilist_search(title, j => {
