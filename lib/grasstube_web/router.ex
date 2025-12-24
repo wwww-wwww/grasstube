@@ -28,12 +28,7 @@ defmodule GrasstubeWeb.Router do
       scope "/r" do
         live "/:room/auth", AuthLive
 
-        scope "/" do
-          live "/:room/chat", ChatOnlyLive
-          live "/:room/video", VideoOnlyLive
-          live "/:room/no_video", NoVideoLive
-          live "/:room", RoomLive
-        end
+        live "/:room", RoomLive
 
         scope "/" do
           pipe_through :require_authenticated_user

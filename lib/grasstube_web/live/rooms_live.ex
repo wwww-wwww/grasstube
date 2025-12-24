@@ -1,5 +1,37 @@
+defmodule GrasstubeWeb.RoomActivity do
+  import Phoenix.LiveView
+  import Phoenix.Component
+
+  alias GrasstubeWeb.Router.Helpers, as: Routes
+
+  def on_mount(:default, %{"channel_id" => "1453264271495532628"}, _session, socket) do
+    socket =
+      socket
+      |> assign(chat: Grasstube.ProcessRegistry.lookup("jade room", :chat))
+      |> assign(room: "jade room")
+      |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomLive, "jade room"))
+
+    {:halt, socket}
+  end
+
+  def on_mount(:default, %{"channel_id" => "433951983897018369"}, _session, socket) do
+    socket =
+      socket
+      |> assign(chat: Grasstube.ProcessRegistry.lookup("/ss/", :chat))
+      |> assign(room: "/ss/")
+      |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomLive, "/ss/"))
+
+    {:halt, socket}
+  end
+
+  def on_mount(:default, _map, _session, socket) do
+    {:cont, socket}
+  end
+end
+
 defmodule GrasstubeWeb.RoomsLive do
   use GrasstubeWeb, :live_view
+  on_mount GrasstubeWeb.RoomActivity
 
   alias Grasstube.ProcessRegistry
 

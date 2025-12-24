@@ -1,6 +1,7 @@
 defmodule GrasstubeWeb.RoomLive do
   use GrasstubeWeb, :live_view
   on_mount GrasstubeWeb.RoomAuth
+  on_mount GrasstubeWeb.RoomActivity
 
   def render(assigns) do
     GrasstubeWeb.PageView.render("room_live.html", assigns)
