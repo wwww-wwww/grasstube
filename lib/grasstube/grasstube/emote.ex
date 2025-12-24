@@ -81,7 +81,7 @@ defmodule Grasstube.Emote do
   end
 
   def download(%__MODULE__{url: url} = e) do
-    case check(e) do
+    case :ok do #check(e) do
       :ok ->
         case HTTPoison.get(url) do
           {:ok, %HTTPoison.Response{body: body, headers: headers}} ->

@@ -18,7 +18,8 @@ defmodule GrasstubeWeb.RoomsLive do
         %{
           name: name,
           users: Grasstube.Presence.list("chat:#{name}") |> Enum.count(),
-          has_password: Grasstube.ChatAgent.password?(chat)
+          has_password: Grasstube.ChatAgent.password?(chat),
+          owner: Grasstube.ChatAgent.admin(chat)
         }
         | acc
       ]

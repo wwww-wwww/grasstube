@@ -1,6 +1,7 @@
 import { get_cookie, set_cookie } from "./cookies"
 import { create_element, enter, seconds_to_hms } from "./util"
 import { create_window } from "./window"
+import url from "./url"
 import SubtitlesOctopus from "./subtitles-octopus"
 
 class GrassPlayer {
@@ -63,7 +64,7 @@ class GrassPlayer {
     }
 
     const yt = create_element(document.head, "script")
-    yt.src = "https://www.youtube.com/iframe_api"
+    yt.src = url("https://www.youtube.com/iframe_api")
     window.onYouTubeIframeAPIReady = () => {
       document.yt_loaded = YT.loaded
       if (YT.loaded == 1) {
@@ -318,6 +319,7 @@ class GrassPlayer {
   }
 
   set_video(type, videos, subs = "") {
+    console.log("set_video", { type: type, videos: videos, subs: subs })
     this.current_video.type = type
     this.current_video.videos = videos
     this.current_video.subs = subs
@@ -376,10 +378,10 @@ class GrassPlayer {
       default:
         this.stats.videos.textContent = Object.values(videos).join(" ")
         if (this.settings.video_quality in videos) {
-          this.video.src = videos[this.settings.video_quality]
+          this.video.src = url(videos[this.settings.video_quality])
         } else {
           for (const video in videos) {
-            this.video.src = videos[video]
+            this.video.src = url(videos[video])
             break
           }
         }
@@ -431,7 +433,7 @@ class GrassPlayer {
 
     if (subs == null || subs.length == 0) return
 
-    fetch(subs).then(r => r.text()).then(text => {
+    fetch(url(subs)).then(r => r.text()).then(text => {
       const lines = text.substring(text.indexOf("[Events]")).split("\n").slice(2).filter(t => t.startsWith("Dialogue:")).map(t => {
         const d = t.substring(9).trim().split(",")
         const text = d
@@ -449,8 +451,8 @@ class GrassPlayer {
 
     this.octopusInstance = new SubtitlesOctopus({
       video: this.video,
-      subUrl: subs,
-      fallbackFont: "https://r2tube.grass.moe/fonts/arialbd.ttf",
+      subUrl: url(subs),
+      fallbackFont: url("https://r2tube.grass.moe/fonts/arialbd.ttf"),
       availableFonts: this.availableFonts,
       workerUrl: "/includes/subtitles-octopus-worker.js"
     })
@@ -553,7 +555,7 @@ class GrassPlayer {
     filename = filename.substr(0, filename.lastIndexOf("."))
     _path = `${_path}/${filename}.thumb`
 
-    fetch(_path, { method: "GET", mode: "cors" })
+    fetch(url(_path), { method: "GET", mode: "cors" })
       .then(resp => {
         if (!resp.ok) throw resp
         return resp.arrayBuffer()
@@ -1009,7 +1011,7 @@ class GrassPlayer {
     this.select_quality.style.display = "none"
 
     this.select_quality.addEventListener("change", () => {
-      this.video.src = this.current_video.videos[this.select_quality.value]
+      this.video.src = url(this.current_video.videos[this.select_quality.value])
       this.settings.set("video_quality", this.select_quality.value)
     })
 

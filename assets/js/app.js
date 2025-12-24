@@ -9,6 +9,7 @@ import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
 import topbar from "../vendor/topbar"
 import load_media_directories from "./media_directories"
+import url from "./url"
 
 import { ready } from "./ready"
 
@@ -486,9 +487,11 @@ const hooks = {
 
       this.handleEvent("seek", data => this.on_seek(data))
 
-      fetch("https://r2tube.grass.moe/fonts.json")
+      fetch(url("https://r2tube.grass.moe/fonts.json"))
         .then(res => res.json())
         .then(fonts => {
+          for (const key of Object.keys(fonts)) fonts[key] = fonts[key].map(f => url(f))
+          console.log(fonts)
           player_state.player.set_fonts(fonts)
           this.fonts_complete = true
         })

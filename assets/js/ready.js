@@ -1,7 +1,7 @@
 import { create_window, get_window } from "./window"
 import { create_element } from "./util"
 
-const sound = new Audio("https://r2tube.grass.moe/ready/ready.ogg")
+const sound = new Audio("/static/ready.ogg")
 sound.preload = "auto"
 
 function geo(cc) {

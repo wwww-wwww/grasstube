@@ -11,7 +11,9 @@ defmodule GrasstubeWeb.Endpoint do
   @session_options [
     store: :cookie,
     key: "_grasstube_key",
-    signing_salt: "qrEWLdje"
+    signing_salt: "qrEWLdje",
+    same_site: "None",
+    secure: true
   ]
 
   socket "/live",

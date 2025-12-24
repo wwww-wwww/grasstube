@@ -230,10 +230,12 @@ return {
     if (this.last_video == data["title"]) return
     this.last_video = data["title"]
 
-    while (this.anilist.e_content.firstChild) this.anilist.e_content.removeChild(this.anilist.e_content.firstChild)
+    if (this.anilist) {
+      while (this.anilist.e_content.firstChild) this.anilist.e_content.removeChild(this.anilist.e_content.firstChild)
 
-    this.anilist.e_title.removeAttribute("href")
-    this.anilist.e_title.textContent = data["title"]
+      this.anilist.e_title.removeAttribute("href")
+      this.anilist.e_title.textContent = data["title"]
+    }
 
     if (!data["title"]) return
 
@@ -284,7 +286,6 @@ return {
           staff_image_href.href = edge.voiceActors[0].siteUrl
         }
       }
-
     })
   },
   on_message: data => {
