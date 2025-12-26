@@ -31,44 +31,34 @@ defmodule Grasstube.ProcessRegistry do
   def create_room(%Grasstube.User{} = user, room_name, password) do
     user = Repo.preload(user, :rooms)
 
-    cond do
-      Application.get_env(:grasstube, :max_rooms) != :unlimited and
-          length(user.rooms) > Application.get_env(:grasstube, :max_rooms) ->
-        {:error, "Max amount of rooms"}
-
-      String.length(room_name) == 0 ->
-        {:error, "Room name is too short"}
-
-      true ->
-        Ecto.build_assoc(user, :rooms)
-        |> Room.changeset(%{title: room_name, password: password})
-        |> Repo.insert()
+    Ecto.build_assoc(user, :rooms)
+    |> Room.changeset(%{title: room_name, password: password})
+    |> Repo.insert()
+    |> case do
+      {:ok, room} ->
+        room
+        |> Repo.preload([:user, :mods, [emotelists: :emotes]])
+        |> start_room()
         |> case do
-          {:ok, room} ->
-            room
-            |> Repo.preload([:user, :mods, [emotelists: :emotes]])
-            |> start_room()
-            |> case do
-              {:ok, _} ->
-                GrasstubeWeb.RoomsLive.update()
-                {:ok, room_name}
+          {:ok, _} ->
+            GrasstubeWeb.RoomsLive.update()
+            {:ok, room_name}
 
-              {:error, {reason, _}} ->
-                case reason do
-                  :already_started ->
-                    {:error, "A room already exists with this name"}
+          {:error, {reason, _}} ->
+            case reason do
+              :already_started ->
+                {:error, "A room already exists with this name"}
 
-                  _ ->
-                    {:error, "Error creating room #{inspect(reason)}"}
-                end
+              _ ->
+                {:error, "Error creating room #{inspect(reason)}"}
             end
-
-          {:error, %{errors: errors}} ->
-            {:error, inspect(errors)}
-
-          err ->
-            {:error, inspect(err)}
         end
+
+      {:error, %{errors: errors}} ->
+        {:error, inspect(errors)}
+
+      err ->
+        {:error, inspect(err)}
     end
   end
 
@@ -76,6 +66,37 @@ defmodule Grasstube.ProcessRegistry do
     case Repo.get(User, admin) do
       nil -> nil
       %User{} = user -> create_room(user, room_name, password)
+    end
+  end
+
+  def create_room(opts) do
+    Room.changeset(%Room{}, opts)
+    |> Repo.insert()
+    |> case do
+      {:ok, room} ->
+        room
+        |> Repo.preload([:user, :mods, [emotelists: :emotes]])
+        |> start_room()
+        |> case do
+          {:ok, _} ->
+            GrasstubeWeb.RoomsLive.update()
+            :ok
+
+          {:error, {reason, _}} ->
+            case reason do
+              :already_started ->
+                {:error, "A room already exists with this name"}
+
+              _ ->
+                {:error, "Error creating room #{inspect(reason)}"}
+            end
+        end
+
+      {:error, %{errors: errors}} ->
+        {:error, inspect(errors)}
+
+      err ->
+        {:error, inspect(err)}
     end
   end
 

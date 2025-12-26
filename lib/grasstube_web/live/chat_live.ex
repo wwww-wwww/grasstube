@@ -60,6 +60,21 @@ defmodule GrasstubeWeb.ChatLive do
   def terminate(_reason, socket) do
     Presence.untrack(self(), socket.assigns.topic, socket.assigns.user_id)
     Presence.untrack(self(), "geo" <> socket.assigns.topic, socket.assigns.user_id)
+
+    if Grasstube.Room.get_room(socket.assigns.room).user_username == nil and
+         Presence.list(socket.assigns.topic) |> Map.to_list() |> length == 0 do
+      case Nostrum.Api.request(
+             :get,
+             "/applications/#{Nostrum.Cache.Me.get().id}/activity-instances/#{socket.assigns.room}"
+           ) do
+        {:error, %Nostrum.Error.ApiError{status_code: 404}} ->
+          Grasstube.ProcessRegistry.delete_room(socket.assigns.room)
+
+        _ ->
+          :ok
+      end
+    end
+
     GrasstubeWeb.RoomsLive.update()
     :ok
   end

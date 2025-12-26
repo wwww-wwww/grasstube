@@ -1,4 +1,5 @@
 import { create_element } from "./util"
+import fix_url from "./url"
 
 function build_hosted_videos(hosted_videos_outer, media_directories, add, fill) {
   media_directories.forEach(async root_directory => {
@@ -78,7 +79,7 @@ async function scan(url, limit = 2) {
   url = new URL(url)
   let files = []
   let folders = []
-  await fetch(url).then(res => res.text())
+  await fetch(fix_url(url.toString())).then(res => res.text())
     .then(t => {
       const doc = document.createElement("div")
       doc.innerHTML = t
@@ -115,7 +116,9 @@ async function scan(url, limit = 2) {
       }
     })
 
-  folders = folders.filter(x => !dir_filter.some(e => new URL(x).pathname.split("/").at(-2).toLowerCase() == e))
+  folders = folders
+    .filter(x => !dir_filter.some(e => new URL(x).pathname.split("/").at(-2).toLowerCase() == e))
+    .filter(x => x.length > 0)
   folders = await Promise.all(folders.map(folder => scan(folder, limit - 1)))
 
   return [{ folder: url.pathname, files: files }, ...folders.flat()]

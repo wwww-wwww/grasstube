@@ -4,16 +4,6 @@ defmodule GrasstubeWeb.RoomActivity do
 
   alias GrasstubeWeb.Router.Helpers, as: Routes
 
-  def on_mount(:default, %{"channel_id" => "1453264271495532628"}, _session, socket) do
-    socket =
-      socket
-      |> assign(chat: Grasstube.ProcessRegistry.lookup("jade room", :chat))
-      |> assign(room: "jade room")
-      |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomLive, "jade room"))
-
-    {:halt, socket}
-  end
-
   def on_mount(:default, %{"channel_id" => "433951983897018369"}, _session, socket) do
     socket =
       socket
@@ -24,7 +14,19 @@ defmodule GrasstubeWeb.RoomActivity do
     {:halt, socket}
   end
 
-  def on_mount(:default, _map, _session, socket) do
+  def on_mount(:default, %{"instance_id" => instance_id}, _session, socket) do
+    Grasstube.Instances.create(instance_id)
+
+    socket =
+      socket
+      |> assign(chat: Grasstube.ProcessRegistry.lookup(instance_id, :chat))
+      |> assign(room: instance_id)
+      |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomLive, instance_id))
+
+    {:halt, socket}
+  end
+
+  def on_mount(:default, _params, _session, socket) do
     {:cont, socket}
   end
 end
@@ -56,6 +58,7 @@ defmodule GrasstubeWeb.RoomsLive do
         | acc
       ]
     end)
+    |> Enum.filter(&(&1.owner != nil))
     |> Enum.sort_by(&{-&1.users, &1.name})
   end
 

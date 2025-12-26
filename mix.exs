@@ -46,7 +46,8 @@ defmodule Grasstube.MixProject do
       {:auto_linker, "~> 1.0"},
       {:httpoison, "~> 2.1"},
       {:dart_sass, "~> 0.6.0", runtime: Mix.env() == :dev},
-      {:phoenix_pubsub_redis, "~> 3.0"}
+      {:phoenix_pubsub_redis, "~> 3.0"},
+      {:nostrum, github: "Kraigie/nostrum"}
     ]
   end
 

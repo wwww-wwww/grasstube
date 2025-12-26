@@ -34,7 +34,7 @@ defmodule Grasstube.Room do
   def changeset(struct, params \\ %{}) do
     struct
     |> cast(params, [:title, :password, :motd, :public_controls, :attributes, :queue])
-    |> validate_required([:title, :user_username])
+    |> validate_required([:title])
     |> unique_constraint(:title)
   end
 
@@ -236,5 +236,20 @@ defmodule Grasstube.Room do
     |> Repo.preload(:room)
     |> Enum.map(& &1.room)
     |> Enum.each(&Grasstube.ChatAgent.reload_room/1)
+  end
+
+  def create_temporary(username, title) do
+    %{
+      title: title,
+      password: "",
+      videos: [],
+      mods: [],
+      emotelists: [],
+      attributes: %{
+      },
+      public_controls: true,
+      inserted_at: DateTime.now!("Etc/UTC")
+    }
+    |> Grasstube.ProcessRegistry.create_room()
   end
 end

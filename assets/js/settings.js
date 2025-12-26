@@ -46,19 +46,6 @@ function make_settings() {
 
   row = create_element(modal, "div", "row")
 
-  lbl = create_element(row, "span")
-  lbl.textContent = "Header:"
-
-  const toggle_header = create_element(row, "button")
-  toggle_header.textContent = (get_cookie("room_hide_header") || 0) ? "Off" : "On"
-
-  toggle_header.addEventListener("click", () => {
-    const header_hide = (get_cookie("room_hide_header") || 0)
-    set_cookie("room_hide_header", !header_hide)
-    toggle_header.textContent = !header_hide ? "Off" : "On"
-    document.getElementsByTagName("header")[0].classList.toggle("hide", !header_hide)
-  })
-
   return modal
 }
 

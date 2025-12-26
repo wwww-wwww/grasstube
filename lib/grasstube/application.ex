@@ -4,19 +4,27 @@ defmodule Grasstube.Application do
   def start(_type, _args) do
     children = [
       Grasstube.Repo,
-      GrasstubeWeb.Endpoint,
       {Phoenix.PubSub,
        name: Grasstube.PubSub,
        adapter: Phoenix.PubSub.Redis,
        host: "127.0.0.1",
        node_name: "grasstube"},
+      Grasstube.Presence,
       {Task.Supervisor, name: Tasks},
       GrasstubeWeb.Counter,
       Grasstube.YTCounter,
       Grasstube.ProcessRegistry,
-      Grasstube.Presence,
       {DynamicSupervisor, name: Grasstube.DynamicSupervisor, strategy: :one_for_one},
-      Grasstube.DefaultRooms
+      Grasstube.DefaultRooms,
+      Grasstube.Instances,
+      GrasstubeWeb.Endpoint,
+      {Nostrum.Bot,
+       %{
+         name: DiscordBot,
+         consumer: Grasstube.Consumer,
+         intents: [:direct_messages, :guild_messages, :message_content],
+         wrapped_token: fn -> System.fetch_env!("BOT_TOKEN") end
+       }}
     ]
 
     opts = [strategy: :one_for_one, name: Grasstube.Supervisor]

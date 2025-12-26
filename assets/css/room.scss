@@ -1,5 +1,17 @@
 @import "danmaku";
 
+.RoomLive + header {
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.RoomLive + header:hover {
+  opacity: 1;
+}
+
 .RoomLive {
   overflow: hidden;
 
