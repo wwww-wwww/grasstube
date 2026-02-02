@@ -64,18 +64,21 @@ function load_script() {
 
   if (script) {
     room.script = new Function(script)()
-    if (room.room) {
-      if (room.script.room_load) {
-        room.script.room_load(room.room)
+    try {
+      if (room.room) {
+        if (room.script.room_load) {
+          room.script.room_load(room.room)
+        }
+        room.room = null
       }
-      room.room = null
-    }
-    if (room.video) {
-      if (room.script.video_load) {
-        room.script.video_load(room.video)
+      if (room.video) {
+        if (room.script.video_load) {
+          room.script.video_load(room.video)
+        }
+        room.video = null
       }
-      room.video = null
     }
+    catch (e) { console.log(e) }
   }
 }
 
@@ -131,7 +134,10 @@ const hooks = {
         let script_message = 0
 
         if (room.script && room.script.on_message) {
-          script_message = room.script.on_message(data)
+          try {
+            script_message = room.script.on_message(data)
+          }
+          catch (e) { console.log(e) }
         }
 
         if (script_message < 1 && chat_state.on_message) chat_state.on_message(data)
@@ -276,7 +282,9 @@ const hooks = {
     set_video(data) {
       if (room.script) {
         if (room.script.on_set_video) {
-          room.script.on_set_video(data)
+          try {
+            room.script.on_set_video(data)
+          } catch (e) { console.log(e) }
         }
       }
       this.mount_loaded = true
@@ -510,7 +518,9 @@ const hooks = {
     },
     destroyed() {
       if (room.script && room.script.video_unload) {
-        room.script.video_unload()
+        try {
+          room.script.video_unload()
+        } catch (e) { console.log(e) }
       }
       clearInterval(this.ping_interval)
       clearTimeout(this.catchup_timeout)
@@ -783,7 +793,9 @@ const hooks = {
     },
     destroyed() {
       if (room.script && room.script.room_unload) {
-        room.script.room_unload()
+        try {
+          room.script.room_unload()
+        } catch (e) { console.log(e) }
       }
       chat_state.autohide = false
       chat_state.on_message = null

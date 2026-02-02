@@ -3,13 +3,20 @@
 <div class="rooms">
 
 <%= for room <- @rooms do %>
-	<%= live_redirect(to: Routes.live_path(@socket, GrasstubeWeb.RoomLive, room.name), class: "btn_room #{if room.has_password, do: 'password', else: ''}") do %>
+	<.link
+		navigate={Routes.live_path(@socket, GrasstubeWeb.RoomLive, room.name)}
+		class={"btn_room" <> (if room.has_password, do: " password", else: "")}
+	>
 	<span class="room_name"><%= room.name %></span>
 	<span class="user_count"><%= room.users %></span>
-	<% end %>
+	</.link>
 <% end %>
 
-<%= if @can_make_room do live_redirect("Create a room", to: Routes.live_path(@socket, GrasstubeWeb.CreateRoomLive)) end %>
+<%= if @can_make_room do %>
+<.link navigate={Routes.live_path(@socket, GrasstubeWeb.CreateRoomLive)}>
+Create a room
+</.link>
+<% end %>
 
 </div>
 

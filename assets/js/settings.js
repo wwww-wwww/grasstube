@@ -5,8 +5,6 @@ import { create_element } from "./util"
 function init() {
   const settings_modal = make_settings()
   btn_user_settings.addEventListener("click", () => settings_modal.show())
-
-  document.getElementsByTagName("header")[0].classList.toggle("hide", (get_cookie("room_hide_header") || 0))
 }
 
 function make_settings() {

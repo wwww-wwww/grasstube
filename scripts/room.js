@@ -220,6 +220,7 @@ return {
     this.anilist.e_content = create_element(this.anilist, "div")
   },
   video_unload: () => {
+    const overlay = document.getElementById("player_overlay")
     document.removeEventListener("keydown", keydown)
     if (this.anilist.parentElement == overlay)
       overlay.removeChild(this.anilist)
@@ -227,6 +228,7 @@ return {
       overlay.removeChild(this.hover_e)
   },
   on_set_video: data => {
+    console.log("script: on_set_video")
     if (this.last_video == data["title"]) return
     this.last_video = data["title"]
 
@@ -238,6 +240,7 @@ return {
     }
 
     if (!data["title"]) return
+    console.log("on_set_video: " + data["title"])
 
     let title = decodeURIComponent(data["title"])
       .replaceAll(".", " ")
@@ -261,6 +264,7 @@ return {
       .trim()
 
     anilist_search(title, j => {
+      console.log("on_set_video", j)
       if (j.errors && j.errors.length > 0) return
       this.anilist.e_title.textContent = j.data.Media.title.romaji
       this.anilist.e_title.href = j.data.Media.siteUrl

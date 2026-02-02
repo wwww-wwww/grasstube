@@ -1,15 +1,7 @@
 @import "danmaku";
 
-.RoomLive + header {
-  opacity: 0;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-}
-
-.RoomLive + header:hover {
-  opacity: 1;
+header:has(+ .RoomLive) {
+  display: none;
 }
 
 .RoomLive {
@@ -97,7 +89,9 @@
     cursor: row-resize;
     z-index: 2;
     transform: translateY(-50%);
-    transition: 0.1s height, 0.1s background-color;
+    transition:
+      0.1s height,
+      0.1s background-color;
   }
 
   #dragbar_v:hover {
