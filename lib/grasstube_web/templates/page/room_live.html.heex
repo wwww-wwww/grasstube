@@ -1,3 +1,9 @@
+<head>
+<%= if @room == "jade room" do %>
+  <link rel="icon" href="/static/yuri!!!.webp" type="image/webp">
+<% end %>
+</head>
+
 <%= if @script do %>
 <meta phx-update="ignore" id="room_script" name="room_script" content={@script}>
 <% end %>
