@@ -30,7 +30,7 @@ defmodule GrasstubeWeb.ChatLive do
 
         Presence.track(self(), topic, user_id, meta)
         Presence.track(self(), "geo:" <> topic, user_id, %{geo: geo})
-        GrasstubeWeb.RoomsLive.update()
+        GrasstubeWeb.IndexLive.update()
         user_id
       else
         nil
@@ -48,11 +48,6 @@ defmodule GrasstubeWeb.ChatLive do
       |> assign(users: Presence.list_with_nicknames(topic))
 
     send(self(), %{event: "user", payload: %{user_id: user_id}})
-
-    case ChatAgent.get_motd(chat, true) do
-      "" -> nil
-      motd -> send(self(), %{event: "chat", payload: %{sender: "sys", name: room, content: motd}})
-    end
 
     {:ok, socket}
   end
@@ -75,7 +70,7 @@ defmodule GrasstubeWeb.ChatLive do
       end
     end
 
-    GrasstubeWeb.RoomsLive.update()
+    GrasstubeWeb.IndexLive.update()
     :ok
   end
 

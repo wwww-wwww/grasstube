@@ -109,7 +109,7 @@ const hooks = {
     user_id: null,
     focus: null,
     send(message) {
-      this.pushEvent("chat", { message: message })
+      this.pushEventTo("#" + this.el.id, "chat", { message: message })
     },
     mounted() {
       window.__chat = this
@@ -223,7 +223,9 @@ const hooks = {
       })
 
       chat_input.addEventListener("keydown", e => enter(e, () => {
-        this.send(chat_input.value)
+        if (chat_input.value.length) {
+          this.send(chat_input.value)
+        }
         chat_input.value = ""
         chat_state.emotes_modal.close()
         if (document.getElementById("player")) {
@@ -688,8 +690,8 @@ const hooks = {
     extra_emotes: null,
     on_keydown: null,
     toggle_chat() {
-      view_chat.classList.toggle("hidden")
-      if (view_chat.classList.contains("hidden")) {
+      ChatComponent_container.classList.toggle("hidden")
+      if (ChatComponent_container.classList.contains("hidden")) {
         btn_open_chat.textContent = "Open chat"
       } else {
         btn_open_chat.textContent = "Close chat"
@@ -707,7 +709,7 @@ const hooks = {
       }
 
       this.on_keydown = e => {
-        const chat_open = !view_chat.classList.contains("hidden")
+        const chat_open = !ChatComponent_container.classList.contains("hidden")
         if (e.target.tagName == "INPUT" && e.target != chat_input) return
 
         if (e.key == "Enter") {
@@ -728,7 +730,7 @@ const hooks = {
             this.extra_emotes.show()
           }
         } else if (e.key == "Escape") {
-          if (!view_chat.classList.contains("hidden")) {
+          if (!ChatComponent_container.classList.contains("hidden")) {
             e.preventDefault()
             chat_input.value = ""
             this.toggle_chat()

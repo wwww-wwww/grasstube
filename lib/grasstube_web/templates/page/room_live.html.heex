@@ -12,16 +12,12 @@
 
 <div phx-hook="room" id="maincontent">
 
-<%= live_render(@socket, GrasstubeWeb.VideoLive,
-  session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
-  id: "view_video"
-) %>
-
-<%= live_render(@socket, GrasstubeWeb.ChatLive,
-  session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
-  id: "view_chat",
-  container: {:div, class: "ChatLive can_hide hidden"}
-) %>
+<.live_component
+  module={GrasstubeWeb.ChatComponent}
+  id={"#{GrasstubeWeb.ChatComponent}:{@room}"}
+  room={@room}
+  chat={@chat}
+  emotes={@emotes} />
 
 <div id="chat_danmaku" phx-update="ignore"></div>
 
@@ -37,17 +33,9 @@
     <button id="btn_user_settings">Settings</button>
   </div>
 
-  <%= live_render(@socket, GrasstubeWeb.PollsLive,
-    session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
-    id: "view_polls"
-  ) %>
 </div>
 
 <div class="col">
-  <%= live_render(@socket, GrasstubeWeb.PlaylistLive,
-    session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
-    id: "view_playlist"
-  ) %>
 </div>
 
 </div>

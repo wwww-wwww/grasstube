@@ -36,18 +36,6 @@
 </div>
 
 <div>
-  <h2>MOTD</h2>
-  <form phx-submit="motd_set">
-    <div>
-      <textarea name="motd" placeholder="MOTD"><%= @room.motd %></textarea>
-      <span>
-      <%= submit("save", class: "icon square") %>
-      </span>
-    </div>
-  </form>
-</div>
-
-<div>
   <h2>Emotelists</h2>
   <ul>
     <%= for %{username: username} <- @room.emotelists do %>

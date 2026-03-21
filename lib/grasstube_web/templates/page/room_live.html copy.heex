@@ -1,0 +1,53 @@
+<head>
+<%= if @room == "jade room" do %>
+  <link rel="icon" href="/static/yuri!!!.webp" type="image/webp">
+<% end %>
+</head>
+
+<%= if @script do %>
+<meta phx-update="ignore" id="room_script" name="room_script" content={@script}>
+<% end %>
+
+<meta name="robots" content="noindex">
+
+<div phx-hook="room" id="maincontent">
+
+<%= live_render(@socket, GrasstubeWeb.VideoLive,
+  session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
+  id: "view_video"
+) %>
+
+<%= live_render(@socket, GrasstubeWeb.ChatLive,
+  session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
+  id: "view_chat",
+  container: {:div, class: "ChatLive can_hide hidden"}
+) %>
+
+<div id="chat_danmaku" phx-update="ignore"></div>
+
+</div>
+
+<div id="dragbar_v"></div>
+
+<div id="bottom">
+
+<div class="col">
+  <div style="display: flex; gap: 0.5em;">
+    <button id="btn_open_chat">Open chat</button>
+    <button id="btn_user_settings">Settings</button>
+  </div>
+
+  <%= live_render(@socket, GrasstubeWeb.PollsLive,
+    session: %{"room" => @room, "current_user" => @current_user, "chat" => @chat},
+    id: "view_polls"
+  ) %>
+</div>
+
+<div class="col">
+  <.live_component
+    module={GrasstubeWeb.PlaylistComponent}
+    id={"#{GrasstubeWeb.PlaylistComponent}:{@room}"}
+    room={@room} />
+</div>
+
+</div>

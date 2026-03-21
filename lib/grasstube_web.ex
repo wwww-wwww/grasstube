@@ -57,6 +57,21 @@ defmodule GrasstubeWeb do
     quote do
       use Phoenix.LiveComponent
 
+      def subscribe_once(socket, topic) do
+        key = String.to_atom("subscribe:#{topic}")
+
+        if connected?(socket) do
+          if socket.assigns |> Map.get(key) || false do
+            socket
+          else
+            GrasstubeWeb.Endpoint.subscribe(topic)
+            assign(socket, key, true)
+          end
+        else
+          socket
+        end
+      end
+
       unquote(view_helpers())
     end
   end
@@ -82,6 +97,7 @@ defmodule GrasstubeWeb do
     quote do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
+      use Phoenix.Component
 
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
       import Phoenix.LiveView.Helpers
@@ -94,6 +110,11 @@ defmodule GrasstubeWeb do
       import GrasstubeWeb.ErrorHelpers
       import GrasstubeWeb.Gettext
       alias GrasstubeWeb.Router.Helpers, as: Routes
+
+      use Phoenix.VerifiedRoutes,
+        router: GrasstubeWeb.Router,
+        endpoint: GrasstubeWeb.Endpoint,
+        statics: ~w(images)
     end
   end
 

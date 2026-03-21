@@ -3,25 +3,25 @@ defmodule Grasstube.RoomSupervisor do
 
   def start_link(opts) do
     room = opts |> Keyword.get(:room)
-    Supervisor.start_link(__MODULE__, opts, name: via_tuple(room.title))
+
+    Supervisor.start_link(__MODULE__, opts,
+      name: Grasstube.ProcessRegistry.via_tuple(__MODULE__, room.id)
+    )
   end
 
   def init(opts) do
     room = Keyword.get(opts, :room)
 
     children = [
-      {Grasstube.ChatAgent, room},
-      {Grasstube.VideoAgent, room},
-      {Grasstube.VideoScheduler, room},
-      {Grasstube.PlaylistAgent, room},
-      {Grasstube.PollsAgent, room}
+      {Grasstube.RoomAgent, room},
+      {Grasstube.ChatAgent, room}
+      # {Grasstube.VideoAgent, room},
+      # {Grasstube.VideoScheduler, room},
+      # {Grasstube.PlaylistAgent, room},
+      # {Grasstube.PollsAgent, room}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
-  end
-
-  def via_tuple(room_name) do
-    Grasstube.ProcessRegistry.via_tuple({room_name, :supervisor})
   end
 end
 
@@ -42,7 +42,6 @@ defmodule GrasstubeWeb.UserSocket do
 
   channel("chat:*", GrasstubeWeb.ChatChannel)
   channel("video:*", GrasstubeWeb.VideoChannel)
-  channel("playlist:*", GrasstubeWeb.PlaylistChannel)
   channel("polls:*", GrasstubeWeb.PollsChannel)
 
   def connect(_, socket, _) do

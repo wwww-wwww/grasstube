@@ -156,17 +156,7 @@ defmodule Grasstube.Room do
 
     GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
     ChatAgent.reload_room(room)
-    GrasstubeWeb.RoomsLive.update()
-  end
-
-  def set_motd(room, motd) when is_bitstring(room), do: set_motd(get_room(room), motd)
-
-  def set_motd(%Room{title: room_name} = room, motd) do
-    changeset(room, %{motd: String.trim(motd)})
-    |> Repo.update()
-
-    GrasstubeWeb.Endpoint.broadcast(room_name, "details", %{})
-    ChatAgent.reload_room(room)
+    GrasstubeWeb.IndexLive.update()
   end
 
   def set_public_controls(room, public_controls) when is_bitstring(room),
@@ -207,16 +197,10 @@ defmodule Grasstube.Room do
   def attr("false"), do: false
   def attr(val), do: val
 
-  def get_attr(room, key, default \\ nil)
+  def get_attr(chat, key, default \\ nil)
 
-  def get_attr(room, key, default) when is_bitstring(room),
-    do: get_attr(ProcessRegistry.lookup(room, :chat), key, default)
-
-  def get_attr(pid, key, default) when not is_bitstring(key),
-    do: get_attr(pid, to_string(key), default)
-
-  def get_attr(pid, key, default),
-    do: Agent.get(pid, &Map.get(&1.room.attributes || %{}, key, default)) |> attr()
+  def get_attr(%ChatAgent{} = chat, key, default),
+    do: Map.get(chat.room.attributes || %{}, key, default) |> attr()
 
   def remove_attr(room, key) when is_bitstring(room), do: remove_attr(get_room(room), key)
 
@@ -246,6 +230,8 @@ defmodule Grasstube.Room do
       mods: [],
       emotelists: [],
       attributes: %{
+        "media_directories" => "https://bc.grass.moe/public/video/",
+        "room" => File.read!("scripts/room.js")
       },
       public_controls: true,
       inserted_at: DateTime.now!("Etc/UTC")

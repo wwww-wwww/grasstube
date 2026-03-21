@@ -5,9 +5,7 @@ defmodule Grasstube.ProcessRegistry do
     Registry.start_link(keys: :unique, name: __MODULE__)
   end
 
-  def via_tuple({room_name, key}) do
-    {:via, Registry, {__MODULE__, {room_name |> String.downcase(), key}, room_name}}
-  end
+  def via_tuple(module, key), do: {:via, Registry, {__MODULE__, {module, key}}}
 
   def child_spec(_) do
     Supervisor.child_spec(
@@ -17,15 +15,17 @@ defmodule Grasstube.ProcessRegistry do
     )
   end
 
-  def lookup(room_name, channel) do
-    case Registry.lookup(__MODULE__, {room_name |> String.downcase(), channel}) do
+  def get(id, module), do: lookup(id, module) |> module.get()
+
+  def lookup(id, module) do
+    case Registry.lookup(__MODULE__, {module, id}) do
       [{pid, _}] -> pid
       _ -> :not_found
     end
   end
 
   def list_rooms() do
-    Registry.select(__MODULE__, [{{{:"$1", :supervisor}, :"$2", :"$3"}, [], [:"$3"]}])
+    Registry.select(__MODULE__, [{{{Grasstube.RoomSupervisor, :"$1"}, :"$2", :"$3"}, [], [:"$1"]}])
   end
 
   def create_room(%Grasstube.User{} = user, room_name, password) do
@@ -41,7 +41,7 @@ defmodule Grasstube.ProcessRegistry do
         |> start_room()
         |> case do
           {:ok, _} ->
-            GrasstubeWeb.RoomsLive.update()
+            GrasstubeWeb.IndexLive.update()
             {:ok, room_name}
 
           {:error, {reason, _}} ->
@@ -79,7 +79,7 @@ defmodule Grasstube.ProcessRegistry do
         |> start_room()
         |> case do
           {:ok, _} ->
-            GrasstubeWeb.RoomsLive.update()
+            GrasstubeWeb.IndexLive.update()
             :ok
 
           {:error, {reason, _}} ->
@@ -109,9 +109,9 @@ defmodule Grasstube.ProcessRegistry do
     )
   end
 
-  def close_room(room_name) do
-    DynamicSupervisor.stop(lookup(room_name, :supervisor))
-    GrasstubeWeb.RoomsLive.update()
+  def close_room(id) do
+    DynamicSupervisor.stop(lookup(id, Grasstube.RoomSupervisor))
+    GrasstubeWeb.IndexLive.update()
   end
 
   def delete_room(room) when is_bitstring(room), do: delete_room(Repo.get_by(Room, title: room))

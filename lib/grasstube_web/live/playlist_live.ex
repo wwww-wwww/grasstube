@@ -86,8 +86,11 @@ defmodule GrasstubeWeb.PlaylistLive do
 
   def handle_event("order", %{"order" => order}, socket) do
     if ChatAgent.controls?(socket.assigns.chat, socket) do
-      socket.assigns.playlist
-      |> PlaylistAgent.set_queue(order)
+      playlist =
+        socket.assigns.playlist
+        |> PlaylistAgent.set_queue(order)
+
+      Endpoint.broadcast("playlist:" <> playlist.room_id, "update", playlist)
     end
 
     {:noreply, socket}
@@ -125,7 +128,12 @@ defmodule GrasstubeWeb.PlaylistLive do
           "track" -> :none
         end
 
-      PlaylistAgent.set_repeat_mode(socket.assigns.playlist, new_mode)
+      playlist =
+        PlaylistAgent.update(socket.assigns.playlist, fn state ->
+          Map.merge(state, %{repeat_mode: mode})
+        end)
+
+      Endpoint.broadcast("playlist:" <> playlist.room_id, "update", playlist)
     end
 
     {:noreply, socket}

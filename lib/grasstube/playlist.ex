@@ -4,11 +4,10 @@ defmodule Grasstube.PlaylistAgent do
   alias Grasstube.{Repo, Room, VideoAgent, Video, ProcessRegistry}
   alias GrasstubeWeb.Endpoint
 
-  defstruct videos: [],
+  defstruct room_id: -1,
+            videos: [],
             queue: [],
-            room_name: "",
-            repeat_mode: :none,
-            room: nil
+            repeat_mode: :none
 
   @yt_domains ["youtube.com", "www.youtube.com", "youtu.be", "www.youtu.be"]
   @gdrive_domains [
@@ -40,9 +39,8 @@ defmodule Grasstube.PlaylistAgent do
     Agent.start_link(
       fn ->
         %__MODULE__{
-          room: room,
+          room_id: room.id,
           videos: videos |> Enum.map(&{&1.id, &1}) |> Map.new(),
-          room_name: room.title,
           queue: queue
         }
       end,
@@ -50,11 +48,9 @@ defmodule Grasstube.PlaylistAgent do
     )
   end
 
-  def via_tuple(room_name), do: ProcessRegistry.via_tuple({room_name, :playlist})
+  def via_tuple(room_title), do: ProcessRegistry.via_tuple({room_title, :playlist})
 
-  def get_room(pid), do: Agent.get(pid, & &1.room)
-
-  def get_room_name(pid), do: Agent.get(pid, & &1.room_name)
+  def get_room_title(pid), do: Agent.get(pid, & &1.room_title)
 
   def get_video(pid, id) when is_integer(id),
     do: Agent.get(pid, &Map.get(&1.videos, id, :nothing))
@@ -66,17 +62,11 @@ defmodule Grasstube.PlaylistAgent do
 
   def get_queue(pid), do: Agent.get(pid, & &1.queue)
 
-  def set_queue(pid, queue) do
-    videos = Agent.get_and_update(pid, &{&1.videos, %{&1 | queue: queue}})
-
-    room = get_room(pid)
-
-    Room.changeset(room, %{queue: queue})
-    |> Repo.update()
-
-    Endpoint.broadcast("playlist:" <> room.title, "playlist", %{
-      playlist: get_playlist(%{videos: videos, queue: queue})
-    })
+  def update(pid, fun) do
+    Agent.get_and_update(pid, fn state ->
+      state = fun.(state)
+      {state, state}
+    end)
   end
 
   def get_playlist(%{videos: videos, queue: queue}),
@@ -90,41 +80,41 @@ defmodule Grasstube.PlaylistAgent do
 
   def get_repeat_mode(pid), do: Agent.get(pid, & &1.repeat_mode)
 
-  def set_repeat_mode(pid, mode) do
-    Agent.update(pid, &%{&1 | repeat_mode: mode})
-
-    Endpoint.broadcast("playlist:" <> get_room_name(pid), "repeat", %{
-      repeat: mode
-    })
-  end
-
   def add_queue(pid, title, url, sub, alts) do
-    room = get_room(pid)
+    playlist = Agent.get(pid, & &1)
 
-    Ecto.build_assoc(room, :videos)
-    |> Video.changeset(%{title: "loading", url: url})
-    |> Repo.insert()
-    |> case do
-      {:ok, video} ->
-        {new_playlist, queue} =
-          Agent.get_and_update(pid, fn val ->
-            queue = val.queue ++ [video.id]
-            val = %{val | videos: Map.put(val.videos, video.id, video), queue: queue}
-            {{get_playlist(val), queue}, val}
+    {:ok, {playlist, room, video}} =
+      Repo.transact(fn ->
+        room = Repo.get(Room, playlist.room_id)
+
+        {:ok, video} =
+          %Video{room_id: playlist.room_id}
+          |> Ecto.Changeset.change(%{title: "loading", url: url})
+          |> Repo.insert()
+
+        playlist =
+          Agent.get_and_update(pid, fn state ->
+            state =
+              Map.merge(state, %{
+                videos: Map.put(state.videos, video.id, video),
+                queue: state.queue ++ [video.id]
+              })
+
+            {state, state}
           end)
 
-        Room.changeset(room, %{queue: queue})
-        |> Repo.update()
+        {:ok, _room} =
+          Ecto.Changeset.change(room, %{queue: playlist.queue})
+          |> Repo.update()
 
-        Endpoint.broadcast("playlist:" <> room.title, "playlist", %{playlist: new_playlist})
+        {:ok, {playlist, room, video}}
+      end)
 
-        Task.Supervisor.async_nolink(Tasks, fn ->
-          queue_lookup(pid, room, video, title, url, sub, alts)
-        end)
+    Endpoint.broadcast("playlist:" <> playlist.room_id, "update", playlist)
 
-      err ->
-        IO.inspect(err)
-    end
+    Task.Supervisor.async_nolink(Tasks, fn ->
+      queue_lookup(pid, room, video, title, url, sub, alts)
+    end)
   end
 
   def update_queue_item(pid, video, opts) do
@@ -188,17 +178,17 @@ defmodule Grasstube.PlaylistAgent do
       %{val | queue: new_queue, videos: new_videos}
     end)
 
-    room_name = get_room_name(pid)
+    room_title = get_room_title(pid)
 
-    video = ProcessRegistry.lookup(room_name, :video)
+    video = ProcessRegistry.lookup(room_title, :video)
     current = VideoAgent.get_current_video(video)
 
     if current != :nothing and current.id == id do
       VideoAgent.set_current_video(video, :nothing)
-      Endpoint.broadcast("playlist:" <> room_name, "current", %{id: -1})
+      Endpoint.broadcast("playlist:" <> room_title, "current", %{id: -1})
     end
 
-    Endpoint.broadcast("playlist:" <> room_name, "playlist", %{playlist: get_playlist(pid)})
+    Endpoint.broadcast("playlist:" <> room_title, "playlist", %{playlist: get_playlist(pid)})
   end
 
   def remove_queue(pid, id) do
@@ -412,9 +402,9 @@ defmodule Grasstube.PlaylistAgent do
   def next_video(pid) do
     queue = get_queue(pid)
 
-    room_name = get_room_name(pid)
+    room_title = get_room_title(pid)
 
-    video = ProcessRegistry.lookup(room_name, :video)
+    video = ProcessRegistry.lookup(room_title, :video)
 
     next =
       case VideoAgent.get_current_video(video) do
@@ -439,7 +429,7 @@ defmodule Grasstube.PlaylistAgent do
         true ->
           VideoAgent.set_current_video(video, next)
 
-          ProcessRegistry.lookup(room_name, :video_scheduler)
+          ProcessRegistry.lookup(room_title, :video_scheduler)
           |> Grasstube.VideoScheduler.delayed_start(5000)
 
         false ->

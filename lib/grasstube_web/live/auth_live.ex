@@ -6,8 +6,11 @@ defmodule GrasstubeWeb.AuthLive do
   end
 
   def mount(%{"room" => room}, _session, socket) do
+    room =
+      Grasstube.Repo.get_by(Grasstube.Room, title: room)
+
     socket =
-      case Grasstube.ProcessRegistry.lookup(room, :chat) do
+      case Grasstube.ProcessRegistry.lookup(room.id, Grasstube.ChatAgent) do
         :not_found ->
           socket
           |> put_flash(:error, "Room does not exist")

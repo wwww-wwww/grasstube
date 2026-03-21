@@ -22,7 +22,7 @@ defmodule GrasstubeWeb.Router do
     pipe_through :browser
 
     live_session :default, on_mount: GrasstubeWeb.UserAuth do
-      live "/", RoomsLive
+      live "/", IndexLive
       get "/gdrive", PageController, :gdrive
 
       scope "/r" do
@@ -68,9 +68,6 @@ defmodule GrasstubeWeb.Router do
     scope "/api" do
       pipe_through :api
 
-      get "/list_rooms", PageController, :list_rooms
-      get "/emotes/r/:room", PageController, :emotes
-      get "/emotes/u/:username", UserController, :emotes_json
       get "/yt_search", YTController, :yt_search
     end
   end

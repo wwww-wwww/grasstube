@@ -6,7 +6,10 @@ defmodule GrasstubeWeb.RoomAuth do
   alias GrasstubeWeb.Router.Helpers, as: Routes
 
   def on_mount(:default, %{"room" => room, "password" => password}, _session, socket) do
-    case Grasstube.ProcessRegistry.lookup(room, :chat) do
+    room =
+      Grasstube.Repo.get_by(Grasstube.Room, title: room)
+
+    case Grasstube.ProcessRegistry.lookup(room.id, Grasstube.ChatAgent) do
       :not_found ->
         {:halt,
          socket
@@ -18,7 +21,7 @@ defmodule GrasstubeWeb.RoomAuth do
              ChatAgent.check_password(chat, password) do
           {:cont,
            socket
-           |> assign(:chat, chat)
+           |> assign(:chat_pid, chat)
            |> assign(:room, room)}
         else
           {:halt,

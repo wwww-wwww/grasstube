@@ -1,0 +1,17 @@
+<h1>Rooms</h1>
+
+<div class="rooms">
+<%= for room <- @rooms do %>
+	<.link
+		navigate={Routes.live_path(@socket, GrasstubeWeb.RoomLive, room.title)}
+		class={"btn_room" <> (if room.has_password, do: " password", else: "")}
+	>
+	<span class="room_name"><%= room.title %></span>
+	<span class="user_count"><%= room.users %></span>
+	</.link>
+<% end %>
+</div>
+
+<%= if @can_make_room do %>
+<.link navigate={~p"/create_room"}>Create a room</.link>
+<% end %>

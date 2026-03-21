@@ -46,11 +46,6 @@ defmodule GrasstubeWeb.EditRoomLive do
     {:noreply, assign(socket, room: get_room(socket))}
   end
 
-  def handle_event("motd_set", %{"motd" => motd}, socket) do
-    Room.set_motd(socket.assigns.room, motd)
-    {:noreply, assign(socket, room: get_room(socket))}
-  end
-
   def handle_event("emotelist_add", %{"username" => username}, socket) do
     Room.add_emotelist(socket.assigns.room, username)
     {:noreply, assign(socket, room: get_room(socket))}

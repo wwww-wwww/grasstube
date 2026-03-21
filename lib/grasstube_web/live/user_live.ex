@@ -39,7 +39,7 @@ defmodule GrasstubeWeb.UserLive do
         nil ->
           socket
           |> put_flash(:error, "User does not exist")
-          |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomsLive))
+          |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.IndexLive))
 
         user ->
           socket

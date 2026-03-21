@@ -7,8 +7,8 @@ defmodule GrasstubeWeb.RoomActivity do
   def on_mount(:default, %{"channel_id" => "433951983897018369"}, _session, socket) do
     socket =
       socket
-      |> assign(chat: Grasstube.ProcessRegistry.lookup("/ss/", :chat))
-      |> assign(room: "/ss/")
+      |> assign(chat_pid: Grasstube.ProcessRegistry.lookup("/ss/", :chat))
+      # |> assign(room: "/ss/")
       |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomLive, "/ss/"))
 
     {:halt, socket}
@@ -19,8 +19,8 @@ defmodule GrasstubeWeb.RoomActivity do
 
     socket =
       socket
-      |> assign(chat: Grasstube.ProcessRegistry.lookup(instance_id, :chat))
-      |> assign(room: instance_id)
+      |> assign(chat_pid: Grasstube.ProcessRegistry.lookup(instance_id, :chat))
+      # |> assign(room: instance_id)
       |> push_navigate(to: Routes.live_path(socket, GrasstubeWeb.RoomLive, instance_id))
 
     {:halt, socket}
@@ -31,7 +31,7 @@ defmodule GrasstubeWeb.RoomActivity do
   end
 end
 
-defmodule GrasstubeWeb.RoomsLive do
+defmodule GrasstubeWeb.IndexLive do
   use GrasstubeWeb, :live_view
   on_mount GrasstubeWeb.RoomActivity
 
@@ -40,26 +40,23 @@ defmodule GrasstubeWeb.RoomsLive do
   @topic "rooms_updates"
 
   def render(assigns) do
-    GrasstubeWeb.PageView.render("roomlist.html", assigns)
+    GrasstubeWeb.PageView.render("index.html", assigns)
   end
 
   def get_rooms() do
     ProcessRegistry.list_rooms()
-    |> Enum.reduce([], fn name, acc ->
-      chat = ProcessRegistry.lookup(name, :chat)
+    |> Enum.map(fn room_id ->
+      room =
+        ProcessRegistry.lookup(room_id, Grasstube.RoomAgent)
+        |> Grasstube.RoomAgent.get()
 
-      [
-        %{
-          name: name,
-          users: Grasstube.Presence.list("chat:#{name}") |> Enum.count(),
-          has_password: Grasstube.ChatAgent.password?(chat),
-          owner: Grasstube.ChatAgent.admin(chat)
-        }
-        | acc
-      ]
+      chat =
+        ProcessRegistry.lookup(room_id, Grasstube.ChatAgent)
+        |> Grasstube.ChatAgent.get()
+
+      %{title: room.title, users: 0, has_password: false}
     end)
-    |> Enum.filter(&(&1.owner != nil))
-    |> Enum.sort_by(&{-&1.users, &1.name})
+    |> Enum.sort_by(&{-&1.users, &1.title})
   end
 
   def mount(_, _session, socket) do
