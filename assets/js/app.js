@@ -3,7 +3,7 @@ import { LiveSocket } from "phoenix_live_view"
 import { create_element, enter, get_meta, pad, seconds_to_hms } from "./util"
 import { create_window } from "./window"
 import { get_cookie } from "./cookies"
-import GrassPlayer from "./grassplayer"
+import GrassPlayer from "./grassplayer2"
 import Text from "./danmaku"
 import { init_drag, destroy_drag } from "./drag"
 import init_settings from "./settings"
@@ -262,12 +262,12 @@ const hooks = {
     mount_loaded: false,
     ping() {
       this.ping_time = Date.now()
-      if (!document.hidden) { console.info("video:ping") }
+      // if (!document.hidden) { console.info("video:ping") }
       this.pushEvent("ping", {}, () => {
         this.last_ping = (Date.now() - this.ping_time) * 10
         this.latency_rtt = this.last_ping * 0.25 + (this.latency_rtt || this.last_ping) * 0.75
-        this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
-        if (!document.hidden) { console.info("video:pong", this.last_ping) }
+        // this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
+        // if (!document.hidden) { console.info("video:pong", this.last_ping) }
         if (!this.mount_loaded) {
           // response from ping should always be after setvid
           this.pushEvent("getvid", {}, data => {
@@ -293,7 +293,7 @@ const hooks = {
       let videos = {}
       if (data.type == "default") {
         if (data.url.length > 0) {
-          videos["normal"] = data.url
+          videos["default"] = data.url
         }
         for (const alt in data.alts) {
           videos[alt] = data.alts[alt]
@@ -301,11 +301,11 @@ const hooks = {
       } else {
         videos = data.url
       }
-      if (!this.fonts_complete) {
-        this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub || "" }
-      } else {
-        player_state.player.set_video(data.type, videos, data.sub || "")
-      }
+      // if (!this.fonts_complete) {
+      //   this.set_video_on_ready = { type: data.type, videos: videos, sub: data.sub || "" }
+      // } else {
+      player_state.player.set_video(data.type, videos, data.sub || "")
+      // }
 
       if (data.playing) this.on_playing(data)
       if (data.t) this.on_seek(data)
@@ -353,10 +353,10 @@ const hooks = {
         this.pushEvent("buffered", { buffered: buffered })
       }
 
-      this.stats_latency = player_state.player.stats_add_row("Latency (RTT):", this.latency_rtt)
-      this.stats_catchup = player_state.player.stats_add_row("Catchup mul:", `${this.catchup_mul}x`)
-      player_state.player.settings.set("catchup", get_cookie("catchup", true))
-      player_state.player.add_setting("catchup", "Catchup")
+      // this.stats_latency = player_state.player.stats_add_row("Latency (RTT):", this.latency_rtt)
+      // this.stats_catchup = player_state.player.stats_add_row("Catchup mul:", `${this.catchup_mul}x`)
+      // player_state.player.settings.set("catchup", get_cookie("catchup", true))
+      // player_state.player.add_setting("catchup", "Catchup")
 
       this.handleEvent("autopause", data => {
         console.log("video:autopause", data)
@@ -382,7 +382,7 @@ const hooks = {
         const current_state = player_state.player.playing
 
         if (player_state.player.playing != data.playing) {
-          player_state.player.show_osd(data.playing ? "Play" : "Pause")
+          // player_state.player.show_osd(data.playing ? "Play" : "Pause")
           player_state.player.set_playing(data.playing)
         }
 
@@ -450,7 +450,7 @@ const hooks = {
       this.catchup_timeout = null
 
       this.handleEvent("sync", data => {
-        console.info("video:sync", data)
+        // console.info("video:sync", data)
 
         this.on_playing(data)
 
@@ -478,7 +478,7 @@ const hooks = {
           return
 
         console.log("video:seek", data)
-        player_state.player.show_osd(seconds_to_hms(data.t, true))
+        // player_state.player.show_osd(seconds_to_hms(data.t, true))
         player_state.player.seek(offset_time)
 
         if (player_state.player.playing) {
@@ -495,23 +495,23 @@ const hooks = {
 
       this.handleEvent("seek", data => this.on_seek(data))
 
-      fetch(url("https://r2tube.grass.moe/fonts.json"))
-        .then(res => res.json())
-        .then(fonts => {
-          for (const key of Object.keys(fonts)) fonts[key] = fonts[key].map(f => url(f))
-          console.log(fonts)
-          player_state.player.set_fonts(fonts)
-          this.fonts_complete = true
-        })
-        .catch(err => {
-          console.log("fonts:error fetching", err)
-        })
-        .finally(() => {
-          console.log("fonts:loaded")
-          if (this.set_video_on_ready) {
-            player_state.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
-          }
-        })
+      // fetch(url("https://r2tube.grass.moe/fonts.json"))
+      //   .then(res => res.json())
+      //   .then(fonts => {
+      //     for (const key of Object.keys(fonts)) fonts[key] = fonts[key].map(f => url(f))
+      //     console.log(fonts)
+      //     player_state.player.set_fonts(fonts)
+      //     this.fonts_complete = true
+      //   })
+      //   .catch(err => {
+      //     console.log("fonts:error fetching", err)
+      //   })
+      //   .finally(() => {
+      //     console.log("fonts:loaded")
+      //     if (this.set_video_on_ready) {
+      //       player_state.player.set_video(this.set_video_on_ready.type, this.set_video_on_ready.videos, this.set_video_on_ready.sub)
+      //     }
+      //   })
 
       room.video = this
       load_script()

@@ -3,6 +3,7 @@
 @import "window";
 
 @import "grassplayer";
+@import "grassplayer2";
 
 @import "roomlist";
 
@@ -152,7 +153,7 @@ button:not(:disabled):active,
 }
 
 option {
-  background-color: rgb(0, 0, 0);
+  // background-color: rgb(0, 0, 0);
 }
 
 .square {
