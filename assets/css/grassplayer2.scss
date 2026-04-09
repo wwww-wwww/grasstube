@@ -10,7 +10,7 @@
     height: 100%;
     overflow: hidden;
     position: relative;
-    /*background-color: black;*/
+
     font-family: Arial, Helvetica, sans-serif;
     background-image: url("/static/vlc.png");
     background-repeat: no-repeat;
@@ -257,21 +257,21 @@
         object-fit: contain;
     }
 
-    .shade button,
-    button.icon {
-        font-family: "Material Symbols Rounded";
-        font-weight: normal;
-        font-style: normal;
-        font-size: 1em;
-        line-height: 1;
-        letter-spacing: normal;
-        text-transform: none;
-        display: inline-block;
-        white-space: nowrap;
-        word-wrap: normal;
-        direction: ltr;
-        font-variation-settings: "FILL" 1;
-    }
+    // .shade button,
+    // button.icon {
+    //     font-family: "Material Symbols Rounded";
+    //     font-weight: normal;
+    //     font-style: normal;
+    //     font-size: 1em;
+    //     line-height: 1;
+    //     letter-spacing: normal;
+    //     text-transform: none;
+    //     display: inline-block;
+    //     white-space: nowrap;
+    //     word-wrap: normal;
+    //     direction: ltr;
+    //     font-variation-settings: "FILL" 1;
+    // }
 
     button.icon.floating {
         border: none;
@@ -325,15 +325,53 @@
             display: flex;
             height: 64px;
             justify-content: space-between;
-            display: none;
+            // outline: 1px solid blue;
+            align-items: center;
 
             >.left,
             >.right {
                 display: flex;
             }
 
-            button {
+
+            button,
+            input[type="checkbox"] {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-family: "Material Symbols Rounded";
                 border: none;
+                background: none;
+                border-radius: 100%;
+                color: rgba(255, 255, 255, 0.9);
+                background: rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(5px);
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+                text-shadow: 0 0 5px rgba(0, 0, 0, 1);
+                width: 48px;
+                height: 48px;
+                padding: 0;
+                margin: 8px;
+
+                &:hover {
+                    background: rgba(255, 255, 255, 0.5);
+                    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+                    // transform: translate(-2px, -2px);
+                }
+
+                &:focus {
+                    outline: 4px dotted rgba(255, 255, 255, 0.5);
+                }
+            }
+
+            button {
+                font-size: 40px;
+                line-height: 40px;
+            }
+
+            input[type="checkbox"] {
+                font-size: 32px;
+                line-height: 32px;
             }
 
             .btn-play::after {
@@ -348,31 +386,144 @@
                 content: "skip_next";
             }
 
-            .btn-settings::after {
-                content: "settings";
+
+            .btn-settings {
+                &:checked {
+                    &:hover {
+                        background: rgba(255, 255, 255, 0.6);
+                        box-shadow: inset 0 0 5px rgba(0, 0, 0, 1);
+                    }
+
+                    background: rgba(255, 255, 255, 0.6);
+                    box-shadow: inset 0 0 5px rgba(0, 0, 0, 1);
+                }
+
+                &::after {
+                    content: "settings";
+                }
             }
 
-            .btn-fullscreen::after {
-                content: "fullscreen";
-            }
+            .btn-fullscreen {
+                &::after {
+                    content: "open_in_full";
+                }
 
-            .btn-fullscreen[state="0"]::after {
-                content: "fullscreen_exit";
-            }
-
-            .seekbar {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 16px;
-                outline: 1px solid red;
-                transform: translateY(-100%);
-
-                &:hover {}
+                &:checked::after {
+                    content: "close_fullscreen";
+                }
             }
         }
     }
+
+    .seekbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 16px;
+        cursor: pointer;
+        transition: height 0.1s, bottom 0.1s;
+        transform: translateY(-100%);
+        // pointer-events: all;
+
+        // outline: 1px solid red;
+
+        &:hover {
+            height: 16px;
+
+            >.seekbar-time {
+                transform: translate(-50%, -100%);
+                opacity: 1;
+            }
+
+            >.seekbar-preview {
+                transform: translate(-50%, 0);
+                opacity: 0.9;
+            }
+
+            >.seekbar-bar {
+                height: 8px;
+            }
+
+            >.seekbar_dial {
+                width: 12px;
+                height: 12px;
+                opacity: 0.8;
+            }
+        }
+
+        .seekbar-time {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 0.25em;
+            padding: 0.25em;
+            position: absolute;
+            transform: translate(-50%, -80%);
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .seekbar-preview {
+            padding: 0.1em;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 0.25em;
+            position: absolute;
+            bottom: 2.5em;
+            transform: translate(-50%, 20%);
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            max-height: 6em;
+            max-width: 11em;
+            pointer-events: none;
+        }
+
+        .seekbar-dial {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            top: 50%;
+            left: 0%;
+            transform: translate(-50%, -50%);
+            border-radius: 12px;
+            background: white;
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 2;
+            transition: width 0.1s, height 0.1s, margin-top 0.1s, opacity 0.1s,
+                left 0.1s linear;
+
+            &.seeking {
+                transition: left 0s;
+            }
+        }
+
+        .seekbar-bar {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            bottom: 0;
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+            // transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            // backdrop-filter: blur(5px);
+            transition: height 0.1s;
+
+            >div {
+                position: absolute;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.2);
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            >.seekbar-bar-current {
+                background: rgba(0, 255, 70, 0.4);
+                z-index: 1;
+            }
+        }
+    }
+
 
     // .overlay_hidden {
     //     cursor: none;
@@ -532,109 +683,6 @@
     //     pointer-events: all;
     // }
 
-    // .seekbar {
-    //     position: absolute;
-    //     width: 100%;
-    //     height: 8px;
-    //     bottom: 3em;
-    //     cursor: pointer;
-    //     transition: height 0.1s, bottom 0.1s;
-    //     transform: translateY(50%);
-    //     pointer-events: none;
-
-    //     .seekbar_time {
-    //         background-color: rgba(0, 0, 0, 0.2);
-    //         border-radius: 0.25em;
-    //         padding: 0.25em;
-    //         position: absolute;
-    //         transform: translate(-50%, -80%);
-    //         color: rgba(255, 255, 255, 0.8);
-    //         text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
-    //         opacity: 0;
-    //         transition: opacity 0.2s, transform 0.2s;
-    //     }
-
-    //     .seekbar_preview {
-    //         padding: 0.1em;
-    //         background-color: rgba(0, 0, 0, 0.2);
-    //         border-radius: 0.25em;
-    //         position: absolute;
-    //         bottom: 2.5em;
-    //         transform: translate(-50%, 20%);
-    //         opacity: 0;
-    //         transition: opacity 0.2s, transform 0.2s;
-    //         max-height: 6em;
-    //         max-width: 11em;
-    //         pointer-events: none;
-    //     }
-
-    //     .seekbar_dial {
-    //         position: absolute;
-    //         width: 2px;
-    //         height: 2px;
-    //         top: 50%;
-    //         left: 0%;
-    //         transform: translate(-50%, -50%);
-    //         border-radius: 12px;
-    //         background: white;
-    //         opacity: 0.5;
-    //         pointer-events: none;
-    //         z-index: 2;
-    //         transition: width 0.1s, height 0.1s, margin-top 0.1s, opacity 0.1s,
-    //             left 0.1s linear;
-    //     }
-
-    //     .seekbar_dial.seeking {
-    //         transition: left 0s;
-    //     }
-
-    //     .seekbar_bar {
-    //         position: absolute;
-    //         width: 100%;
-    //         height: 2px;
-    //         top: 50%;
-    //         transform: translateY(-50%);
-    //         background: rgba(255, 255, 255, 0.2);
-    //         transition: height 0.1s, margin-top 0.1s;
-
-    //         >div {
-    //             position: absolute;
-    //             height: 100%;
-    //             background: rgba(255, 255, 255, 0.3);
-    //             pointer-events: none;
-    //             z-index: 0;
-    //         }
-
-    //         >.current {
-    //             background: rgba(0, 70, 255, 0.6);
-    //             z-index: 1;
-    //         }
-    //     }
-    // }
-
-    // .seekbar:hover {
-    //     height: 16px;
-
-    //     >.seekbar_time {
-    //         transform: translate(-50%, -100%);
-    //         opacity: 1;
-    //     }
-
-    //     >.seekbar_preview {
-    //         transform: translate(-50%, 0);
-    //         opacity: 0.9;
-    //     }
-
-    //     >.seekbar_bar {
-    //         height: 8px;
-    //     }
-
-    //     >.seekbar_dial {
-    //         width: 12px;
-    //         height: 12px;
-    //         opacity: 0.8;
-    //     }
-    // }
 
     // .seeking>div,
     // .seeking {

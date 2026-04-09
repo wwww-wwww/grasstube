@@ -1,5 +1,7 @@
 import SubtitlesOctopus from "../subtitles-octopus"
 
+import Seekbar from "./seekbar"
+
 import Timer from "./timer"
 
 import { BestFitResizer, StretchResizer } from "./resizer"
@@ -406,8 +408,8 @@ const html = `
             <input type="range" class="range-volume"/>
         </div>
         <div class="right">
-            <button class="btn-settings"></button>
-            <button class="btn-fullscreen" state="1"></button>
+            <input type="checkbox" class="btn-settings"></input>
+            <input type="checkbox" class="btn-fullscreen" state="1"></input>
         </div>
         <div class="seekbar">
         </div>
@@ -416,21 +418,27 @@ const html = `
 </div>
 `
 
-export default class {
+export default class GrassPlayer {
+    #seekbar
+    #video
+    #renderer
+
+    #on_set_video
+
     constructor(root, fonts, controls = true) {
         root.innerHTML = html
-        this.video = root.querySelector("video")
-        this.renderer = new WebGPURenderer(root)
+        this.#video = root.querySelector("video")
+        this.#renderer = new WebGPURenderer(root)
 
         {
             const btn_play = root.querySelector(".btn-play")
             this.play = () => {
                 btn_play.setAttribute("state", 0)
-                this.video.play()
+                this.#video.play()
             }
             this.pause = () => {
                 btn_play.setAttribute("state", 1)
-                this.video.pause()
+                this.#video.pause()
             }
             btn_play.addEventListener("click", e => {
                 const new_state = e.target.getAttribute("state") == 1
@@ -450,10 +458,14 @@ export default class {
         }
 
         {
+            this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this.#video)
+        }
+
+        {
             const div = root.querySelector(".videoinfo-resolution")
-            this.on_set_video = (type, videos, subtitles) => {
-                this.video.requestVideoFrameCallback(() => {
-                    div.textContent = `${this.video.videoWidth}x${this.video.videoHeight}`
+            this.#on_set_video = (type, videos, subtitles) => {
+                this.#video.requestVideoFrameCallback(() => {
+                    div.textContent = `${this.#video.videoWidth}x${this.#video.videoHeight}`
                 })
                 // div.textContent = videos.default
             }
@@ -475,9 +487,9 @@ export default class {
     }
 
     set_video(type, videos, subtitles) {
-        this.on_set_video(type, videos, subtitles)
-        this.video.src = videos["default"]
-        this.renderer.reload()
+        this.#on_set_video(type, videos, subtitles)
+        this.#video.src = videos["default"]
+        this.#renderer.reload()
     }
 
     seek(t) { }
