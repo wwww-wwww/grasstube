@@ -53,11 +53,10 @@ export default class EffectLut3d extends Effect {
 @compute @workgroup_size(16, 16)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let size = textureDimensions(inputTexture);
-    let lutSize = f32(textureDimensions(lutTexture).x);
 
-    if (id.x >= size.x || id.y >= size.y) {
-        return;
-    }
+    if (id.x >= size.x || id.y >= size.y) { return; }
+
+    let lutSize = f32(textureDimensions(lutTexture).x);
 
     // sample
     let sample = textureLoad(inputTexture, id.xy, 0);

@@ -1,17 +1,17 @@
 import SubtitlesOctopus from "../subtitles-octopus"
 
+import Timer from "./timer"
 
-import EffectLoad from "./effects/load"
-import EffectDeband from "./effects/deband"
-import EffectLut3d from "./effects/lut3d"
-import EffectLinear from "./effects/linear"
+import { BestFitResizer, StretchResizer } from "./resizer"
+
 import EffectArt from "./effects/artcnn"
+import EffectDeband from "./effects/deband"
+import EffectLinear from "./effects/linear"
+import EffectLoad from "./effects/load"
+import EffectLut3d from "./effects/lut3d"
 
 import { SamplerDefault, SamplerDefaultLinear, SamplerHermite } from "./samplers/default"
 import SamplerSphere from "./samplers/sphere"
-
-
-import { BestFitResizer, StretchResizer } from "./resizer"
 
 function create_element(tagname, root = null, classes = "") {
     const e = document.createElement(tagname)
@@ -24,99 +24,6 @@ function create_element(tagname, root = null, classes = "") {
 
     if (root) root.appendChild(e)
     return e
-}
-
-class Timer {
-    #labelmap
-    #encoder
-    #i
-    #querySet
-    #resolveBuffer
-    #resultBuffer
-    enabled = true
-    constructor(device) {
-        this.#querySet = device.createQuerySet({
-            type: "timestamp",
-            count: 32,
-        })
-        this.#resolveBuffer = device.createBuffer({
-            size: this.#querySet.count * 8,
-            usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-        })
-        this.#resultBuffer = device.createBuffer({
-            size: this.#resolveBuffer.size,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-        })
-    }
-    beginComputePass(desc = {}) {
-        if (!this.enabled) {
-            return this.#encoder.beginComputePass(desc)
-        }
-        const pass = this.#encoder.beginComputePass({
-            ...desc,
-            timestampWrites: {
-                querySet: this.#querySet,
-                beginningOfPassWriteIndex: this.#i++,
-                endOfPassWriteIndex: this.#i++,
-            }
-        })
-        this.#labelmap[this.#i / 2 - 1] = desc.label
-        return pass
-    }
-    beginRenderPass(desc = {}) {
-        if (!this.enabled) {
-            return this.#encoder.beginRenderPass(desc)
-        }
-        const pass = this.#encoder.beginRenderPass({
-            ...desc,
-            timestampWrites: {
-                querySet: this.#querySet,
-                beginningOfPassWriteIndex: this.#i++,
-                endOfPassWriteIndex: this.#i++,
-            }
-        })
-        this.#labelmap[this.#i / 2 - 1] = desc.label
-        return pass
-    }
-    start(encoder) {
-        this.#labelmap = []
-        this.#encoder = encoder
-        this.#i = 0
-    }
-    run(effect, a, b, c, d, e, f, g) {
-        return effect.run(this, a, b, c, d, e, f, g)
-    }
-    finish() {
-        if (!this.enabled) return
-        this.#encoder.resolveQuerySet(this.#querySet, 0, this.#querySet.count, this.#resolveBuffer, 0)
-
-        if (this.#resultBuffer.mapState === "unmapped") {
-            this.#encoder.copyBufferToBuffer(this.#resolveBuffer, 0, this.#resultBuffer, 0, this.#resultBuffer.size)
-        }
-    }
-    results() {
-        return new Promise(async (resolve, reject) => {
-            if (this.#resultBuffer.mapState === "unmapped") {
-                await this.#resultBuffer.mapAsync(GPUMapMode.READ)
-                const times = new BigUint64Array(this.#resultBuffer.getMappedRange())
-                const passes = []
-
-                let sum = 0
-                for (let i = 0; i < this.#labelmap.length; i++) {
-                    const duration = Number(times[i * 2 + 1] - times[i * 2])
-                    sum += duration
-                    passes[i] = [this.#labelmap[i], duration]
-                }
-
-                this.#resultBuffer.unmap()
-
-                resolve({ sum, passes })
-            } else {
-                reject()
-            }
-        })
-    }
-
 }
 
 class WebGPURenderer {
@@ -313,7 +220,7 @@ class WebGPURenderer {
             return view
         }
 
-        // timer.enabled = false
+        const timer = new Timer(this.#device)
 
         const framenumber = root.querySelector(".framenumber")
         const txt_fps = root.querySelector(".fps")
@@ -355,7 +262,6 @@ class WebGPURenderer {
 
             const texture_canvas = context.getCurrentTexture().createView()
 
-            const timer = new Timer(this.#device)
             timer.start(encoder)
 
             let last_tex = texture_video
@@ -378,15 +284,17 @@ class WebGPURenderer {
             const t2 = performance.now()
             this.#device.queue.submit([encoder.finish()])
 
-            timer.results().then(({ sum, passes }) => {
-                let txt = ""
-                for (let i = 0; i < passes.length; i++) {
-                    txt += `${i} ${passes[i][0]}: ${passes[i][1]}\n`
-                }
+            if (timer.enabled) {
+                timer.results().then(({ sum, passes }) => {
+                    let txt = ""
+                    for (let i = 0; i < passes.length; i++) {
+                        txt += `${i} ${passes[i][0]}: ${passes[i][1]}\n`
+                    }
 
-                timing.textContent = txt
-                gputime.textContent = (sum / 1000000).toFixed(4)
-            }).catch(() => { })
+                    timing.textContent = txt
+                    gputime.textContent = (sum / 1000000).toFixed(4)
+                }).catch(() => { })
+            }
 
             this.#device.queue.onSubmittedWorkDone().then(() => {
                 const t3 = performance.now()

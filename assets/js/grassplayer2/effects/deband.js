@@ -107,9 +107,7 @@ fn average(uv: vec2<f32>, size: vec2<f32>, range: f32, h0: f32) -> AverageOut {
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let size = textureDimensions(inputTexture);
 
-    if (id.x >= size.x || id.y >= size.y) {
-        return;
-    }
+    if (id.x >= size.x || id.y >= size.y) { return; }
 
     let uv = (vec2<f32>(id.xy) + 0.5) / vec2<f32>(size);
 

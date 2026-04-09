@@ -27,6 +27,10 @@ fn to_linear_fast(srgb: vec3<f32>) -> vec3<f32> {
 
 @compute @workgroup_size(16, 16)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let size = textureDimensions(inputTexture);
+
+    if (id.x >= size.x || id.y >= size.y) { return; }
+
     let sample = textureLoad(inputTexture, id.xy, 0);
     let linear = to_linear_fast(sample.rgb);
 
