@@ -5,7 +5,7 @@ export default `
 fn rgb_to_ycbcr_rec709(rgb: vec3<f32>) -> vec3<f32> {
     let rgb_to_ycbcr_mat = mat3x3<f32>(
         vec3<f32>(0.2126, -0.114572,  0.5),
-        vec3<f32>(0.7152, -0.385428, -0.454153), 
+        vec3<f32>(0.7152, -0.385428, -0.454153),
         vec3<f32>(0.0722,  0.5,      -0.045847)
     );
 

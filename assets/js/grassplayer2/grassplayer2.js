@@ -1,18 +1,15 @@
-import SubtitlesOctopus from "./subtitles-octopus"
+import SubtitlesOctopus from "../subtitles-octopus"
 
-import {
-    EffectLoad,
-    EffectLut3d,
-    EffectDeband,
-} from "./effects"
 
-import {
-    SamplerHermite,
-    SamplerDefault,
-    SamplerSphere,
-} from "./samplers"
+import EffectLoad from "./effects/load"
+import EffectDeband from "./effects/deband"
+import EffectLut3d from "./effects/lut3d"
+import EffectLinear from "./effects/linear"
+import EffectArt from "./effects/artcnn"
 
-import SamplerArt from "./artcnn"
+import { SamplerDefault, SamplerDefaultLinear, SamplerHermite } from "./samplers/default"
+import SamplerSphere from "./samplers/sphere"
+
 
 import { BestFitResizer, StretchResizer } from "./resizer"
 
@@ -65,15 +62,29 @@ class Timer {
         })
         this.#labelmap[this.#i / 2 - 1] = desc.label
         return pass
-
+    }
+    beginRenderPass(desc = {}) {
+        if (!this.enabled) {
+            return this.#encoder.beginRenderPass(desc)
+        }
+        const pass = this.#encoder.beginRenderPass({
+            ...desc,
+            timestampWrites: {
+                querySet: this.#querySet,
+                beginningOfPassWriteIndex: this.#i++,
+                endOfPassWriteIndex: this.#i++,
+            }
+        })
+        this.#labelmap[this.#i / 2 - 1] = desc.label
+        return pass
     }
     start(encoder) {
         this.#labelmap = []
         this.#encoder = encoder
         this.#i = 0
     }
-    run(effect, t, video_time, tex1, tex2) {
-        effect.run(this, t, video_time, tex1, tex2)
+    run(effect, a, b, c, d, e, f, g) {
+        return effect.run(this, a, b, c, d, e, f, g)
     }
     finish() {
         if (!this.enabled) return
@@ -111,6 +122,7 @@ class Timer {
 class WebGPURenderer {
     #resizer
     #device
+    #have_frame
 
     constructor(root) {
         this.video = root.querySelector("video")
@@ -120,8 +132,12 @@ class WebGPURenderer {
         this.loaded = this.init(root)
     }
 
+    #textures = {}
+    #texture_views = {}
     async init(root) {
-        const adapter = await navigator.gpu?.requestAdapter()
+        const adapter = await navigator.gpu?.requestAdapter({
+            powerPreference: "high-performance",
+        })
         this.#device = await adapter?.requestDevice({
             requiredFeatures: ["timestamp-query"],
             requiredLimits: {
@@ -139,7 +155,7 @@ class WebGPURenderer {
         const context = this.canvas.getContext("webgpu")
         context.configure({
             device: this.#device, format: "rgba8unorm", colorSpace: "srgb",
-            usage: GPUTextureUsage.STORAGE_BINDING
+            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT
         })
 
         // Create resizer
@@ -168,26 +184,36 @@ class WebGPURenderer {
             this.#resizer.create_settings(el)
         }
 
-        let have_frame = false
         // Create effects
         {
             this.effects = [
+                new EffectLoad(this.#device),
                 new EffectDeband(this.#device),
                 new EffectLut3d(this.#device),
+                new EffectLinear(this.#device),
+                new EffectArt(this.#device),
             ]
 
             const div = root.querySelector(".filters")
             this.effects.forEach(e => {
+                e.on_update = () => { this.#have_frame = true }
+
                 const el = create_element("div", div)
 
                 const title = create_element("div", el, "title")
-                const check = create_element("input", title)
-                check.type = "checkbox"
-                check.checked = e.enabled
-                check.addEventListener("input", () => {
-                    e.enabled = check.checked
-                    have_frame = true
-                })
+                if (!e.force) {
+                    const check = create_element("input", title)
+                    check.type = "checkbox"
+                    check.checked = e.enabled
+                    check.addEventListener("input", () => {
+                        e.enabled = check.checked
+                        if (e.enabled) {
+                            if (!e.initialized) { e.init() }
+                            e.resize(this.texturewidth, this.textureheight)
+                        }
+                        this.#have_frame = true
+                    })
+                }
 
                 const title_text = create_element("span", title)
                 title_text.textContent = e.constructor.name
@@ -200,9 +226,9 @@ class WebGPURenderer {
         // Create upsampler
         {
             const options = [
+                new SamplerDefaultLinear(this.#device, this.video, this.canvas),
                 new SamplerDefault(this.#device, this.video, this.canvas),
                 new SamplerHermite(this.#device, this.video, this.canvas),
-                new SamplerArt(this.#device, this.video, this.canvas),
                 new SamplerSphere(this.#device, this.video, this.canvas),
             ]
 
@@ -218,7 +244,8 @@ class WebGPURenderer {
                 options[select.selectedIndex].create_settings(div)
                 options[select.selectedIndex].init()
                 this.upsampler = options[select.selectedIndex]
-                this.resize()
+                this.upsampler.reset()
+                this.#have_frame = true
             })
 
             this.upsampler = options[0]
@@ -230,8 +257,8 @@ class WebGPURenderer {
         {
             const options = [
                 new SamplerDefault(this.#device, this.video, this.canvas),
-                new SamplerHermite(this.#device, this.video, this.canvas),
-                new SamplerSphere(this.#device, this.video, this.canvas),
+                // new SamplerHermite(this.#device, this.video, this.canvas),
+                // new SamplerSphere(this.#device, this.video, this.canvas),
             ]
 
             const select = root.querySelector(".select-downsamplers")
@@ -252,9 +279,40 @@ class WebGPURenderer {
 
         this.#prepare_textures(4, 4)
 
-        this.effects.forEach(e => e.init())
+        this.effects.forEach(e => {
+            if (e.enabled) { e.init() }
+        })
 
-        const timer = new Timer(this.#device)
+        const get_texture = (dims, not = []) => {
+            const id = dims.toString()
+            if (id in this.#texture_views) {
+                for (let i = 0; i < this.#texture_views[id].length; i++) {
+                    if (!not.includes(this.#texture_views[id][i])) {
+                        return this.#texture_views[id][i]
+                    }
+                }
+            }
+
+            console.log(`Create texture ${dims}`)
+
+            const texture = this.#device.createTexture({
+                size: dims,
+                format: "rgba16float",
+                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
+            })
+            const view = texture.createView()
+
+            if (!(id in this.#texture_views)) {
+                this.#textures[id] = []
+                this.#texture_views[id] = []
+            }
+
+            this.#textures[id].push(texture)
+            this.#texture_views[id].push(view)
+
+            return view
+        }
+
         // timer.enabled = false
 
         const framenumber = root.querySelector(".framenumber")
@@ -265,108 +323,104 @@ class WebGPURenderer {
         const gputime = root.querySelector(".gputime")
         const timing = root.querySelector(".timing")
 
-        this.load = new EffectLoad(this.#device)
-
         let frame_n = 0
         let last_t = 0
 
         let tz = () => {
-            have_frame = true
+            this.#have_frame = true
             this.video.requestVideoFrameCallback(tz)
         }
         this.video.requestVideoFrameCallback(tz)
 
-        let texture_index = 0
         let render = t => {
             requestAnimationFrame(render)
-            if (!have_frame) {
+            if (this.video.videoWidth == 0) return
+
+            if (!this.#have_frame) {
                 const encoder = this.#device.createCommandEncoder()
                 this.#device.queue.submit([encoder.finish()])
                 return
             }
-            have_frame = false
-
-            if (this.video.videoWidth == 0) return
+            this.#have_frame = false
 
             let video_time = this.video.currentTime
+
+            const t0 = performance.now()
+            const encoder = this.#device.createCommandEncoder()
+
+            let texture_video
             try {
-                const t0 = performance.now()
-                const encoder = this.#device.createCommandEncoder()
-                const texture_video = this.#device.importExternalTexture({ source: this.video })
-                const texture_canvas = context.getCurrentTexture().createView()
+                texture_video = this.#device.importExternalTexture({ source: this.video })
+            } catch (e) { return }
 
-                timer.start(encoder)
+            const texture_canvas = context.getCurrentTexture().createView()
 
-                timer.run(this.load, t, video_time, texture_video, this.textureviews[0])
+            const timer = new Timer(this.#device)
+            timer.start(encoder)
 
-                texture_index = 0
-                this.effects.some(e => {
-                    if (!e.enabled) return
-                    timer.run(e, t, video_time,
-                        this.textureviews[texture_index % 2],
-                        this.textureviews[(texture_index + 1) % 2])
-                    texture_index++
-                })
+            let last_tex = texture_video
+            let last_tex_res = [this.video.videoWidth, this.video.videoHeight]
 
-                timer.run(this.upsampler, t, video_time, this.textureviews[texture_index % 2], texture_canvas)
+            this.effects.forEach(e => {
+                if (!e.enabled) return
 
-                timer.finish()
+                const res = timer.run(e, t, video_time, last_tex_res, last_tex, get_texture)
 
-                const t2 = performance.now()
-                this.#device.queue.submit([encoder.finish()])
+                last_tex = res[0]
+                last_tex_res = res[1]
+            })
 
-                this.#device.queue.onSubmittedWorkDone().then(() => {
-                    const t3 = performance.now()
-                    totaltime.textContent = (t3 - t0).toFixed(4)
-                    queuetime.textContent = (t3 - t2).toFixed(4)
-                })
+            timer.run(this.upsampler, t, video_time, last_tex_res, last_tex,
+                [this.canvas.width, this.canvas.height], texture_canvas)
 
-                timer.results().then(({ sum, passes }) => {
-                    let txt = ""
-                    for (let i = 0; i < passes.length; i++) {
-                        txt += `${i} ${passes[i][0]}: ${passes[i][1]}\n`
-                    }
+            timer.finish()
 
-                    timing.textContent = txt
-                    gputime.textContent = (sum / 1000000).toFixed(4)
-                }).catch(() => { })
+            const t2 = performance.now()
+            this.#device.queue.submit([encoder.finish()])
 
-                const t1 = performance.now()
-                jstime.textContent = (t1 - t0).toFixed(4)
-                framenumber.textContent = ++frame_n
-                txt_fps.textContent = (1000 / (t - last_t)).toFixed(4)
-                last_t = t
-            }
-            catch (e) { console.log(e) }
+            timer.results().then(({ sum, passes }) => {
+                let txt = ""
+                for (let i = 0; i < passes.length; i++) {
+                    txt += `${i} ${passes[i][0]}: ${passes[i][1]}\n`
+                }
+
+                timing.textContent = txt
+                gputime.textContent = (sum / 1000000).toFixed(4)
+            }).catch(() => { })
+
+            this.#device.queue.onSubmittedWorkDone().then(() => {
+                const t3 = performance.now()
+                totaltime.textContent = (t3 - t0).toFixed(4)
+                queuetime.textContent = (t3 - t2).toFixed(4)
+            })
+
+            const t1 = performance.now()
+            jstime.textContent = (t1 - t0).toFixed(4)
+            framenumber.textContent = ++frame_n
+            txt_fps.textContent = (1000 / (t - last_t)).toFixed(4)
+            last_t = t
         }
         requestAnimationFrame(render)
     }
 
+
     #prepare_textures(width, height) {
-        const texDesc = {
-            size: [width, height],
-            format: "rgba16float",
-            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-        }
+        this.#textures = {}
+        this.#texture_views = {}
 
         this.texturewidth = width
         this.textureheight = height
 
-        this.textures = [
-            this.#device.createTexture(texDesc),
-            this.#device.createTexture(texDesc)
-        ]
-        this.textureviews = [
-            this.textures[0].createView(),
-            this.textures[1].createView(),
-        ]
+        this.effects.forEach(e => {
+            if (e.enabled) {
+                e.resize(this.texturewidth, this.textureheight)
+            }
+        })
     }
 
     resize() {
         this.#resizer.resize()
-        this.load.resize(this.texturewidth, this.textureheight)
-        this.upsampler.resize(this.texturewidth, this.textureheight)
-        this.effects.forEach(e => e.resize(this.texturewidth, this.textureheight))
+        this.#have_frame = true
     }
 
     reload() {

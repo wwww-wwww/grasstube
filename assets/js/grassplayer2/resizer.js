@@ -5,10 +5,14 @@ class Resizer {
         this.video = video
         this.canvas = canvas
     }
+
     create_settings(el) {
         console.log(`${this.constructor.name}.create_settings not implemented`)
     }
-    resize() { }
+
+    resize() {
+        console.log(`${this.constructor.name}.resize not implemented`)
+    }
 }
 
 class BestFitResizer extends Resizer {
@@ -20,6 +24,7 @@ class BestFitResizer extends Resizer {
         this.txt_root = el.querySelector(".dims-root")
         this.txt_dims = el.querySelector(".dims-canvas")
     }
+
     resize() {
         if (!this.video.videoWidth || !this.video.videoHeight) return
 
