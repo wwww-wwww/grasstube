@@ -90,6 +90,18 @@
     }
 
     .settings {
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(32px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         right: 0;
         bottom: 0;
         margin: 1em;
@@ -107,6 +119,8 @@
         padding: 0.5em;
         gap: 0.5em;
         scrollbar-width: none;
+
+        animation: slide-in 0.2s;
 
         .stats {
             font-family: monospace;
@@ -292,9 +306,9 @@
             position: absolute;
             margin: 0.5em;
             padding: 0.5em;
-            border-radius: 0.25em;
+            border-radius: 4px;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            background-color: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.3);
             font-size: 1em;
             text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
             color: rgba(255, 255, 255, 0.7);
@@ -314,8 +328,33 @@
             flex: 1;
             position: relative;
 
+
             >* {
                 pointer-events: all;
+            }
+        }
+
+        .messages {
+            position: absolute;
+            left: 25%;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5em;
+            padding: 0.5em;
+            pointer-events: none;
+
+            >div {
+                pointer-events: all;
+                background: rgba(0, 0, 0, 0.2);
+                backdrop-filter: blur(5px);
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                padding: 0.5em;
+                border-radius: 4px;
             }
         }
 
@@ -347,7 +386,7 @@
                 background: rgba(255, 255, 255, 0.2);
                 backdrop-filter: blur(5px);
                 box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-                text-shadow: 0 0 5px rgba(0, 0, 0, 1);
+                text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
                 width: 48px;
                 height: 48px;
                 padding: 0;
@@ -422,17 +461,18 @@
         width: 100%;
         height: 16px;
         cursor: pointer;
-        transition: height 0.1s, bottom 0.1s;
+        transition: height 0.1s linear, bottom 0.1s linear;
         transform: translateY(-100%);
         // pointer-events: all;
 
         // outline: 1px solid red;
 
-        &:hover {
+        &:hover,
+        &.seeking {
             height: 16px;
 
-            >.seekbar-time {
-                transform: translate(-50%, -100%);
+            >.seekbar-handle-info {
+                transform: translate(-50%, -120%);
                 opacity: 1;
             }
 
@@ -443,25 +483,40 @@
 
             >.seekbar-bar {
                 height: 8px;
+
+                >.seekbar-bar-current {
+                    background: rgba(0, 255, 70, 0.7);
+                }
             }
 
-            >.seekbar_dial {
-                width: 12px;
-                height: 12px;
+            >.seekbar-handle {
+                position: absolute;
+                width: 16px;
+                height: 16px;
                 opacity: 0.8;
+
+                transform: translate(-50%, 4px);
             }
         }
 
-        .seekbar-time {
-            background-color: rgba(0, 0, 0, 0.2);
-            border-radius: 0.25em;
-            padding: 0.25em;
+        .seekbar-handle-info {
+            pointer-events: none;
             position: absolute;
-            transform: translate(-50%, -80%);
+            display: flex;
+            flex-direction: column;
+            padding: 0.25em;
+            top: 0;
+            transform: translate(-50%, -100%);
+
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
             color: rgba(255, 255, 255, 0.8);
-            text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
             opacity: 0;
-            transition: opacity 0.2s, transform 0.2s;
+
+            transition: opacity 0.2s, transform 0.1s linear;
         }
 
         .seekbar-preview {
@@ -475,23 +530,21 @@
             transition: opacity 0.2s, transform 0.2s;
             max-height: 6em;
             max-width: 11em;
-            pointer-events: none;
         }
 
-        .seekbar-dial {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            top: 50%;
-            left: 0%;
-            transform: translate(-50%, -50%);
-            border-radius: 12px;
-            background: white;
-            opacity: 0.5;
+        .seekbar-handle {
             pointer-events: none;
-            z-index: 2;
-            transition: width 0.1s, height 0.1s, margin-top 0.1s, opacity 0.1s,
-                left 0.1s linear;
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            bottom: 0;
+            left: 0%;
+            transform: translate(-50%, 0px);
+            background: rgba(0, 255, 70, 1);
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            opacity: 0;
+            transition: width 0.1s linear, height 0.1s linear, transform 0.1s linear, opacity 0.1s;
 
             &.seeking {
                 transition: left 0s;
@@ -503,7 +556,7 @@
             width: 100%;
             height: 4px;
             bottom: 0;
-            box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
             // transform: translateY(-50%);
             background: rgba(255, 255, 255, 0.1);
             // backdrop-filter: blur(5px);

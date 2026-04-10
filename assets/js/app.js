@@ -383,12 +383,12 @@ const hooks = {
 
         if (player_state.player.playing != data.playing) {
           // player_state.player.show_osd(data.playing ? "Play" : "Pause")
-          player_state.player.set_playing(data.playing)
+          player_state.player.auto_set_playing(data.playing)
         }
 
         if (!current_state && !data.playing) {
-          player_state.player.seek(data.t)
-          player_state.player.set_playing(false)
+          player_state.player.auto_seek(data.t)
+          player_state.player.auto_set_playing(false)
           return
         }
 
@@ -400,7 +400,7 @@ const hooks = {
 
         if (current_state != data.playing) {
           if (Math.abs(offset_time - player_state.player.current_time()) > 0.1) {
-            player_state.player.seek(offset_time)
+            player_state.player.auto_seek(offset_time)
           }
 
           clearInterval(this.catchup_interval)
@@ -412,7 +412,8 @@ const hooks = {
         }
 
         if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
-          player_state.player.show_osd("CHECK THE CONSOLE")
+          // player_state.player.create_message("error!", 3000)
+
           console.error("something went horribly wrong", {
             last_ping: this.last_ping,
             latency: this.latency_rtt / 1000,
@@ -420,30 +421,30 @@ const hooks = {
             offset_time: offset_time,
             current_time: player_state.player.current_time(),
           })
-          //player_state.player.seek(offset_time)
+          //player_state.player.auto_seek(offset_time)
         }
       }
 
       this.run_catchup = () => {
-        if (player_state.player == null || !player_state.player.settings.catchup) {
-          clearInterval(this.catchup_interval)
-          return
-        }
-        if (this.catchup_target == null || !player_state.player.playing) return
-        const elapsed = (Date.now() - this.catchup_target_time) / 1000
-        const dist = (this.catchup_target + elapsed) - player_state.player.current_time()
+        // if (player_state.player == null || !player_state.player.settings.catchup) {
+        //   clearInterval(this.catchup_interval)
+        //   return
+        // }
+        // if (this.catchup_target == null || !player_state.player.playing) return
+        // const elapsed = (Date.now() - this.catchup_target_time) / 1000
+        // const dist = (this.catchup_target + elapsed) - player_state.player.current_time()
 
-        if (Math.abs(dist) < 0.02) {
-          this.catchup_mul = 1
-          console.log("video:catchup end")
-          clearInterval(this.catchup_interval)
-        } else {
-          const dir = dist > 0 ? 1 : -1
-          this.catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
-        }
+        // if (Math.abs(dist) < 0.02) {
+        //   this.catchup_mul = 1
+        //   console.log("video:catchup end")
+        //   clearInterval(this.catchup_interval)
+        // } else {
+        //   const dir = dist > 0 ? 1 : -1
+        //   this.catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
+        // }
 
-        player_state.player.set_speed(this.speed * this.catchup_mul)
-        this.stats_catchup.textContent = `${dist.toFixed(5)} ${this.catchup_mul.toFixed(5)}x`
+        // player_state.player.set_speed(this.speed * this.catchup_mul)
+        // this.stats_catchup.textContent = `${dist.toFixed(5)} ${this.catchup_mul.toFixed(5)}x`
       }
 
       this.catchup_interval = null
@@ -479,7 +480,7 @@ const hooks = {
 
         console.log("video:seek", data)
         // player_state.player.show_osd(seconds_to_hms(data.t, true))
-        player_state.player.seek(offset_time)
+        player_state.player.auto_seek(offset_time)
 
         if (player_state.player.playing) {
           this.catchup_target = offset_time

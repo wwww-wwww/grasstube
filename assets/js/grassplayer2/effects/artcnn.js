@@ -76,8 +76,8 @@ export default class EffectArt extends Effect {
         const tex2_x2_2 = get_texture(tex2_res, [tex2_x2_0, tex2_x2_1])
 
         if (this.#tex1 != tex1) {
+            console.log("Recreating bind group")
             this.#tex1 = tex1
-            console.log("create bindgroups")
             this.#bindgroups = [
                 this.device.createBindGroup({
                     layout: this.#pipelines[0].getBindGroupLayout(0),

@@ -11,6 +11,7 @@ import EffectDeband from "./effects/deband"
 import EffectLinear from "./effects/linear"
 import EffectLoad from "./effects/load"
 import EffectLut3d from "./effects/lut3d"
+import EffectDehalo from "./effects/dehalo"
 
 import { SamplerDefault, SamplerDefaultLinear, SamplerHermite } from "./samplers/default"
 import SamplerSphere from "./samplers/sphere"
@@ -100,6 +101,7 @@ class WebGPURenderer {
                 new EffectDeband(this.#device),
                 new EffectLut3d(this.#device),
                 new EffectLinear(this.#device),
+                new EffectDehalo(this.#device),
                 new EffectArt(this.#device),
             ]
 
@@ -351,7 +353,8 @@ const html = `
 <canvas width="1920" height="1080"></canvas>
 <div class="overlay">
     <div class="main">
-        <div class="settings">
+        <div class="messages"></div>
+        <div class="settings" style="display: none;">
             <div>
                 <div>Stats</div>
                 <div class="stats options nogap">
@@ -423,42 +426,40 @@ export default class GrassPlayer {
     #video
     #renderer
 
+    #e_btn_play
+    #e_messages
+
     #on_set_video
 
     constructor(root, fonts, controls = true) {
         root.innerHTML = html
         this.#video = root.querySelector("video")
+        this.#e_messages = root.querySelector(".messages")
         this.#renderer = new WebGPURenderer(root)
 
+        this.#e_btn_play = root.querySelector(".btn-play")
+        this.#e_btn_play.addEventListener("click", e => {
+            const new_state = e.target.getAttribute("state") == 1
+
+            this.set_playing(new_state)
+
+            if (this.on_toggle_playing != null) {
+                this.on_toggle_playing(new_state)
+            } else {
+                // this.set_playing(new_state)
+            }
+        })
+
         {
-            const btn_play = root.querySelector(".btn-play")
-            this.play = () => {
-                btn_play.setAttribute("state", 0)
-                this.#video.play()
-            }
-            this.pause = () => {
-                btn_play.setAttribute("state", 1)
-                this.#video.pause()
-            }
-            btn_play.addEventListener("click", e => {
-                const new_state = e.target.getAttribute("state") == 1
-
-                if (new_state) {
-                    this.play()
-                } else {
-                    this.pause()
-                }
-
-                if (this.on_toggle_playing != null) {
-                    this.on_toggle_playing(new_state)
-                } else {
-                    this.set_playing(new_state)
-                }
+            const btn_settings = root.querySelector(".btn-settings")
+            const e_settings = root.querySelector(".settings")
+            btn_settings.addEventListener("change", () => {
+                e_settings.style.display = btn_settings.checked ? "" : "none"
             })
         }
 
         {
-            this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this.#video)
+            this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this, this.#video)
         }
 
         {
@@ -472,9 +473,36 @@ export default class GrassPlayer {
         }
     }
 
+    create_message(message, timeout = null) {
+        const el = document.createElement("div")
+        el.className = "message"
+        el.textContent = message
+        el.addEventListener("click", () => {
+            this.#e_messages.removeChild(el)
+        })
+        this.#e_messages.appendChild(el)
+        if (timeout != null && timeout > 0) {
+            setTimeout(() => {
+                this.#e_messages.removeChild(el)
+            }, timeout)
+        }
+    }
+
     set_speed(s) { }
 
-    set_playing(playing) {
+    playing() {
+        return !this.#video.paused
+    }
+
+    current_time() {
+        return this.#video.currentTime
+    }
+
+    duration() {
+        return this.#video.duration
+    }
+
+    auto_set_playing(playing) {
         // if (playing) {
         //     this.video.play()
         // } else {
@@ -482,15 +510,29 @@ export default class GrassPlayer {
         // }
     }
 
-    duration() {
-        return 0
+    set_playing(playing) {
+        this.#e_btn_play.setAttribute("state", playing ? 0 : 1)
+        if (playing) {
+            this.#video.play()
+        } else {
+            this.#video.pause()
+        }
     }
 
     set_video(type, videos, subtitles) {
+        this.set_playing(false)
         this.#on_set_video(type, videos, subtitles)
         this.#video.src = videos["default"]
         this.#renderer.reload()
+        this.#seekbar.reset()
     }
 
-    seek(t) { }
+    seek(t) {
+        console.log(["seek", t])
+        this.#video.currentTime = t
+    }
+
+    auto_seek(t) {
+        console.log(["auto_seek", t])
+    }
 }

@@ -1,26 +1,50 @@
+function pad(n, width) {
+    return n.toString().padStart(width, "0")
+}
+
+function seconds_to_hms(seconds, hide_hours = false) {
+    seconds = Math.round(seconds)
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor(seconds / 60) % 60
+    seconds = seconds % 60
+    if (hide_hours && hours <= 0)
+        return `${pad(minutes, 2)}:${pad(seconds, 2)}`
+    return `${pad(hours, 2)}:${pad(minutes, 2)}:${pad(seconds, 2)}`
+}
+
 export default class Seekbar {
     #e_bar
     #e_current
-    #e_dial
-    #e_time
+    #e_handle
+
+    #e_handle_info
+    #e_preview_time
     #e_preview
 
+    #player
+    seeking
+
     #buffers = []
-    constructor(root, video) {
+    constructor(root, player, video) {
+        this.#player = player
+
         root.innerHTML = `
-<div class="seekbar-time"></div>
-<canvas class="seekbar-preview"></canvas>
+<div class="seekbar-handle-info">
+    <div class="seekbar-preview-time"></div>
+    <canvas class="seekbar-preview"></canvas>
+</div>
 <div class="seekbar-bar">
     <div class="seekbar-bar-current"></div>
 </div>
-<div class="seekbar-dial"></div>
+<div class="seekbar-handle"></div>
 `
 
         this.#e_bar = root.querySelector(".seekbar-bar")
         this.#e_current = root.querySelector(".seekbar-bar-current")
-        this.#e_dial = root.querySelector(".seekbar-dial")
-        this.#e_time = root.querySelector(".seekbar-time")
+        this.#e_handle = root.querySelector(".seekbar-handle")
 
+        this.#e_handle_info = root.querySelector(".seekbar-handle-info")
+        this.#e_preview_time = root.querySelector(".seekbar-preview-time")
         this.#e_preview = root.querySelector(".seekbar-preview")
         const preview_ctx = this.#e_preview.getContext("2d")
 
@@ -32,21 +56,63 @@ export default class Seekbar {
             this.#set_time((video.currentTime || 0) / video.duration)
         })
 
+        root.addEventListener("mousemove", e => {
+            const rect = root.getBoundingClientRect()
+            const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
+            const u = t / player.duration()
+            this.#e_handle_info.style.left = `${u * 100}%`
+            this.#e_preview_time.textContent = seconds_to_hms(t, true)
+        })
+
         root.addEventListener("mousedown", e => {
             if (e.buttons != 1) return
             e.preventDefault()
+            console.log("mousedown")
 
             // if (Object.keys(this.current_video.videos).length == 0) return
 
+            this.seeking = true
+            root.classList.toggle("seeking", true)
+
+            const playing = player.playing()
+            console.log(["playing", playing])
+
             video.pause()
 
-            // body.addEventListener("mousemove", seek)
-            // window.addEventListener("mouseup", mouseup)
+            const seek = e => {
+                e.preventDefault()
+                console.log(e)
+                const rect = root.getBoundingClientRect()
+                const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
+                console.log(t)
+                this.#set_time(t / player.duration())
+                player.seek(t)
+                // if (seek) this.seek_to(t)
+                return t
+            }
+
+            const mouseup = e => {
+                console.log("mouseup")
+                e.preventDefault()
+                body.removeEventListener("mousemove", seek)
+                window.removeEventListener("mouseup", mouseup)
+
+                seek(e)
+
+                player.set_playing(playing)
+
+                this.seeking = false
+                root.classList.toggle("seeking", false)
+            }
+
+            body.addEventListener("mousemove", seek)
+            window.addEventListener("mouseup", mouseup)
+
+            seek(e)
 
             // this.seeking = true
             // this.seeking_playing = this.playing
 
-            // seek(e)
             // this.seekbar.graphic.classList.toggle("seeking", true)
             // this.seekbar.dial.classList.toggle("seeking", true)
         })
@@ -129,7 +195,6 @@ export default class Seekbar {
     }
 
     #set_buffers(buffers, duration) {
-        console.log(buffers)
         while (this.#buffers.length < buffers.length) {
             const buffer = document.createElement("div")
             buffer.style.width = "0%"
@@ -151,9 +216,14 @@ export default class Seekbar {
         }
     }
 
-    #set_time(t) {
-        this.#e_current.style.width = t * 100 + "%"
-        this.#e_dial.style.left = t * 100 + "%"
+    #set_time(u) {
+        this.#e_current.style.width = u * 100 + "%"
+        this.#e_handle.style.left = u * 100 + "%"
+    }
+
+    reset() {
+        this.#set_time(0)
+        this.#set_buffers([], 0)
     }
 }
 

@@ -114,9 +114,9 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let m = vec3(uv, uniforms.random) + vec3(1.0);
     var h = permute(permute(permute(m.x) + m.y) + m.z);
 
-    let sample = sample_yuv(uv);
+    let sample = textureLoad(inputTexture, id.xy, 0);
 
-    var debanded = sample.rgb;
+    var debanded = rgb_to_ycbcr_rec709(sample.rgb);
 
     for (var i = 1; i <= 3; i++) {
         // Use the average instead if the difference is below the threshold
