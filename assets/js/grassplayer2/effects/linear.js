@@ -17,10 +17,6 @@ export default class EffectLinear extends Effect {
 @group(0) @binding(0) var inputTexture: texture_2d<f32>;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
 
-fn to_srgb_fast(linear: vec3<f32>) -> vec3<f32> {
-    return pow(max(linear, vec3<f32>(0.0)), vec3<f32>(1.0 / 2.2));
-}
-
 fn to_linear_fast(srgb: vec3<f32>) -> vec3<f32> {
     return pow(max(srgb, vec3<f32>(0.0)), vec3<f32>(2.2));
 }

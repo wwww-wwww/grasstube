@@ -69,10 +69,6 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let lutCoords = mix(vec3(0.5 / lutSize), vec3(1.0 - 0.5 / lutSize), limited);
     var sample_lut = textureSampleLevel(lutTexture, samp, lutCoords, 0.0).rgb;
 
-    // convert to full range rgb
-    sample_lut = (sample_lut - vec3(16.0 / 255.0)) * vec3(255.0 / 219.0);
-    sample_lut += 140.0 / 65535.0;
-
     textureStore(outputTexture, id.xy, vec4<f32>(sample_lut, sample.a));
 }`)
             },
@@ -149,14 +145,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         const texture = this.device.createTexture({
             size: [width, width, width],
             dimension: "3d",
-            format: "rgb10a2unorm",
+            format: "rgba16float",
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
         })
 
         this.device.queue.writeTexture(
             { texture },
             data,
-            { bytesPerRow: width * 4, rowsPerImage: width },
+            { bytesPerRow: width * 4 * 2, rowsPerImage: width },
             [width, width, width],
         )
 
@@ -178,23 +174,21 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 try {
                     const data = readerEvent.target.result.slice(16384)
                     const data_view = new Uint8Array(data)
-                    let lut = new Uint32Array(256 * 256 * 256)
+                    const lut = new Float16Array(256 * 256 * 256 * 4)
 
                     for (let i = 0; i < 256 * 256 * 256; i++) {
                         const r = i >> 16
                         const g = (i >> 8) & 0xFF
                         const b = i & 0xFF
 
-                        let old_r = (data_view[i * 6 + 5] << 8) + data_view[i * 6 + 4]
-                        let new_r = old_r >> 6
-                        let old_g = (data_view[i * 6 + 3] << 8) + data_view[i * 6 + 2]
-                        let new_g = old_g >> 6
-                        let old_b = (data_view[i * 6 + 1] << 8) + data_view[i * 6 + 0]
-                        let new_b = old_b >> 6
+                        const old_r = (data_view[i * 6 + 5] << 8) + data_view[i * 6 + 4]
+                        const old_g = (data_view[i * 6 + 3] << 8) + data_view[i * 6 + 2]
+                        const old_b = (data_view[i * 6 + 1] << 8) + data_view[i * 6 + 0]
 
-                        let combined = 0xc0000000 + (new_b << 20) + (new_g << 10) + new_r
-                        let new_loc = ((b << 16) + (g << 8) + r)
-                        lut[new_loc] = combined
+                        const new_loc = ((b << 16) + (g << 8) + r)
+                        lut[new_loc * 4 + 0] = (old_r - 4096) * (65535 / 56064) / 65535
+                        lut[new_loc * 4 + 1] = (old_g - 4096) * (65535 / 56064) / 65535
+                        lut[new_loc * 4 + 2] = (old_b - 4096) * (65535 / 56064) / 65535
                     }
 
                     this.#lut3dtexture = this.#generate_3d_texture(lut, 256)
