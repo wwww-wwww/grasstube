@@ -1,27 +1,5 @@
 import Effect from "./_effect"
 
-const DEFAULT_LUT = new Uint32Array([      // (b, g, r)
-    0b11_0000000000_0000000000_0000000000, // (0, 0, 0)
-    0b11_0000000000_0000000000_1111111111, // (0, 0, 1)
-    0b11_0000000000_1111111111_0000000000, // (0, 1, 0)
-    0b11_0000000000_1111111111_1111111111, // (0, 1, 1)
-    0b11_1111111111_0000000000_0000000000, // (1, 0, 0)
-    0b11_1111111111_0000000000_1111111111, // (1, 0, 1)
-    0b11_1111111111_1111111111_0000000000, // (1, 1, 0)
-    0b11_1111111111_1111111111_1111111111, // (1, 1, 1)
-])
-const DEFAULT_LUT_F16 = new Float16Array([      // (r, g, b, a)
-    0, 0, 0, 1, // (0, 0, 0, 1)
-    1, 0, 0, 1, // (1, 0, 0, 1)
-    0, 1, 0, 1, // (0, 1, 0, 1)
-    1, 1, 0, 1, // (1, 1, 0, 1)
-    0, 0, 1, 1, // (0, 0, 1, 1)
-    1, 0, 1, 1, // (1, 0, 1, 1)
-    0, 1, 1, 1, // (0, 1, 1, 1)
-    1, 1, 1, 1, // (1, 1, 1, 1)
-])
-
-
 export default class EffectLut3d extends Effect {
     #txt_3dlut_name
     create_settings(el) {
@@ -76,15 +54,15 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
         if (this.#lut3dtexture == null) {
             const m = 8
-            const lut = new Uint32Array(m * m * m)
+            const lut = new Float16Array(m * m * m * 4)
 
             for (let r = 0; r < m; r++) {
                 for (let g = 0; g < m; g++) {
                     for (let b = 0; b < m; b++) {
-                        const c = 0xc0000000 + ((r / (m - 1) * 1023) << 20) +
-                            ((g / (m - 1) * 1023) << 10) +
-                            (b / (m - 1) * 1023)
-                        lut[r * m * m + g * m + b] = c
+                        const loc = (b * m * m + g * m + r) * 4
+                        lut[loc + 0] = (r / (m - 1) * 65535 - 4096) / 56064
+                        lut[loc + 1] = (g / (m - 1) * 65535 - 4096) / 56064
+                        lut[loc + 2] = (b / (m - 1) * 65535 - 4096) / 56064
                     }
                 }
             }
@@ -173,7 +151,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             reader.onload = readerEvent => {
                 try {
                     const data = readerEvent.target.result.slice(16384)
-                    const data_view = new Uint8Array(data)
+                    const data_view = new Uint16Array(data)
                     const lut = new Float16Array(256 * 256 * 256 * 4)
 
                     for (let i = 0; i < 256 * 256 * 256; i++) {
@@ -181,14 +159,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                         const g = (i >> 8) & 0xFF
                         const b = i & 0xFF
 
-                        const old_r = (data_view[i * 6 + 5] << 8) + data_view[i * 6 + 4]
-                        const old_g = (data_view[i * 6 + 3] << 8) + data_view[i * 6 + 2]
-                        const old_b = (data_view[i * 6 + 1] << 8) + data_view[i * 6 + 0]
+                        const old_r = (data_view[i * 3 + 2])
+                        const old_g = (data_view[i * 3 + 1])
+                        const old_b = (data_view[i * 3 + 0])
 
-                        const new_loc = ((b << 16) + (g << 8) + r)
-                        lut[new_loc * 4 + 0] = (old_r - 4096) * (65535 / 56064) / 65535
-                        lut[new_loc * 4 + 1] = (old_g - 4096) * (65535 / 56064) / 65535
-                        lut[new_loc * 4 + 2] = (old_b - 4096) * (65535 / 56064) / 65535
+                        const loc = ((b << 16) + (g << 8) + r)
+                        lut[loc * 4 + 0] = (old_r - 4096) / 56064
+                        lut[loc * 4 + 1] = (old_g - 4096) / 56064
+                        lut[loc * 4 + 2] = (old_b - 4096) / 56064
                     }
 
                     this.#lut3dtexture = this.#generate_3d_texture(lut, 256)

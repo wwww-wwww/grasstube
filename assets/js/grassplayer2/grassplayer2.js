@@ -1,4 +1,4 @@
-import SubtitlesOctopus from "../subtitles-octopus"
+import SubtitlesOctopus from "../subtitles-octopus2"
 
 import Seekbar from "./seekbar"
 
@@ -8,10 +8,10 @@ import { BestFitResizer, StretchResizer } from "./resizer"
 
 import EffectArt from "./effects/artcnn"
 import EffectDeband from "./effects/deband"
+import EffectDehalo from "./effects/dehalo"
 import EffectLinear from "./effects/linear"
 import EffectLoad from "./effects/load"
 import EffectLut3d from "./effects/lut3d"
-import EffectDehalo from "./effects/dehalo"
 
 import { SamplerDefault, SamplerDefaultLinear, SamplerHermite } from "./samplers/default"
 import SamplerSphere from "./samplers/sphere"
@@ -34,14 +34,20 @@ class WebGPURenderer {
     #device
     #have_frame
 
+    #loaded
+    #e_video
+    #e_canvas
     constructor(root) {
-        this.video = root.querySelector("video")
-        this.canvas = root.querySelector("canvas")
+        this.#e_video = root.querySelector("video")
+        this.#e_canvas = root.querySelector("canvas.video")
 
-        this.textures = []
-        this.loaded = this.init(root)
+        this.#loaded = this.init(root)
     }
 
+    #texturewidth
+    #textureheight
+    #sampler
+    #effects
     #textures = {}
     #texture_views = {}
     async init(root) {
@@ -62,17 +68,37 @@ class WebGPURenderer {
 
         console.log("gpu loaded")
 
-        const context = this.canvas.getContext("webgpu")
+        const context = this.#e_canvas.getContext("webgpu")
         context.configure({
             device: this.#device, format: "rgba8unorm", colorSpace: "srgb",
             usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT
         })
 
+        this.clear = () => {
+            const commandEncoder = this.#device.createCommandEncoder()
+            const textureView = context.getCurrentTexture().createView()
+
+            const renderPassDescriptor = {
+                colorAttachments: [
+                    {
+                        view: textureView,
+                        clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+                        loadOp: "clear",
+                        storeOp: "store",
+                    },
+                ],
+            }
+
+            const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor)
+            passEncoder.end()
+            this.#device.queue.submit([commandEncoder.finish()])
+        }
+
         // Create resizer
         {
             const options = [
-                new BestFitResizer(this.#device, root, this.video, this.canvas),
-                new StretchResizer(this.#device, root, this.video, this.canvas),
+                new BestFitResizer(this.#device, root, this.#e_video, this.#e_canvas),
+                // new StretchResizer(this.#device, root, this.#e_video, this.#e_canvas),
             ]
 
             const select = root.querySelector(".select-resizers")
@@ -96,7 +122,7 @@ class WebGPURenderer {
 
         // Create effects
         {
-            this.effects = [
+            this.#effects = [
                 new EffectLoad(this.#device),
                 new EffectDeband(this.#device),
                 new EffectLut3d(this.#device),
@@ -106,7 +132,7 @@ class WebGPURenderer {
             ]
 
             const div = root.querySelector(".filters")
-            this.effects.forEach(e => {
+            this.#effects.forEach(e => {
                 e.on_update = () => { this.#have_frame = true }
 
                 const el = create_element("div", div)
@@ -120,7 +146,7 @@ class WebGPURenderer {
                         e.enabled = check.checked
                         if (e.enabled) {
                             if (!e.initialized) { e.init() }
-                            e.resize(this.texturewidth, this.textureheight)
+                            e.resize(this.#texturewidth, this.#textureheight)
                         }
                         this.#have_frame = true
                     })
@@ -134,63 +160,39 @@ class WebGPURenderer {
             })
         }
 
-        // Create upsampler
+        // Create sampler
         {
             const options = [
-                new SamplerDefaultLinear(this.#device, this.video, this.canvas),
-                new SamplerDefault(this.#device, this.video, this.canvas),
-                new SamplerHermite(this.#device, this.video, this.canvas),
-                new SamplerSphere(this.#device, this.video, this.canvas),
+                new SamplerDefaultLinear(this.#device, this.#e_video, this.#e_canvas),
+                new SamplerDefault(this.#device, this.#e_video, this.#e_canvas),
+                new SamplerHermite(this.#device, this.#e_video, this.#e_canvas),
+                new SamplerSphere(this.#device, this.#e_video, this.#e_canvas),
             ]
 
-            const select = root.querySelector(".select-upsamplers")
+            const select = root.querySelector(".select-sampler")
             options.forEach(e => {
                 create_element("option", select).textContent = e.constructor.name
             })
 
-            const div = root.querySelector(".upsampler")
+            const div = root.querySelector(".sampler")
 
             select.addEventListener("change", () => {
                 while (div.firstChild) { div.removeChild(div.firstChild) }
                 options[select.selectedIndex].create_settings(div)
                 options[select.selectedIndex].init()
-                this.upsampler = options[select.selectedIndex]
-                this.upsampler.reset()
+                this.#sampler = options[select.selectedIndex]
+                this.#sampler.reset()
                 this.#have_frame = true
             })
 
-            this.upsampler = options[0]
-            this.upsampler.init()
-            this.upsampler.create_settings(div)
-        }
-
-        // Create downsampler
-        {
-            const options = [
-                new SamplerDefault(this.#device, this.video, this.canvas),
-                // new SamplerHermite(this.#device, this.video, this.canvas),
-                // new SamplerSphere(this.#device, this.video, this.canvas),
-            ]
-
-            const select = root.querySelector(".select-downsamplers")
-            options.forEach(e => {
-                create_element("option", select).textContent = e.constructor.name
-            })
-
-            select.addEventListener("change", () => {
-                console.log(select.selectedIndex)
-            })
-
-            this.downsampler = options[0]
-            this.downsampler.init()
-
-            const div = root.querySelector(".downsampler")
-            this.downsampler.create_settings(div)
+            this.#sampler = options[0]
+            this.#sampler.init()
+            this.#sampler.create_settings(div)
         }
 
         this.#prepare_textures(4, 4)
 
-        this.effects.forEach(e => {
+        this.#effects.forEach(e => {
             if (e.enabled) { e.init() }
         })
 
@@ -239,13 +241,13 @@ class WebGPURenderer {
 
         let tz = () => {
             this.#have_frame = true
-            this.video.requestVideoFrameCallback(tz)
+            this.#e_video.requestVideoFrameCallback(tz)
         }
-        this.video.requestVideoFrameCallback(tz)
+        this.#e_video.requestVideoFrameCallback(tz)
 
         let render = t => {
             requestAnimationFrame(render)
-            if (this.video.videoWidth == 0) return
+            if (this.#e_video.videoWidth == 0) return
 
             if (!this.#have_frame) {
                 const encoder = this.#device.createCommandEncoder()
@@ -254,14 +256,14 @@ class WebGPURenderer {
             }
             this.#have_frame = false
 
-            let video_time = this.video.currentTime
+            let video_time = this.#e_video.currentTime
 
             const t0 = performance.now()
             const encoder = this.#device.createCommandEncoder()
 
             let texture_video
             try {
-                texture_video = this.#device.importExternalTexture({ source: this.video })
+                texture_video = this.#device.importExternalTexture({ source: this.#e_video })
             } catch (e) { return }
 
             const texture_canvas = context.getCurrentTexture().createView()
@@ -269,9 +271,9 @@ class WebGPURenderer {
             timer.start(encoder)
 
             let last_tex = texture_video
-            let last_tex_res = [this.video.videoWidth, this.video.videoHeight]
+            let last_tex_res = [this.#e_video.videoWidth, this.#e_video.videoHeight]
 
-            this.effects.forEach(e => {
+            this.#effects.forEach(e => {
                 if (!e.enabled) return
 
                 const res = timer.run(e, t, video_time, last_tex_res, last_tex, get_texture)
@@ -280,8 +282,8 @@ class WebGPURenderer {
                 last_tex_res = res[1]
             })
 
-            timer.run(this.upsampler, t, video_time, last_tex_res, last_tex,
-                [this.canvas.width, this.canvas.height], texture_canvas)
+            timer.run(this.#sampler, t, video_time, last_tex_res, last_tex,
+                [this.#e_canvas.width, this.#e_canvas.height], texture_canvas)
 
             timer.finish()
 
@@ -320,12 +322,12 @@ class WebGPURenderer {
         this.#textures = {}
         this.#texture_views = {}
 
-        this.texturewidth = width
-        this.textureheight = height
+        this.#texturewidth = width
+        this.#textureheight = height
 
-        this.effects.forEach(e => {
+        this.#effects.forEach(e => {
             if (e.enabled) {
-                e.resize(this.texturewidth, this.textureheight)
+                e.resize(this.#texturewidth, this.#textureheight)
             }
         })
     }
@@ -336,21 +338,24 @@ class WebGPURenderer {
     }
 
     reload() {
-        this.video.requestVideoFrameCallback(async () => {
-            await this.loaded
+        this.#e_video.requestVideoFrameCallback(async () => {
+            await this.#loaded
 
-            this.#prepare_textures(this.video.videoWidth, this.video.videoHeight)
+            this.#prepare_textures(this.#e_video.videoWidth, this.#e_video.videoHeight)
 
             this.resize()
         })
     }
+
+    clear() { }
 }
 
 const html = `
-<div class="grassplayer2">
+<div class="grassplayer2" tabindex="0">
 <input id="chk_split" type="checkbox"></input>
-<div class="video-outer"><video controls crossorigin="anonymous"></video></div>
-<canvas width="1920" height="1080"></canvas>
+<video controls crossorigin="anonymous"></video>
+<canvas class="video" width="1920" height="1080"></canvas>
+<div class="subtitles"></div>
 <div class="overlay">
     <div class="main">
         <div class="messages"></div>
@@ -371,7 +376,10 @@ const html = `
             <div>
                 <div>Video</div>
                 <div class="videoinfo options">
+                    <div class="videoinfo-video-container"></div>
                     <div><span>Resolution</span><span class="videoinfo-resolution"></span></div>
+                    <div><span>Buffered</span><span class="videoinfo-buffered"></span></div>
+                    <div><span>Catchup</span><span class="videoinfo-catchup"></span></div>
                     <div>
                         <span>Method</span>
                         <select class="videoinfo-method">
@@ -395,24 +403,24 @@ const html = `
                 <div class="filters"></div>
             </div>
             <div>
-                <div><span>Upsampler</span><select class="select-upsamplers"></select></div>
-                <div class="upsampler options"></div>
-            </div>
-            <div>
-                <div><span>Downsampler</span><select class="select-downsamplers"></select></div>
-                <div class="downsampler options"></div>
+                <div><span>Sampler</span><select class="select-sampler"></select></div>
+                <div class="sampler options"></div>
             </div>
         </div>
     </div>
     <div class="controls">
         <div class="left">
-            <button class="btn-play" state="1"></button>
-            <button class="btn-next"></button>
-            <input type="range" class="range-volume"/>
+            <input type="checkbox" class="chk-play"></input>
+            <button class="chk-next"></button>
         </div>
         <div class="right">
-            <input type="checkbox" class="btn-settings"></input>
-            <input type="checkbox" class="btn-fullscreen" state="1"></input>
+            <div class="volume">
+                <input type="range" class="range-volume" min="0" max="100"/>
+                <div class="range-volume-progress"><div class="range-volume-progress-track"></div></div>
+            </div>
+            <input type="checkbox" class="chk-captions"></input>
+            <input type="checkbox" class="chk-settings"></input>
+            <input type="checkbox" class="chk-fullscreen"></input>
         </div>
         <div class="seekbar">
         </div>
@@ -422,54 +430,222 @@ const html = `
 `
 
 export default class GrassPlayer {
-    #seekbar
-    #video
+    #e_video
+    #e_canvas
+    #e_subtitles
+
     #renderer
+    #seekbar
 
-    #e_btn_play
+    #e_main
+    #e_chk_play
     #e_messages
+    #e_videoinfo_catchup
 
-    #on_set_video
+    on_toggle_playing = null
+    on_seek = null
+    on_next = null
+    on_buffer = null
 
-    constructor(root, fonts, controls = true) {
+    constructor(root, controls = true) {
+        window.gp = this
         root.innerHTML = html
-        this.#video = root.querySelector("video")
+
+        this.#e_main = root.querySelector(".grassplayer2")
+
+        this.#e_video = root.querySelector("video")
+        this.#e_canvas = root.querySelector("canvas.video")
+        this.#e_subtitles = root.querySelector("div.subtitles")
         this.#e_messages = root.querySelector(".messages")
+        this.#e_videoinfo_catchup = root.querySelector(".videoinfo-catchup")
+
         this.#renderer = new WebGPURenderer(root)
 
-        this.#e_btn_play = root.querySelector(".btn-play")
-        this.#e_btn_play.addEventListener("click", e => {
-            const new_state = e.target.getAttribute("state") == 1
+        root.querySelector(".videoinfo-video-container").appendChild(this.#e_video)
 
-            this.set_playing(new_state)
+        // overlay show/hide
+        let overlay_timeout = null
+        const show_overlay = e => {
+            this.#e_main.classList.toggle("show", true)
 
-            if (this.on_toggle_playing != null) {
-                this.on_toggle_playing(new_state)
-            } else {
-                // this.set_playing(new_state)
+            if (overlay_timeout != null) {
+                clearTimeout(overlay_timeout)
             }
+
+            if (e != null &&
+                (e.target.closest(".settings") != null ||
+                    e.target.closest(".controls") != null)) {
+                return
+            }
+
+            overlay_timeout = setTimeout(() => {
+                this.#e_main.classList.toggle("show", false)
+            }, 2000)
+        }
+
+        this.#e_main.addEventListener("pointerdown", show_overlay)
+        this.#e_main.addEventListener("pointermove", show_overlay)
+
+        this.#e_main.addEventListener("mouseleave", () => {
+            this.#e_main.classList.toggle("show", false)
         })
 
+        // play button
         {
-            const btn_settings = root.querySelector(".btn-settings")
+            this.#e_chk_play = root.querySelector(".chk-play")
+            this.#e_chk_play.addEventListener("change", () => {
+                const playing = this.#e_chk_play.checked
+
+                this.#toggle_playing(playing)
+            })
+        }
+
+        // volume slider
+        {
+            const range_volume = root.querySelector(".range-volume")
+            const range_volume_progress = root.querySelector(".range-volume-progress-track")
+
+            this.volume_change = (v) => {
+                range_volume.value = v * 100
+                range_volume_progress.style.width = `${v * 100}%`
+            }
+
+            range_volume.addEventListener("input", () => {
+                this.set_volume(range_volume.value / 100)
+            })
+        }
+
+        // settings button
+        {
+            const chk = root.querySelector(".chk-settings")
             const e_settings = root.querySelector(".settings")
-            btn_settings.addEventListener("change", () => {
-                e_settings.style.display = btn_settings.checked ? "" : "none"
+            chk.addEventListener("change", () => {
+                e_settings.style.display = chk.checked ? "" : "none"
+            })
+        }
+
+        // next button
+        {
+            root.querySelector(".chk-next").addEventListener("click", () => {
+                this.on_next()
+            })
+        }
+
+        // captions button
+        {
+            const chk = root.querySelector(".chk-captions")
+            chk.addEventListener("input", () => {
+                this.#e_subtitles.style.display = !chk.checked ? "" : "none"
+            })
+        }
+
+        // fullscreen button
+        {
+            const chk = root.querySelector(".chk-fullscreen")
+            chk.addEventListener("input", () => {
+                this.#toggle_fullscreen()
+            })
+            document.addEventListener("fullscreenchange", () => {
+                chk.checked = document.fullscreenElement == this.#e_main
+            })
+        }
+
+        this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this, this.#e_video)
+
+        {
+            const resolution = root.querySelector(".videoinfo-resolution")
+            this.#e_video.addEventListener("loadedmetadata", () => {
+                resolution.textContent = `${this.#e_video.videoWidth}x${this.#e_video.videoHeight}`
             })
         }
 
         {
-            this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this, this.#video)
+            const buffered = root.querySelector(".videoinfo-buffered")
+            // video buffer
+            this.#e_video.addEventListener("timeupdate", () => {
+                const end = this.#update_playable()
+                buffered.textContent = `${Math.round(end - this.#e_video.currentTime)} seconds`
+            })
+
+            this.#e_video.addEventListener("progress", () => {
+                const end = this.#update_playable()
+                buffered.textContent = `${Math.round(end - this.#e_video.currentTime)} seconds`
+            })
         }
 
+        // keyboard shortcuts
         {
-            const div = root.querySelector(".videoinfo-resolution")
-            this.#on_set_video = (type, videos, subtitles) => {
-                this.#video.requestVideoFrameCallback(() => {
-                    div.textContent = `${this.#video.videoWidth}x${this.#video.videoHeight}`
-                })
-                // div.textContent = videos.default
+            window.addEventListener("keydown", e => {
+                if (document.activeElement.closest(".grassplayer2") == null) return
+
+                if (e.key == "f") {
+                    this.#toggle_fullscreen()
+                } else if (e.key == "ArrowLeft") {
+                    e.preventDefault()
+                    this.seek(this.current_time() - 5, true)
+                } else if (e.key == "ArrowRight") {
+                    e.preventDefault()
+                    this.seek(this.current_time() + 5, true)
+                } else if (e.key == "ArrowUp") {
+                    e.preventDefault()
+                    this.set_volume(this.#volume + 0.1)
+                    const m = this.create_message(Math.round(this.#volume * 100), 1000)
+                    m.classList.toggle("volume-up")
+                } else if (e.key == "ArrowDown") {
+                    e.preventDefault()
+                    this.set_volume(this.#volume - 0.1)
+                    const m = this.create_message(Math.round(this.#volume * 100), 1000)
+                    m.classList.toggle("volume-down")
+                } else if (e.key == " ") {
+                    e.preventDefault()
+                    this.#toggle_playing()
+                }
+            })
+        }
+
+        fetch("https://r2tube.grass.moe/fonts.json")
+            .then(res => res.json())
+            .then(fonts => {
+                for (const key of Object.keys(fonts)) {
+                    fonts[key] = fonts[key].map(f => f)
+                }
+                this.#set_fonts(fonts)
+                this.set_subtitles(this.#current_subtitles)
+                console.log("fonts:loaded")
+            })
+            .catch(err => {
+                console.log("fonts:error fetching", err)
+            })
+    }
+
+    #fonts
+    #set_fonts(fonts) {
+        this.#fonts = fonts
+    }
+
+    #update_playable() {
+        for (let i = 0; i < this.#e_video.buffered.length; i++) {
+            const start = this.#e_video.buffered.start(i)
+            const end = this.#e_video.buffered.end(i)
+            if ((start < this.#e_video.currentTime || start < 1) && end > this.#e_video.currentTime) {
+                if (this.on_buffer) {
+                    this.on_buffer(end)
+                }
+
+                return end
             }
+        }
+    }
+
+    #toggle_playing(playing = null) {
+        if (playing == null) {
+            playing = !this.playing()
+        }
+
+        if (this.on_toggle_playing != null) {
+            this.on_toggle_playing(playing)
+        } else {
+            this.set_playing(playing)
         }
     }
 
@@ -480,59 +656,183 @@ export default class GrassPlayer {
         el.addEventListener("click", () => {
             this.#e_messages.removeChild(el)
         })
+
         this.#e_messages.appendChild(el)
         if (timeout != null && timeout > 0) {
             setTimeout(() => {
-                this.#e_messages.removeChild(el)
+                if (el.parentElement == this.#e_messages) {
+                    this.#e_messages.removeChild(el)
+                }
             }, timeout)
         }
+        return el
     }
 
-    set_speed(s) { }
+    volume_change
+    #volume = 0.5
+    set_volume(v) {
+        v = Math.min(Math.max(v, 0), 1)
+        v = Math.round(v * 100) / 100
+
+        this.#volume = v
+
+        this.#e_video.volume = (Math.pow(10, v) - 1) / 9
+
+        this.volume_change(v)
+    }
+
+    #speed = 1
+    set_speed(s) {
+        this.#speed = 1
+        this.#e_video.playbackRate = s
+    }
 
     playing() {
-        return !this.#video.paused
+        return !this.#e_video.paused
     }
 
     current_time() {
-        return this.#video.currentTime
+        return this.#e_video.currentTime
     }
 
     duration() {
-        return this.#video.duration
-    }
-
-    auto_set_playing(playing) {
-        // if (playing) {
-        //     this.video.play()
-        // } else {
-        //     this.video.pause()
-        // }
-    }
-
-    set_playing(playing) {
-        this.#e_btn_play.setAttribute("state", playing ? 0 : 1)
-        if (playing) {
-            this.#video.play()
-        } else {
-            this.#video.pause()
-        }
+        return this.#e_video.duration || 0
     }
 
     set_video(type, videos, subtitles) {
         this.set_playing(false)
-        this.#on_set_video(type, videos, subtitles)
-        this.#video.src = videos["default"]
-        this.#renderer.reload()
+
+        const keys = Object.keys(videos)
+
+        if (keys.length > 0) {
+            this.#e_video.src = videos["default"]
+            this.#renderer.reload()
+        } else {
+            this.#e_video.src = ""
+            this.#renderer.clear()
+        }
+
+        this.set_subtitles(subtitles)
+
         this.#seekbar.reset()
     }
 
-    seek(t) {
-        console.log(["seek", t])
-        this.#video.currentTime = t
+    #octopus
+    #current_subtitles
+    set_subtitles(subtitles) {
+        this.#current_subtitles = subtitles
+
+        if (this.#octopus) {
+            this.#octopus.destroy()
+            this.#octopus = null
+            while (this.#e_subtitles.firstChild)
+                this.#e_subtitles.removeChild(this.#e_subtitles.firstChild)
+        }
+
+        this.#octopus = new SubtitlesOctopus({
+            video: this.#e_video,
+            canvasParent: this.#e_subtitles,
+            proxyCanvas: this.#e_canvas,
+            subUrl: subtitles,
+            fallbackFont: "https://r2tube.grass.moe/fonts/arialbd.ttf",
+            availableFonts: this.#fonts,
+            workerUrl: "/includes/subtitles-octopus-worker.js"
+        })
+    }
+
+    auto_set_playing(playing) {
+        this.set_playing(playing)
+    }
+
+    set_playing(playing) {
+        if (this.playing() == playing) return
+
+        this.#e_chk_play.checked = playing
+
+        this.#catchup_done = false
+
+        if (playing) {
+            if (this.#e_video.currentTime >= this.#e_video.duration) return
+            this.#e_video.play()
+        } else {
+            this.#e_video.pause()
+        }
+    }
+
+    seek(t, final = false) {
+        if (this.duration() == 0) return
+
+        t = Math.max(0, t)
+
+        if (final && this.on_seek) {
+            this.on_seek(t)
+            return
+        }
+
+        this.#catchup_done = false
+
+        this.#e_video.currentTime = t
     }
 
     auto_seek(t) {
-        console.log(["auto_seek", t])
+        if (t == undefined) return
+        if (this.#seekbar.seeking) return
+
+        this.#catchup_done = false
+
+        this.seek(t)
+    }
+
+    on_fullscreen = null
+
+    #toggle_fullscreen() {
+        if (this.on_fullscreen) {
+            this.on_fullscreen()
+            return
+        }
+
+        if (document.fullscreenElement == this.#e_main) {
+            document.exitFullscreen()
+        } else {
+            this.#e_main.requestFullscreen()
+        }
+    }
+
+    #catchup_done = false
+    #catchup_target = null
+    #catchup_target_time = null
+    #catchup_timeout = null
+    #catchup_interval = null
+    set_catchup(target, time) {
+        if (this.#catchup_done) return
+        if (!this.playing()) return
+
+        clearInterval(this.#catchup_interval)
+        clearTimeout(this.#catchup_timeout)
+
+        this.#catchup_target = target
+        this.#catchup_target_time = time
+        this.#catchup_timeout = setTimeout(() => {
+            this.#catchup_interval = setInterval(() => this.#run_catchup(), 20)
+        }, 200)
+    }
+
+    #run_catchup() {
+        if (this.#catchup_target == null || !this.playing()) return
+        const elapsed = (Date.now() - this.#catchup_target_time) / 1000
+        const dist = (this.#catchup_target + elapsed) - this.current_time()
+
+        const dir = dist > 0 ? 1 : -1
+        let catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
+
+        if (Math.abs(dist) < 0.02) {
+            this.#catchup_done = true
+            catchup_mul = 1
+            clearInterval(this.#catchup_interval)
+        }
+
+        this.set_speed(this.#speed * catchup_mul)
+
+        this.#e_videoinfo_catchup.textContent = `${dist.toFixed(5)} ${catchup_mul.toFixed(5)}x`
     }
 }

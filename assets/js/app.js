@@ -253,11 +253,6 @@ const hooks = {
     last_ping: 0,
     ping_interval: null,
     stats_latency: null,
-    catchup_mul: 1,
-    catchup_target: null,
-    catchup_target_time: null,
-    catchup_interval: null,
-    stats_catchup: null,
     speed: 1,
     mount_loaded: false,
     ping() {
@@ -313,7 +308,6 @@ const hooks = {
     mounted() {
       player_state.player = new GrassPlayer(
         this.el,
-        [],
         get_meta("controls") == "true"
       )
       window.grassplayer = player_state.player
@@ -324,17 +318,6 @@ const hooks = {
 
       player_state.player.on_seek = t => {
         this.pushEvent("seek", { time: t })
-        this.catchup_target = t
-        this.catchup_target_time = Date.now()
-
-        if (player_state.player.playing) {
-          clearInterval(this.catchup_interval)
-          clearTimeout(this.catchup_timeout)
-          this.catchup_timeout = setTimeout(() => {
-            console.log("video:catchup start")
-            this.catchup_interval = setInterval(() => this.run_catchup(), 20)
-          }, 200)
-        }
       }
 
       player_state.player.on_toggle_playing = playing => {
@@ -345,18 +328,21 @@ const hooks = {
         this.pushEvent("next", {})
       }
 
+      player_state.player.on_fullscreen = () => {
+        if (document.fullscreenElement == maincontent) {
+          document.exitFullscreen()
+        } else {
+          maincontent.requestFullscreen()
+        }
+      }
+
       let last_buffered = 0
 
-      player_state.player.on_playable = buffered => {
+      player_state.player.on_buffer = buffered => {
         if (buffered == last_buffered) return
         last_buffered = buffered
         this.pushEvent("buffered", { buffered: buffered })
       }
-
-      // this.stats_latency = player_state.player.stats_add_row("Latency (RTT):", this.latency_rtt)
-      // this.stats_catchup = player_state.player.stats_add_row("Catchup mul:", `${this.catchup_mul}x`)
-      // player_state.player.settings.set("catchup", get_cookie("catchup", true))
-      // player_state.player.add_setting("catchup", "Catchup")
 
       this.handleEvent("autopause", data => {
         console.log("video:autopause", data)
@@ -379,36 +365,26 @@ const hooks = {
       this.on_playing = data => {
         if (data.playing == undefined) return
 
-        const current_state = player_state.player.playing
+        const current_state = player_state.player.playing()
 
-        if (player_state.player.playing != data.playing) {
-          // player_state.player.show_osd(data.playing ? "Play" : "Pause")
+        if (player_state.player.playing() != data.playing) {
+          player_state.player.create_message(data.playing ? "Play" : "Pause", 1000)
           player_state.player.auto_set_playing(data.playing)
         }
 
         if (!current_state && !data.playing) {
           player_state.player.auto_seek(data.t)
-          player_state.player.auto_set_playing(false)
+          // player_state.player.auto_set_playing(false)
           return
         }
 
         const offset_time = data.t + Math.min(this.latency_rtt / 1000, 1)
         if (offset_time >= player_state.player.duration()) return
 
-        this.catchup_target = offset_time
-        this.catchup_target_time = Date.now()
-
         if (current_state != data.playing) {
           if (Math.abs(offset_time - player_state.player.current_time()) > 0.1) {
             player_state.player.auto_seek(offset_time)
           }
-
-          clearInterval(this.catchup_interval)
-          clearTimeout(this.catchup_timeout)
-          this.catchup_timeout = setTimeout(() => {
-            console.log("video:catchup start")
-            this.catchup_interval = setInterval(() => this.run_catchup(), 20)
-          }, 200)
         }
 
         if (Math.abs(offset_time - player_state.player.current_time()) > 5) {
@@ -421,52 +397,29 @@ const hooks = {
             offset_time: offset_time,
             current_time: player_state.player.current_time(),
           })
-          //player_state.player.auto_seek(offset_time)
+
+          player_state.player.auto_seek(offset_time)
         }
+
+        player_state.player.set_catchup(offset_time, Date.now())
       }
-
-      this.run_catchup = () => {
-        // if (player_state.player == null || !player_state.player.settings.catchup) {
-        //   clearInterval(this.catchup_interval)
-        //   return
-        // }
-        // if (this.catchup_target == null || !player_state.player.playing) return
-        // const elapsed = (Date.now() - this.catchup_target_time) / 1000
-        // const dist = (this.catchup_target + elapsed) - player_state.player.current_time()
-
-        // if (Math.abs(dist) < 0.02) {
-        //   this.catchup_mul = 1
-        //   console.log("video:catchup end")
-        //   clearInterval(this.catchup_interval)
-        // } else {
-        //   const dir = dist > 0 ? 1 : -1
-        //   this.catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
-        // }
-
-        // player_state.player.set_speed(this.speed * this.catchup_mul)
-        // this.stats_catchup.textContent = `${dist.toFixed(5)} ${this.catchup_mul.toFixed(5)}x`
-      }
-
-      this.catchup_interval = null
-      this.catchup_timeout = null
 
       this.handleEvent("sync", data => {
-        // console.info("video:sync", data)
+        console.info("video:sync", data)
 
         this.on_playing(data)
 
         if (data.speed) {
           if (data.speed != this.speed) {
-            player_state.player.show_osd(`Speed: ${data.speed}`)
+            player_state.player.create_message(`Speed: ${data.speed}`, 1000)
           }
+
           this.speed = data.speed
-          player_state.player.set_speed(this.speed * this.catchup_mul)
         }
       })
 
       this.on_seek = data => {
-        this.catchup_target = null
-        this.catchup_target_time = null
+        console.log("video:seek", data)
 
         let offset_time = data.t
         if (player_state.player.playing) {
@@ -475,23 +428,15 @@ const hooks = {
 
         if (offset_time >= player_state.player.duration()) return
 
-        if (Math.abs(offset_time - player_state.player.current_time()) < 0.1)
-          return
+        player_state.player.create_message(seconds_to_hms(data.t, true), 1000)
 
-        console.log("video:seek", data)
-        // player_state.player.show_osd(seconds_to_hms(data.t, true))
+        if (Math.abs(offset_time - player_state.player.current_time()) < 0.1) {
+          return
+        }
+
         player_state.player.auto_seek(offset_time)
 
-        if (player_state.player.playing) {
-          this.catchup_target = offset_time
-          this.catchup_target_time = Date.now()
-          clearInterval(this.catchup_interval)
-          clearTimeout(this.catchup_timeout)
-          this.catchup_timeout = setTimeout(() => {
-            console.log("video:catchup start")
-            this.catchup_interval = setInterval(() => this.run_catchup(), 20)
-          }, 200)
-        }
+        player_state.player.set_catchup(offset_time, Date.now())
       }
 
       this.handleEvent("seek", data => this.on_seek(data))
@@ -524,8 +469,6 @@ const hooks = {
         } catch (e) { console.log(e) }
       }
       clearInterval(this.ping_interval)
-      clearTimeout(this.catchup_timeout)
-      clearInterval(this.catchup_interval)
       player_state.player = null
     }
   },
@@ -538,10 +481,8 @@ const hooks = {
       }
 
       target.parentElement.classList.toggle("dragging", true)
-      document.addEventListener("mouseup", e => this.stop_drag(e))
-      document.addEventListener("mousemove", e => this.drag(e))
-      document.addEventListener("touchend", e => this.stop_drag(e))
-      document.addEventListener("touchmove", e => this.drag(e))
+      document.addEventListener("pointerup", e => this.stop_drag(e))
+      document.addEventListener("pointermove", e => this.drag(e))
     },
     stop_drag(_) {
       const order = []
@@ -553,10 +494,8 @@ const hooks = {
 
       this.pushEvent("order", { order: order })
 
-      document.removeEventListener("mouseup", e => this.stop_drag(e))
-      document.removeEventListener("mousemove", e => this.drag(e))
-      document.removeEventListener("touchend", e => this.stop_drag(e))
-      document.removeEventListener("touchmove", e => this.drag(e))
+      document.removeEventListener("pointerup", e => this.stop_drag(e))
+      document.removeEventListener("pointermove", e => this.drag(e))
     },
     drag(e) {
       const clientY = e.touches ? e.touches[0].clientY : e.clientY

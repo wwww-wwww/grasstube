@@ -56,18 +56,10 @@ export default class Seekbar {
             this.#set_time((video.currentTime || 0) / video.duration)
         })
 
-        root.addEventListener("mousemove", e => {
-            const rect = root.getBoundingClientRect()
-            const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
-            const u = t / player.duration()
-            this.#e_handle_info.style.left = `${u * 100}%`
-            this.#e_preview_time.textContent = seconds_to_hms(t, true)
-        })
-
-        root.addEventListener("mousedown", e => {
+        root.addEventListener("pointerdown", e => {
             if (e.buttons != 1) return
+
             e.preventDefault()
-            console.log("mousedown")
 
             // if (Object.keys(this.current_video.videos).length == 0) return
 
@@ -75,29 +67,26 @@ export default class Seekbar {
             root.classList.toggle("seeking", true)
 
             const playing = player.playing()
-            console.log(["playing", playing])
 
             video.pause()
 
-            const seek = e => {
+            const seek = (e, final = false) => {
                 e.preventDefault()
-                console.log(e)
+
                 const rect = root.getBoundingClientRect()
                 const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
-                console.log(t)
+
                 this.#set_time(t / player.duration())
-                player.seek(t)
-                // if (seek) this.seek_to(t)
-                return t
+                player.seek(t, final)
             }
 
-            const mouseup = e => {
-                console.log("mouseup")
+            const pointerup = e => {
                 e.preventDefault()
-                body.removeEventListener("mousemove", seek)
-                window.removeEventListener("mouseup", mouseup)
 
-                seek(e)
+                body.removeEventListener("pointermove", seek)
+                window.removeEventListener("pointerup", pointerup)
+
+                seek(e, true)
 
                 player.set_playing(playing)
 
@@ -105,66 +94,27 @@ export default class Seekbar {
                 root.classList.toggle("seeking", false)
             }
 
-            body.addEventListener("mousemove", seek)
-            window.addEventListener("mouseup", mouseup)
+            body.addEventListener("pointermove", seek)
+            window.addEventListener("pointerup", pointerup)
 
             seek(e)
-
-            // this.seeking = true
-            // this.seeking_playing = this.playing
-
-            // this.seekbar.graphic.classList.toggle("seeking", true)
-            // this.seekbar.dial.classList.toggle("seeking", true)
         })
 
-        /*
-        this.#_seek = (e, seek = true) => {
-            e.preventDefault()
-            const rect = this.seekbar.getBoundingClientRect()
-            const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * this.duration()
-            if (seek) this.seek_to(t)
-            return t
-        }
-
-        const seek = e => { return this.#_seek(e) }
-        const mouseup = e => {
-            e.preventDefault()
-            this.seeking = false
-
-            if (Object.keys(this.current_video.videos).length == 0) return
-
-            body.removeEventListener("mousemove", seek)
-            window.removeEventListener("mouseup", this.seekbar._mouseup)
-
-            if (this.seeking_playing) { this.play() }
-
-            this.on_seek(this.#_seek(e, false))
-
-            this.seekbar.graphic.classList.toggle("seeking", false)
-            this.seekbar.dial.classList.toggle("seeking", false)
-            if (this.overlay_hide) { clearTimeout(this.overlay_hide) }
-            this.overlay.classList.toggle("overlay_hidden", false)
-            this.overlay_hide = setTimeout(() => {
-                this.overlay.classList.toggle("overlay_hidden", true)
-            }, 2000)
-        }
-
-
-        seekbar.addEventListener("mousemove", e => {
-            if (!this.current_video.yt && Object.keys(this.current_video.videos).length == 0) {
-                mtime.textContent = ""
+        root.addEventListener("pointermove", e => {
+            if (player.duration() == 0) {
+                this.#e_handle_info.style.display = "none"
                 return
             }
-            const rect = this.seekbar.getBoundingClientRect()
-            let pct = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1)
-            const t = pct * this.duration()
-            mtime.textContent = seconds_to_hms(t, true)
 
-            const mtime_rect = mtime.getBoundingClientRect()
-            const mtime_width = mtime_rect.width / rect.width / 2
-            const mtime_pct = Math.min(Math.max(pct, mtime_width), 1 - mtime_width)
-            mtime.style.left = `${mtime_pct * 100}%`
+            this.#e_handle_info.style.display = ""
 
+            const rect = root.getBoundingClientRect()
+            const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
+            const u = t / player.duration()
+            this.#e_handle_info.style.left = `${u * 100}%`
+            this.#e_preview_time.textContent = seconds_to_hms(t, true)
+
+            /*
             if (this.previews.length == 0) return
 
             const preview_rect = seekbar.preview.getBoundingClientRect()
@@ -178,20 +128,9 @@ export default class Seekbar {
             const url = this.previews[Math.floor(t / this.previews_interval)]
             if (url == undefined) return
 
-            const img_w = url.naturalWidth
-            const img_h = url.naturalHeight
-            const img_r = img_w / img_h
-
-            if (img_r * max_height < max_width) {
-                seekbar.preview.width = img_r * max_height
-                seekbar.preview.height = max_height
-            } else {
-                seekbar.preview.width = max_width
-                seekbar.preview.height = (img_w / img_w) * max_width
-            }
-
             preview_ctx.drawImage(url, 0, 0, seekbar.preview.width, seekbar.preview.height)
-        })*/
+            */
+        })
     }
 
     #set_buffers(buffers, duration) {

@@ -108,8 +108,8 @@ class Window {
       e.clientY - rect.top
     ]
 
-    document.addEventListener("mousemove", this.on_drag_move)
-    document.addEventListener("mouseup", this.on_drag_end)
+    document.addEventListener("pointermove", this.on_drag_move)
+    document.addEventListener("pointerup", this.on_drag_end)
   }
 
   drag_end(e) {
@@ -119,8 +119,8 @@ class Window {
     this.top.style.cursor = ""
     this.drag = null
 
-    document.removeEventListener("mousemove", this.on_drag_move)
-    document.removeEventListener("mouseup", this.on_drag_end)
+    document.removeEventListener("pointermove", this.on_drag_move)
+    document.removeEventListener("pointerup", this.on_drag_end)
   }
 
   move_to(x, y) {

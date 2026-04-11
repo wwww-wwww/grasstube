@@ -20,6 +20,14 @@
     align-items: start;
     justify-content: start;
 
+    .subtitles-octopus {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+    }
+
     button {
         color: black;
         background: rgba(255, 255, 255, 0.5);
@@ -127,7 +135,7 @@
             font-size: 0.9em;
 
             >* {
-                white-space: pre;
+                white-space: pre-wrap;
             }
         }
 
@@ -233,11 +241,9 @@
     }
 
     video {
+        width: 100%;
         pointer-events: all;
         object-fit: contain;
-        position: absolute;
-        width: 20em;
-        bottom: 10em;
     }
 
     #chk_split {
@@ -264,6 +270,7 @@
     }
 
     canvas {
+        z-index: 1;
         max-width: 100%;
         max-height: 100%;
         width: 100%;
@@ -293,7 +300,25 @@
         height: 2em;
     }
 
+    &.show .overlay {
+
+        >.controls,
+        >.main>.settings {
+            opacity: 1;
+            transition: opacity 0.2s;
+        }
+    }
+
     .overlay {
+
+        >.controls,
+        >.main>.settings {
+            opacity: 0;
+        }
+    }
+
+    .overlay {
+        z-index: 2;
         position: absolute;
         width: 100%;
         height: 100%;
@@ -301,33 +326,10 @@
         display: flex;
         flex-direction: column;
 
-        .overlay_osd {
-            pointer-events: none;
-            position: absolute;
-            margin: 0.5em;
-            padding: 0.5em;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(0, 0, 0, 0.3);
-            font-size: 1em;
-            text-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.4);
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .overlay_osd.hidden {
-            display: none;
-        }
-
-        .overlay_tmp {
-            opacity: 1;
-            transition: opacity 0.2s;
-        }
-
         >.main {
             pointer-events: none;
             flex: 1;
             position: relative;
-
 
             >* {
                 pointer-events: all;
@@ -341,8 +343,9 @@
             width: 50%;
             height: 100%;
             display: flex;
-            flex-direction: column;
+            flex-direction: column-reverse;
             align-items: center;
+            justify-content: flex-end;
             gap: 0.5em;
             padding: 0.5em;
             pointer-events: none;
@@ -355,6 +358,24 @@
                 text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
                 padding: 0.5em;
                 border-radius: 4px;
+            }
+
+            .volume-up {
+                display: flex;
+
+                &::before {
+                    content: "volume_up";
+                    font-family: "Material Symbols Rounded";
+                }
+            }
+
+            .volume-down {
+                display: flex;
+
+                &::before {
+                    content: "volume_down";
+                    font-family: "Material Symbols Rounded";
+                }
             }
         }
 
@@ -370,11 +391,17 @@
             >.left,
             >.right {
                 display: flex;
-            }
 
+                align-items: center;
+
+                >* {
+                    flex-shrink: 0;
+                }
+            }
 
             button,
             input[type="checkbox"] {
+                appearance: none;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -398,8 +425,11 @@
                     // transform: translate(-2px, -2px);
                 }
 
-                &:focus {
-                    outline: 4px dotted rgba(255, 255, 255, 0.5);
+                &:focus,
+                &:focus-visible {
+                    border: none;
+                    outline: 4px solid rgba(0, 255, 70, 0.5);
+                    outline-offset: 2px
                 }
             }
 
@@ -413,20 +443,36 @@
                 line-height: 32px;
             }
 
-            .btn-play::after {
-                content: "play_arrow";
+            .chk-play {
+                &:checked {
+                    &::after {
+                        content: "pause";
+                    }
+                }
+
+                &::after {
+                    content: "play_arrow";
+                }
             }
 
-            .btn-play[state="0"]::after {
-                content: "pause";
-            }
-
-            .btn-next::after {
+            .chk-next::after {
                 content: "skip_next";
             }
 
+            .chk-captions {
+                &:checked {
+                    &::after {
+                        content: "subtitles_off";
+                    }
+                }
 
-            .btn-settings {
+                &::after {
+                    content: "subtitles";
+
+                }
+            }
+
+            .chk-settings {
                 &:checked {
                     &:hover {
                         background: rgba(255, 255, 255, 0.6);
@@ -442,13 +488,110 @@
                 }
             }
 
-            .btn-fullscreen {
+            .chk-fullscreen {
                 &::after {
                     content: "open_in_full";
                 }
 
                 &:checked::after {
                     content: "close_fullscreen";
+                }
+            }
+
+            .volume {
+                position: relative;
+            }
+
+            .range-volume-progress {
+                display: block;
+                position: absolute;
+                left: 16px;
+                top: 0;
+                width: calc(100% - 32px);
+                height: 100%;
+                padding: 16px;
+                pointer-events: none;
+                margin: 0;
+
+                >.range-volume-progress-track {
+                    display: block;
+                    position: absolute;
+                    left: 0;
+                    top: 50%;
+                    width: calc(80%);
+                    height: 4px;
+                    padding: 0;
+                    // margin: 16px;
+                    background: rgba(255, 255, 255, 1);
+                    transform: translateY(-50%);
+                }
+            }
+
+            .range-volume {
+                appearance: none;
+
+                padding: 0 16px;
+                margin: 0;
+                border: none;
+                width: 100px;
+                height: 48px;
+                border-radius: 48px;
+                box-shadow: none;
+
+                &:focus {
+
+                    outline: 4px solid rgba(0, 255, 70, 0.5);
+                }
+
+                ::after {
+                    display: block;
+                    content: "";
+                }
+
+                @mixin track {
+                    appearance: none;
+                    padding: 0;
+                    margin: 0;
+                    height: 4px;
+                    border-radius: 4px;
+                    width: 100%;
+                    background: rgba(255, 255, 255, 0.4);
+                    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+                }
+
+                @mixin thumb {
+                    appearance: none;
+                    padding: 0;
+                    margin: 0;
+                    height: 16px;
+                    width: 16px;
+                    top: 0;
+                    border: none;
+                    background: rgba(255, 255, 255, 1);
+                    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+
+                    border-radius: 100%;
+                }
+
+                &::-webkit-progress-value {
+                    background: red;
+                }
+
+                &::-webkit-slider-runnable-track {
+                    @include track;
+                }
+
+                &::-moz-range-track {
+                    @include track;
+                }
+
+                &::-moz-range-thumb {
+                    @include thumb;
+                }
+
+                &::-webkit-slider-thumb {
+                    @include thumb;
+                    transform: translateY(-6px);
                 }
             }
         }
@@ -463,9 +606,8 @@
         cursor: pointer;
         transition: height 0.1s linear, bottom 0.1s linear;
         transform: translateY(-100%);
-        // pointer-events: all;
-
-        // outline: 1px solid red;
+        touch-action: none;
+        user-select: none;
 
         &:hover,
         &.seeking {
