@@ -269,13 +269,22 @@
         }
     }
 
-    canvas {
-        z-index: 1;
-        max-width: 100%;
-        max-height: 100%;
+    .view {
+        position: absolute;
+        left: 0;
+        top: 0;
         width: 100%;
         height: 100%;
-        object-fit: contain;
+
+        canvas {
+            user-select: none;
+            z-index: 1;
+            max-width: 100%;
+            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
     }
 
     // .shade button,
@@ -305,7 +314,6 @@
         >.controls,
         >.main>.settings {
             opacity: 1;
-            transition: opacity 0.2s;
         }
     }
 
@@ -314,6 +322,7 @@
         >.controls,
         >.main>.settings {
             opacity: 0;
+            transition: opacity 0.2s;
         }
     }
 
@@ -337,6 +346,7 @@
         }
 
         .messages {
+            user-select: none;
             position: absolute;
             left: 25%;
             top: 0;
@@ -349,6 +359,7 @@
             gap: 0.5em;
             padding: 0.5em;
             pointer-events: none;
+            overflow: hidden;
 
             >div {
                 pointer-events: all;
@@ -360,22 +371,21 @@
                 border-radius: 4px;
             }
 
-            .volume-up {
-                display: flex;
-
-                &::before {
-                    content: "volume_up";
-                    font-family: "Material Symbols Rounded";
-                }
-            }
-
+            .volume-up,
             .volume-down {
                 display: flex;
+                gap: 0.5em;
 
-                &::before {
-                    content: "volume_down";
-                    font-family: "Material Symbols Rounded";
-                }
+            }
+
+            .volume-up::before {
+                content: "volume_up";
+                font-family: "Material Symbols Rounded";
+            }
+
+            .volume-down::before {
+                content: "volume_down";
+                font-family: "Material Symbols Rounded";
             }
         }
 

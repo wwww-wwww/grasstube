@@ -306,10 +306,8 @@ const hooks = {
       if (data.t) this.on_seek(data)
     },
     mounted() {
-      player_state.player = new GrassPlayer(
-        this.el,
-        get_meta("controls") == "true"
-      )
+      player_state.player = new GrassPlayer(this.el)
+      player_state.player.set_controls(get_meta("controls") == "true")
       window.grassplayer = player_state.player
 
       if (player_state.fullscreen_element) {
@@ -338,7 +336,7 @@ const hooks = {
 
       let last_buffered = 0
 
-      player_state.player.on_buffer = buffered => {
+      player_state.player.on_buffer_end = buffered => {
         if (buffered == last_buffered) return
         last_buffered = buffered
         this.pushEvent("buffered", { buffered: buffered })

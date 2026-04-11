@@ -21,13 +21,10 @@ export default class Seekbar {
     #e_preview_time
     #e_preview
 
-    #player
     seeking
 
     #buffers = []
-    constructor(root, player, video) {
-        this.#player = player
-
+    constructor(root, player) {
         root.innerHTML = `
 <div class="seekbar-handle-info">
     <div class="seekbar-preview-time"></div>
@@ -48,14 +45,6 @@ export default class Seekbar {
         this.#e_preview = root.querySelector(".seekbar-preview")
         const preview_ctx = this.#e_preview.getContext("2d")
 
-        video.addEventListener("progress", () => {
-            this.#set_buffers(video.buffered, video.duration)
-        })
-
-        video.addEventListener("timeupdate", () => {
-            this.#set_time((video.currentTime || 0) / video.duration)
-        })
-
         root.addEventListener("pointerdown", e => {
             if (e.buttons != 1) return
 
@@ -68,7 +57,7 @@ export default class Seekbar {
 
             const playing = player.playing()
 
-            video.pause()
+            player.set_playing(false)
 
             const seek = (e, final = false) => {
                 e.preventDefault()
@@ -76,7 +65,7 @@ export default class Seekbar {
                 const rect = root.getBoundingClientRect()
                 const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
 
-                this.#set_time(t / player.duration())
+                this.set_time(t / player.duration())
                 player.seek(t, final)
             }
 
@@ -133,7 +122,7 @@ export default class Seekbar {
         })
     }
 
-    #set_buffers(buffers, duration) {
+    set_buffers(buffers, duration) {
         while (this.#buffers.length < buffers.length) {
             const buffer = document.createElement("div")
             buffer.style.width = "0%"
@@ -155,14 +144,14 @@ export default class Seekbar {
         }
     }
 
-    #set_time(u) {
+    set_time(u) {
         this.#e_current.style.width = u * 100 + "%"
         this.#e_handle.style.left = u * 100 + "%"
     }
 
     reset() {
-        this.#set_time(0)
-        this.#set_buffers([], 0)
+        this.set_time(0)
+        this.set_buffers([], 0)
     }
 }
 

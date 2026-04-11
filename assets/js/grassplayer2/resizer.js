@@ -15,7 +15,7 @@ class Resizer {
     }
 }
 
-class BestFitResizer extends Resizer {
+class ResizerBestFit extends Resizer {
     create_settings(el) {
         el.innerHTML = `
 <div><span>View</span><span class="dims-root"></span></div>
@@ -54,7 +54,7 @@ class BestFitResizer extends Resizer {
     }
 }
 
-class StretchResizer extends Resizer {
+class ResizerStretch extends Resizer {
     resize() {
         if (!this.video.videoWidth || !this.video.videoHeight) return
 
@@ -70,4 +70,4 @@ class StretchResizer extends Resizer {
     }
 }
 
-export { BestFitResizer, StretchResizer }
+export { ResizerBestFit, ResizerStretch }
