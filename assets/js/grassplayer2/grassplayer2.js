@@ -85,6 +85,8 @@ export default class GrassPlayer {
             range_volume.addEventListener("input", () => {
                 this.set_volume(range_volume.value / 100)
             })
+
+            this.set_volume((this.get_storage("volume") || 50) / 100)
         }
 
         // settings button
@@ -190,6 +192,14 @@ export default class GrassPlayer {
         }
     }
 
+    get_storage(name) {
+        return window.localStorage.getItem(`${this.constructor.name}-${name}`)
+    }
+
+    set_storage(name, value) {
+        window.localStorage.setItem(`${this.constructor.name}-${name}`, value)
+    }
+
     create_message(message, timeout = null) {
         const el = document.createElement("div")
         el.className = "message"
@@ -220,6 +230,8 @@ export default class GrassPlayer {
         this.#renderer.set_volume(v)
 
         this.volume_change(v)
+
+        this.set_storage("volume", v * 100)
     }
 
     duration() {

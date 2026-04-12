@@ -70,6 +70,21 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             this.#lut3dtexture = this.#generate_3d_texture(lut, m)
         }
 
+        navigator.storage.getDirectory()
+            .then(root => root.getFileHandle("main.3dlut"))
+            .then(handle => handle.getFile())
+            .then(file => file.arrayBuffer())
+            .then(buf => {
+                console.log(buf)
+                this.#lut3dtexture = this.#load_madvr(buf)
+                console.log("Loaded 3dlut")
+
+                this.#tex2 = null
+                this.#txt_3dlut_name.textContent = this.get_storage("filename")
+
+                this.on_update()
+            })
+
         this.#sampler = this.device.createSampler({
             minFilter: "linear",
             magFilter: "linear",
@@ -79,29 +94,29 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         })
     }
 
-    #tex1_res
+    #tex_in_res
     #compute_x
     #compute_y
-    #tex1
+    #tex_in
     #tex2
     #bindgroup
-    run(encoder, video_time, tex1, tex1_res) {
-        if (this.#tex1_res != tex1_res) {
-            this.#compute_x = Math.ceil(tex1_res[0] / 16)
-            this.#compute_y = Math.ceil(tex1_res[1] / 16)
-            this.#tex1_res = tex1_res
+    run(encoder, video_time, tex_in, tex_in_res) {
+        if (this.#tex_in_res != tex_in_res) {
+            this.#compute_x = Math.ceil(tex_in_res[0] / 16)
+            this.#compute_y = Math.ceil(tex_in_res[1] / 16)
+            this.#tex_in_res = tex_in_res
         }
 
-        const tex2 = this.get_texture(tex1_res, [tex1])
+        const tex2 = this.get_texture(tex_in_res, [tex_in])
 
-        if (this.#tex1 != tex1 || this.#tex2 != tex2) {
-            this.#tex1 = tex1
+        if (this.#tex_in != tex_in || this.#tex2 != tex2) {
+            this.#tex_in = tex_in
             this.#tex2 = tex2
 
             this.#bindgroup = this.device.createBindGroup({
                 layout: this.#pipeline.getBindGroupLayout(0),
                 entries: [
-                    { binding: 0, resource: tex1 },
+                    { binding: 0, resource: tex_in },
                     { binding: 1, resource: tex2 },
                     { binding: 2, resource: this.#lut3dtexture },
                     { binding: 3, resource: this.#sampler },
@@ -114,7 +129,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         pass.dispatchWorkgroups(this.#compute_x, this.#compute_y)
         pass.end()
 
-        return [tex2, tex1_res]
+        return [tex2, tex_in_res]
     }
 
     #generate_3d_texture(data, width) {
@@ -135,6 +150,29 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         return texture
     }
 
+    #load_madvr(buf) {
+        const data = buf.slice(16384)
+        const data_view = new Uint16Array(data)
+        const lut = new Float16Array(256 * 256 * 256 * 4)
+
+        for (let i = 0; i < 256 * 256 * 256; i++) {
+            const r = i >> 16
+            const g = (i >> 8) & 0xFF
+            const b = i & 0xFF
+
+            const old_r = (data_view[i * 3 + 2])
+            const old_g = (data_view[i * 3 + 1])
+            const old_b = (data_view[i * 3 + 0])
+
+            const loc = ((b << 16) + (g << 8) + r)
+            lut[loc * 4 + 0] = (old_r - 4096) / 56064
+            lut[loc * 4 + 1] = (old_g - 4096) / 56064
+            lut[loc * 4 + 2] = (old_b - 4096) / 56064
+        }
+
+        return this.#generate_3d_texture(lut, 256)
+    }
+
     #load_3dlut() {
         const input = document.createElement("input")
         input.type = "file"
@@ -148,29 +186,23 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
             reader.onload = readerEvent => {
                 try {
-                    const data = readerEvent.target.result.slice(16384)
-                    const data_view = new Uint16Array(data)
-                    const lut = new Float16Array(256 * 256 * 256 * 4)
+                    this.#lut3dtexture = this.#load_madvr(readerEvent.target.result)
 
-                    for (let i = 0; i < 256 * 256 * 256; i++) {
-                        const r = i >> 16
-                        const g = (i >> 8) & 0xFF
-                        const b = i & 0xFF
+                    navigator.storage.getDirectory()
+                        .then(root => root.getFileHandle("main.3dlut", { create: true }))
+                        .then(handle => handle.createWritable())
+                        .then(async file => {
+                            await file.write(readerEvent.target.result)
+                            await file.close()
+                        })
+                        .then(() => {
+                            this.set_storage("filename", file.name)
+                            console.log("Saved 3dlut")
+                        })
 
-                        const old_r = (data_view[i * 3 + 2])
-                        const old_g = (data_view[i * 3 + 1])
-                        const old_b = (data_view[i * 3 + 0])
-
-                        const loc = ((b << 16) + (g << 8) + r)
-                        lut[loc * 4 + 0] = (old_r - 4096) / 56064
-                        lut[loc * 4 + 1] = (old_g - 4096) / 56064
-                        lut[loc * 4 + 2] = (old_b - 4096) / 56064
-                    }
-
-                    this.#lut3dtexture = this.#generate_3d_texture(lut, 256)
-                    this.#tex1 = null
                     this.#tex2 = null
                     this.#txt_3dlut_name.textContent = file.name
+
                     this.on_update()
                 }
                 catch (e) { console.log(e) }
