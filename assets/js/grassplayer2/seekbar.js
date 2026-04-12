@@ -7,12 +7,14 @@ function seconds_to_hms(seconds, hide_hours = false) {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor(seconds / 60) % 60
     seconds = seconds % 60
-    if (hide_hours && hours <= 0)
-        return `${pad(minutes, 2)}:${pad(seconds, 2)}`
+    if (hide_hours && hours <= 0) return `${pad(minutes, 2)}:${pad(seconds, 2)}`
     return `${pad(hours, 2)}:${pad(minutes, 2)}:${pad(seconds, 2)}`
 }
 
+export { seconds_to_hms }
+
 export default class Seekbar {
+    #root
     #e_bar
     #e_current
     #e_handle
@@ -36,6 +38,7 @@ export default class Seekbar {
 <div class="seekbar-handle"></div>
 `
 
+        this.#root = root
         this.#e_bar = root.querySelector(".seekbar-bar")
         this.#e_current = root.querySelector(".seekbar-bar-current")
         this.#e_handle = root.querySelector(".seekbar-handle")
@@ -46,6 +49,7 @@ export default class Seekbar {
         const preview_ctx = this.#e_preview.getContext("2d")
 
         root.addEventListener("pointerdown", e => {
+            if (!this.#enabled) return
             if (e.buttons != 1) return
 
             e.preventDefault()
@@ -63,7 +67,9 @@ export default class Seekbar {
                 e.preventDefault()
 
                 const rect = root.getBoundingClientRect()
-                const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
+                const t =
+                    Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) *
+                    player.duration()
 
                 this.set_time(t / player.duration())
                 player.seek(t, final)
@@ -98,7 +104,8 @@ export default class Seekbar {
             this.#e_handle_info.style.display = ""
 
             const rect = root.getBoundingClientRect()
-            const t = Math.min(Math.max(((e.clientX - rect.left) / (rect.width)), 0), 1) * player.duration()
+            const t =
+                Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) * player.duration()
             const u = t / player.duration()
             this.#e_handle_info.style.left = `${u * 100}%`
             this.#e_preview_time.textContent = seconds_to_hms(t, true)
@@ -151,7 +158,12 @@ export default class Seekbar {
 
     reset() {
         this.set_time(0)
-        this.set_buffers([], 0)
+        this.set_buffers([])
+    }
+
+    #enabled
+    set_enabled(b) {
+        this.#enabled = b
+        this.#root.classList.toggle("disabled", !b)
     }
 }
-

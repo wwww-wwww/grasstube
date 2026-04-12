@@ -29,24 +29,25 @@ export default class BasicRenderer {
         {
             const resolution = root_settings.querySelector(".videoinfo-resolution")
             this.#e_video.addEventListener("loadedmetadata", () => {
+                this.on_timeupdate(this.current_time())
                 resolution.textContent = `${this.#e_video.videoWidth}x${this.#e_video.videoHeight}`
             })
         }
 
+        // video buffer
         {
             const buffered = root_settings.querySelector(".videoinfo-buffered")
-            // video buffer
             this.#e_video.addEventListener("timeupdate", () => {
-                this.on_timeupdate((this.#e_video.currentTime || 0) / this.#e_video.duration)
+                this.on_timeupdate(this.current_time())
                 const end = this.#update_playable()
-                buffered.textContent = `${Math.round(end - this.#e_video.currentTime) || 0} seconds`
+                buffered.textContent = `${Math.round(end - this.current_time()) || 0} seconds`
             })
 
             this.#e_video.addEventListener("progress", () => {
-                this.on_buffers(this.#e_video.buffered, this.#e_video.duration)
+                this.on_buffers(this.#e_video.buffered)
 
                 const end = this.#update_playable()
-                buffered.textContent = `${Math.round(end - this.#e_video.currentTime) || 0} seconds`
+                buffered.textContent = `${Math.round(end - this.current_time()) || 0} seconds`
             })
         }
 
@@ -82,7 +83,7 @@ export default class BasicRenderer {
                 this.#e_subtitles.removeChild(this.#e_subtitles.firstChild)
         }
 
-        if (subtitles == undefined || subtitles.length == 0) return
+        if (subtitles == null || subtitles.length == 0) return
 
         this.#octopus = new SubtitlesOctopus({
             video: this.#e_video,
@@ -99,10 +100,7 @@ export default class BasicRenderer {
         for (let i = 0; i < this.#e_video.buffered.length; i++) {
             const start = this.#e_video.buffered.start(i)
             const end = this.#e_video.buffered.end(i)
-            if (
-                (start < this.#e_video.currentTime || start < 1) &&
-                end > this.#e_video.currentTime
-            ) {
+            if ((start < this.current_time() || start < 1) && end > this.current_time()) {
                 if (this.on_buffer_end) {
                     this.on_buffer_end(end)
                 }
@@ -112,7 +110,7 @@ export default class BasicRenderer {
         }
     }
 
-    set_video(type, videos, subtitles) {
+    set_video(videos, subtitles) {
         this.set_playing(false)
 
         const keys = Object.keys(videos)
@@ -127,7 +125,7 @@ export default class BasicRenderer {
     }
 
     set_volume(v) {
-        this.#e_video.volume = (Math.pow(10, v) - 1) / 9
+        this.#e_video.volume = v
     }
 
     set_captions(b) {
@@ -144,7 +142,11 @@ export default class BasicRenderer {
 
     #speed = 1
     set_speed(s) {
-        this.#speed = 1
+        this.#speed = s
+        this.#set_speed(s)
+    }
+
+    #set_speed(s) {
         this.#e_video.playbackRate = s
     }
 
@@ -154,7 +156,7 @@ export default class BasicRenderer {
         this.#catchup_done = false
 
         if (playing) {
-            if (this.#e_video.currentTime >= this.#e_video.duration) return
+            if (this.current_time() >= this.duration()) return
             this.#e_video.play()
         } else {
             this.#e_video.pause()
@@ -213,7 +215,7 @@ export default class BasicRenderer {
             clearInterval(this.#catchup_interval)
         }
 
-        this.set_speed(this.#speed * catchup_mul)
+        this.#set_speed(this.#speed * catchup_mul)
 
         this.#e_videoinfo_catchup.textContent = `${dist.toFixed(5)} ${catchup_mul.toFixed(5)}x`
     }

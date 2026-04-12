@@ -1,7 +1,8 @@
-import WebGPURenderer from "./rendererwebgpu"
 import BasicRenderer from "./rendererbasic"
+import WebGPURenderer from "./rendererwebgpu"
+import YoutubeRenderer from "./rendereryoutube"
 
-import Seekbar from "./seekbar"
+import Seekbar, { seconds_to_hms } from "./seekbar"
 
 const html = `
 <div class="grassplayer2" tabindex="0">
@@ -23,6 +24,7 @@ const html = `
         <div class="left">
             <input type="checkbox" class="chk-play"></input>
             <button class="chk-next"></button>
+            <span class="txt-time"></span>
         </div>
         <div class="right">
             <div class="volume">
@@ -42,7 +44,9 @@ const html = `
 
 export default class GrassPlayer {
     #renderer
+    #renderer_view
     #renderer_yt
+    #renderer_yt_view
     #seekbar
 
     #e_main
@@ -54,7 +58,6 @@ export default class GrassPlayer {
     on_seek = null
     on_next = null
     on_buffer_end = null
-
     constructor(root) {
         window.gp = this
         root.innerHTML = html
@@ -65,6 +68,8 @@ export default class GrassPlayer {
         this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this)
 
         const e_view = root.querySelector(".view")
+
+        const e_txt_time = root.querySelector(".txt-time")
 
         // Create default renderer
         {
@@ -80,30 +85,44 @@ export default class GrassPlayer {
                 })
             }
 
-            const renderer_view = document.createElement("div")
-            e_view.appendChild(renderer_view)
+            this.#renderer_view = document.createElement("div")
+            e_view.appendChild(this.#renderer_view)
 
             const renderer_settings = document.createElement("div")
             root.querySelector(".settings").appendChild(renderer_settings)
 
-            this.#renderer = new renderers[n_renderer](renderer_view, renderer_settings)
-            renderer_view.className = this.#renderer.constructor.name
+            this.#renderer = new renderers[n_renderer](this.#renderer_view, renderer_settings)
+            this.#renderer_view.className = this.#renderer.constructor.name
             renderer_settings.className = this.#renderer.constructor.name
 
             this.#renderer.on_buffer_end = end => this.on_buffer_end(end)
-            this.#renderer.on_buffers = (buffers, duration) =>
-                this.#seekbar.set_buffers(buffers, duration)
-            this.#renderer.on_timeupdate = t => this.#seekbar.set_time(t)
+            this.#renderer.on_buffers = buffers =>
+                this.#seekbar.set_buffers(buffers, this.duration())
+            this.#renderer.on_timeupdate = t => {
+                this.#seekbar.set_time(t / this.duration())
+                e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+            }
+
+            this.#current_renderer = this.#renderer
         }
 
         {
-            const renderer_view = document.createElement("div")
-            e_view.appendChild(renderer_view)
+            this.#renderer_yt_view = document.createElement("div")
+            e_view.appendChild(this.#renderer_yt_view)
 
             const renderer_settings = document.createElement("div")
             root.querySelector(".settings").appendChild(renderer_settings)
 
-            // this.#renderer_yt = new YoutubeRenderer(renderer_view, renderer_settings)
+            this.#renderer_yt = new YoutubeRenderer(this.#renderer_yt_view, renderer_settings)
+            this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
+            renderer_settings.className = this.#renderer_yt.constructor.name
+
+            this.#renderer_yt.on_timeupdate = t => {
+                this.#seekbar.set_time(t / this.duration())
+                e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+            }
+            this.#renderer_yt.on_buffers = buffers =>
+                this.#seekbar.set_buffers(buffers, this.duration())
         }
 
         // play button
@@ -155,6 +174,7 @@ export default class GrassPlayer {
             const chk = root.querySelector(".chk-captions")
             chk.addEventListener("input", () => {
                 this.#renderer.set_captions(!chk.checked)
+                this.#renderer_yt.set_captions(!chk.checked)
             })
         }
 
@@ -273,7 +293,7 @@ export default class GrassPlayer {
 
         this.#volume = v
 
-        this.#renderer.set_volume(v)
+        this.#current_renderer.set_volume((Math.pow(10, v) - 1) / 9)
 
         this.volume_change(v)
 
@@ -281,21 +301,38 @@ export default class GrassPlayer {
     }
 
     duration() {
-        return this.#renderer.duration()
+        return this.#current_renderer.duration()
     }
 
     set_speed(s) {
-        this.#renderer.set_speed(s)
+        this.#current_renderer.set_speed(s)
     }
 
+    #current_renderer
     set_video(type, videos, subtitles) {
-        this.#renderer.set_video(type, videos, subtitles)
+        if (type == "yt") {
+            this.#renderer_yt_view.style.display = ""
+            this.#renderer_view.style.display = "none"
+
+            this.#renderer_yt.set_video(videos)
+            this.#renderer.set_video({}, "")
+            this.#current_renderer = this.#renderer_yt
+        } else {
+            this.#renderer_yt_view.style.display = "none"
+            this.#renderer_view.style.display = ""
+
+            this.#renderer_yt.set_video(null)
+            this.#renderer.set_video(videos, subtitles)
+            this.#current_renderer = this.#renderer
+        }
+
+        this.#current_renderer.set_volume(this.#volume)
 
         this.#seekbar.reset()
     }
 
     playing() {
-        return this.#renderer.playing()
+        return this.#current_renderer.playing()
     }
 
     set_playing(playing) {
@@ -303,7 +340,7 @@ export default class GrassPlayer {
 
         this.#e_chk_play.checked = playing
 
-        this.#renderer.set_playing(playing)
+        this.#current_renderer.set_playing(playing)
     }
 
     auto_set_playing(playing) {
@@ -323,7 +360,7 @@ export default class GrassPlayer {
     }
 
     current_time() {
-        return this.#renderer.current_time()
+        return this.#current_renderer.current_time()
     }
 
     seek(t, final = false) {
@@ -336,7 +373,7 @@ export default class GrassPlayer {
             return
         }
 
-        this.#renderer.seek(t, final)
+        this.#current_renderer.seek(t, final)
     }
 
     auto_seek(t) {
@@ -362,11 +399,12 @@ export default class GrassPlayer {
     }
 
     set_catchup(target, time) {
-        this.#renderer.set_catchup(target, time)
+        this.#current_renderer.set_catchup(target, time)
     }
 
     set_controls(b) {
         this.#e_chk_play.disabled = !b
         this.#e_btn_next.disabled = !b
+        this.#seekbar.set_enabled(b)
     }
 }
