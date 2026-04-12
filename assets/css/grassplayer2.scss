@@ -135,6 +135,7 @@
             font-size: 0.9em;
 
             >* {
+                word-break: keep-all;
                 white-space: pre-wrap;
             }
         }
@@ -309,12 +310,8 @@
         height: 2em;
     }
 
-    &.show .overlay {
-
-        >.controls,
-        >.main>.settings {
-            opacity: 1;
-        }
+    .view {
+        cursor: none;
     }
 
     .overlay {
@@ -323,6 +320,20 @@
         >.main>.settings {
             opacity: 0;
             transition: opacity 0.2s;
+        }
+    }
+
+    &.show {
+        .view {
+            cursor: unset;
+        }
+
+        .overlay {
+
+            >.controls,
+            >.main>.settings {
+                opacity: 1;
+            }
         }
     }
 

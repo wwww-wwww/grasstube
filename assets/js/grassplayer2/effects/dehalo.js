@@ -1,17 +1,17 @@
 import Effect from "./_effect"
 
 export default class EffectDehalo extends Effect {
-    // enabled = true
+    enabled = true
     create_settings(el) {
         el.innerHTML = `
-<div><span>Bright strength</span><input class="input-strength1" type="number" value="100" max="100" min="0"/></div>
+<div><span>Bright strength</span><input class="input-strength1" type="number" value="50" max="100" min="0"/></div>
 <div><span>Dark strength</span><input class="input-strength2" type="number" value="20" max="100" min="0"/></div>
 <div><span>t</span><input class="input-t" type="number" value="4" max="10" min="0"/></div>
 <div><span>Radius</span><input class="input-radius" type="number" value="2" max="20" min="1"/></div>
 `
         const data = new ArrayBuffer(16)
         const view = new DataView(data)
-        view.setFloat32(0, 1, true)
+        view.setFloat32(0, .5, true)
         view.setFloat32(4, .2, true)
         view.setFloat32(8, .4, true)
         view.setInt32(12, 2, true)
@@ -127,7 +127,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         const data = new ArrayBuffer(16)
         const view = new DataView(data)
 
-        view.setFloat32(0, 1, true)
+        view.setFloat32(0, .5, true)
         view.setFloat32(4, .2, true)
         view.setFloat32(8, .4, true)
         view.setInt32(12, 2, true)
@@ -139,22 +139,20 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         this.device.queue.writeBuffer(this.#uniformBuffer, 0, data)
     }
 
-    resize(w, h) { }
-
     #compute_x
     #compute_y
     #tex1_res
     #tex1
     #tex2
     #bindgroup
-    run(encoder, t, video_time, tex1_res, tex1, get_texture) {
+    run(encoder, video_time, tex1, tex1_res) {
         if (this.#tex1_res != tex1_res) {
             this.#compute_x = Math.ceil(tex1_res[0] / 16)
             this.#compute_y = Math.ceil(tex1_res[1] / 16)
             this.#tex1_res = tex1_res
         }
 
-        const tex2 = get_texture(tex1_res, [tex1])
+        const tex2 = this.get_texture(tex1_res, [tex1])
 
         if (this.#tex1 != tex1 || this.#tex2 != tex2) {
             console.log("Recreating bind group")

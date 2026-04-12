@@ -119,7 +119,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     #tex2_res
     #tex1
     #bindgroup
-    run(encoder, t, video_time, tex1_res, tex1, tex2_res, tex2) {
+    run(encoder, video_time, tex1, tex1_res, tex2, tex2_res) {
         if (this.#tex2_res != tex2_res) {
             this.#tex2_res = tex2_res
             this.#uniformData[0] = tex2_res[0] / tex2_res[1]
@@ -137,7 +137,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             })
         }
 
-        this.#uniformData[1] = t / 2000
+        this.#uniformData[1] = video_time / 2000
         this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData);
 
         const pass = encoder.beginRenderPass({

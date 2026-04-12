@@ -1,13 +1,28 @@
 export default class Effect {
-    desc
+    renderer
     device
+    desc
+
     force = false
     enabled = false
     initialized = false
     on_update = null
-    constructor(device) {
-        this.device = device
+    constructor(renderer) {
+        this.renderer = renderer
+        this.device = renderer.device
         this.desc = { label: this.constructor.name }
+    }
+
+    get_storage(name) {
+        return window.localStorage.getItem(`effect-${this.constructor.name}-${name}`)
+    }
+
+    set_storage(name, value) {
+        window.localStorage.setItem(`effect-${this.constructor.name}-${name}`, value)
+    }
+
+    get_texture(dims, not = []) {
+        return this.renderer.get_texture(dims, not)
     }
 
     create_settings(el) {
@@ -18,11 +33,21 @@ export default class Effect {
         this.initialized = true
     }
 
-    resize(w, h) {
-        console.log(`${this.constructor.name}.resize not implemented`)
+    load() {
+        if (!this.force) {
+            this.enabled = this.get_storage("enabled") || this.enabled == "1"
+        }
     }
 
-    run(encoder, t, video_time, texture1, texture2) {
+    on_enable() {
+        this.set_storage("enabled", "1")
+    }
+
+    on_disable() {
+        this.set_storage("enabled", "0")
+    }
+
+    run(encoder, video_time, tex_in, tex_in_res) {
         console.log(`${this.constructor.name}.run not implemented`)
     }
 

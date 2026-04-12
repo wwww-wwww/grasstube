@@ -7,11 +7,11 @@ import { ResizerBestFit, ResizerStretch } from "./resizer"
 import EffectArt from "./effects/artcnn"
 import EffectDeband from "./effects/deband"
 import EffectDehalo from "./effects/dehalo"
-import EffectLinear from "./effects/linear"
 import EffectLoad from "./effects/load"
 import EffectLut3d from "./effects/lut3d"
 
-import { SamplerDefault, SamplerDefaultLinear, SamplerHermite } from "./samplers/default"
+import SamplerDefault from "./samplers/default"
+import SamplerDefaultLinear from "./samplers/defaultlinear"
 import SamplerSphere from "./samplers/sphere"
 
 function create_element(tagname, root = null, classes = "") {
@@ -28,8 +28,9 @@ function create_element(tagname, root = null, classes = "") {
 }
 
 export default class WebGPURenderer {
+    device
+
     #resizer
-    #device
     #have_frame
 
     #e_video
@@ -197,14 +198,14 @@ export default class WebGPURenderer {
         const adapter = await navigator.gpu?.requestAdapter({
             powerPreference: "high-performance",
         })
-        this.#device = await adapter?.requestDevice({
+        this.device = await adapter?.requestDevice({
             requiredFeatures: ["timestamp-query"],
             requiredLimits: {
                 maxComputeWorkgroupStorageSize: 32768
             }
         })
 
-        if (!this.#device) {
+        if (!this.device) {
             console.log("need a browser that supports WebGPU")
             return
         }
@@ -213,12 +214,12 @@ export default class WebGPURenderer {
 
         const context = this.#e_canvas.getContext("webgpu")
         context.configure({
-            device: this.#device, format: "rgba8unorm", colorSpace: "srgb",
+            device: this.device, format: "rgba8unorm", colorSpace: "srgb",
             usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT
         })
 
         this.clear = () => {
-            const commandEncoder = this.#device.createCommandEncoder()
+            const commandEncoder = this.device.createCommandEncoder()
             const textureView = context.getCurrentTexture().createView()
 
             const renderPassDescriptor = {
@@ -234,13 +235,13 @@ export default class WebGPURenderer {
 
             const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor)
             passEncoder.end()
-            this.#device.queue.submit([commandEncoder.finish()])
+            this.device.queue.submit([commandEncoder.finish()])
         }
 
         // Create resizer
         {
             const options = [
-                new ResizerBestFit(this.#device, root, this.#e_video, this.#e_canvas),
+                new ResizerBestFit(this.device, root, this.#e_video, this.#e_canvas),
                 // new ResizerStretch(this.#device, root, this.#e_video, this.#e_canvas),
             ]
 
@@ -266,16 +267,20 @@ export default class WebGPURenderer {
         // Create effects
         {
             this.#effects = [
-                new EffectLoad(this.#device),
-                new EffectDeband(this.#device),
-                new EffectLut3d(this.#device),
-                new EffectDehalo(this.#device),
-                new EffectArt(this.#device),
-                new EffectLinear(this.#device),
+                new EffectLoad(this),
+                new EffectDeband(this),
+                new EffectLut3d(this),
+                new EffectDehalo(this),
+                new EffectArt(this),
             ]
+
+            this.#effects.forEach(e => {
+                e.load()
+            })
 
             const div = root_settings.querySelector(".filters")
             this.#effects.forEach(e => {
+                console.log(e, e.get_storage("enabled") == "1")
                 e.on_update = () => { this.#have_frame = true }
 
                 const el = create_element("div", div)
@@ -286,11 +291,20 @@ export default class WebGPURenderer {
                     check.type = "checkbox"
                     check.checked = e.enabled
                     check.addEventListener("input", () => {
+                        console.log("input")
                         e.enabled = check.checked
-                        if (e.enabled) {
-                            if (!e.initialized) { e.init() }
-                            e.resize(this.#texturewidth, this.#textureheight)
+
+                        if (e.enabled && !e.initialized) {
+                            e.init()
                         }
+
+                        if (e.enabled) {
+                            console.log("on_enable")
+                            e.on_enable()
+                        } else {
+                            e.on_disable()
+                        }
+
                         this.#have_frame = true
                     })
                 }
@@ -306,10 +320,9 @@ export default class WebGPURenderer {
         // Create sampler
         {
             const options = [
-                new SamplerDefaultLinear(this.#device, this.#e_video, this.#e_canvas),
-                new SamplerDefault(this.#device, this.#e_video, this.#e_canvas),
-                new SamplerHermite(this.#device, this.#e_video, this.#e_canvas),
-                new SamplerSphere(this.#device, this.#e_video, this.#e_canvas),
+                new SamplerDefaultLinear(this),
+                new SamplerDefault(this),
+                new SamplerSphere(this),
             ]
 
             const select = root_settings.querySelector(".select-sampler")
@@ -339,37 +352,7 @@ export default class WebGPURenderer {
             if (e.enabled) { e.init() }
         })
 
-        const get_texture = (dims, not = []) => {
-            const id = dims.toString()
-            if (id in this.#texture_views) {
-                for (let i = 0; i < this.#texture_views[id].length; i++) {
-                    if (!not.includes(this.#texture_views[id][i])) {
-                        return this.#texture_views[id][i]
-                    }
-                }
-            }
-
-            console.log(`Create texture ${dims}`)
-
-            const texture = this.#device.createTexture({
-                size: dims,
-                format: "rgba16float",
-                usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
-            })
-            const view = texture.createView()
-
-            if (!(id in this.#texture_views)) {
-                this.#textures[id] = []
-                this.#texture_views[id] = []
-            }
-
-            this.#textures[id].push(texture)
-            this.#texture_views[id].push(view)
-
-            return view
-        }
-
-        const timer = new Timer(this.#device)
+        const timer = new Timer(this.device)
 
         const framenumber = root_settings.querySelector(".framenumber")
         const txt_fps = root_settings.querySelector(".fps")
@@ -393,8 +376,8 @@ export default class WebGPURenderer {
             if (this.#e_video.videoWidth == 0) return
 
             if (!this.#have_frame) {
-                const encoder = this.#device.createCommandEncoder()
-                this.#device.queue.submit([encoder.finish()])
+                const encoder = this.device.createCommandEncoder()
+                this.device.queue.submit([encoder.finish()])
                 return
             }
             this.#have_frame = false
@@ -402,11 +385,11 @@ export default class WebGPURenderer {
             let video_time = this.#e_video.currentTime
 
             const t0 = performance.now()
-            const encoder = this.#device.createCommandEncoder()
+            const encoder = this.device.createCommandEncoder()
 
             let texture_video
             try {
-                texture_video = this.#device.importExternalTexture({ source: this.#e_video })
+                texture_video = this.device.importExternalTexture({ source: this.#e_video })
             } catch (e) { return }
 
             const texture_canvas = context.getCurrentTexture().createView()
@@ -419,19 +402,16 @@ export default class WebGPURenderer {
             this.#effects.forEach(e => {
                 if (!e.enabled) return
 
-                const res = timer.run(e, t, video_time, last_tex_res, last_tex, get_texture)
-
-                last_tex = res[0]
-                last_tex_res = res[1]
+                [last_tex, last_tex_res] = timer.run(e, video_time, last_tex, last_tex_res)
             })
 
-            timer.run(this.#sampler, t, video_time, last_tex_res, last_tex,
-                [this.#e_canvas.width, this.#e_canvas.height], texture_canvas)
+            timer.run(this.#sampler, video_time, last_tex, last_tex_res,
+                texture_canvas, [this.#e_canvas.width, this.#e_canvas.height])
 
             timer.finish()
 
             const t2 = performance.now()
-            this.#device.queue.submit([encoder.finish()])
+            this.device.queue.submit([encoder.finish()])
 
             if (timer.enabled) {
                 timer.results().then(({ sum, passes }) => {
@@ -445,7 +425,7 @@ export default class WebGPURenderer {
                 }).catch(() => { })
             }
 
-            this.#device.queue.onSubmittedWorkDone().then(() => {
+            this.device.queue.onSubmittedWorkDone().then(() => {
                 const t3 = performance.now()
                 totaltime.textContent = (t3 - t0).toFixed(4)
                 queuetime.textContent = (t3 - t2).toFixed(4)
@@ -460,6 +440,35 @@ export default class WebGPURenderer {
         requestAnimationFrame(render)
     }
 
+    get_texture(dims, not = []) {
+        const id = dims.toString()
+        if (id in this.#texture_views) {
+            for (let i = 0; i < this.#texture_views[id].length; i++) {
+                if (!not.includes(this.#texture_views[id][i])) {
+                    return this.#texture_views[id][i]
+                }
+            }
+        }
+
+        console.log(`Create texture ${dims}`)
+
+        const texture = this.device.createTexture({
+            size: dims,
+            format: "rgba16float",
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
+        })
+        const view = texture.createView()
+
+        if (!(id in this.#texture_views)) {
+            this.#textures[id] = []
+            this.#texture_views[id] = []
+        }
+
+        this.#textures[id].push(texture)
+        this.#texture_views[id].push(view)
+
+        return view
+    }
 
     #prepare_textures(width, height) {
         this.#textures = {}
@@ -467,12 +476,6 @@ export default class WebGPURenderer {
 
         this.#texturewidth = width
         this.#textureheight = height
-
-        this.#effects.forEach(e => {
-            if (e.enabled) {
-                e.resize(this.#texturewidth, this.#textureheight)
-            }
-        })
     }
 
     resize() {

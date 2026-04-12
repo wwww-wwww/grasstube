@@ -158,22 +158,20 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         })
     }
 
-    resize(w, h) { }
-
     #compute_x
     #compute_y
     #tex1_res
     #tex1
     #tex2
     #bindgroup
-    run(encoder, t, video_time, tex1_res, tex1, get_texture) {
+    run(encoder, video_time, tex1, tex1_res) {
         if (this.#tex1_res != tex1_res) {
             this.#compute_x = Math.ceil(tex1_res[0] / 16)
             this.#compute_y = Math.ceil(tex1_res[1] / 16)
             this.#tex1_res = tex1_res
         }
 
-        const tex2 = get_texture(tex1_res, [tex1])
+        const tex2 = this.get_texture(tex1_res, [tex1])
 
         if (this.#tex1 != tex1 || this.#tex2 != tex2) {
             console.log("Recreating bind group")
