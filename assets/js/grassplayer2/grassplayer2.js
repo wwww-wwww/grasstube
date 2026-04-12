@@ -1,4 +1,5 @@
 import WebGPURenderer from "./rendererwebgpu"
+import BasicRenderer from "./rendererbasic"
 
 import Seekbar from "./seekbar"
 
@@ -9,6 +10,13 @@ const html = `
     <div class="main">
         <div class="messages"></div>
         <div class="settings" style="display: none;">
+            <div><div><div>
+                <span>Renderer</span>
+                <select class="renderer">
+                    <option>WebGPURenderer</option>
+                    <option>BasicRenderer</option>
+                </select>
+            </div></div></div>
         </div>
     </div>
     <div class="controls">
@@ -34,10 +42,10 @@ const html = `
 
 export default class GrassPlayer {
     #renderer
+    #renderer_yt
     #seekbar
 
     #e_main
-    #e_view
     #e_messages
     #e_chk_play
     #e_btn_next
@@ -52,15 +60,51 @@ export default class GrassPlayer {
         root.innerHTML = html
 
         this.#e_main = root.querySelector(".grassplayer2")
-        this.#e_view = root.querySelector(".view")
         this.#e_messages = root.querySelector(".messages")
 
         this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this)
 
-        this.#renderer = new WebGPURenderer(this.#e_view, root.querySelector(".settings"))
-        this.#renderer.on_buffer_end = end => this.on_buffer_end(end)
-        this.#renderer.on_buffers = (buffers, duration) => this.#seekbar.set_buffers(buffers, duration)
-        this.#renderer.on_timeupdate = t => this.#seekbar.set_time(t)
+        const e_view = root.querySelector(".view")
+
+        // Create default renderer
+        {
+            const renderers = [WebGPURenderer, BasicRenderer]
+            const n_renderer = parseInt(this.get_storage("renderer") || 0)
+
+            {
+                const select = root.querySelector("select.renderer")
+                select.selectedIndex = n_renderer
+                select.addEventListener("change", () => {
+                    this.set_storage("renderer", select.selectedIndex)
+                    window.location.reload()
+                })
+            }
+
+            const renderer_view = document.createElement("div")
+            e_view.appendChild(renderer_view)
+
+            const renderer_settings = document.createElement("div")
+            root.querySelector(".settings").appendChild(renderer_settings)
+
+            this.#renderer = new renderers[n_renderer](renderer_view, renderer_settings)
+            renderer_view.className = this.#renderer.constructor.name
+            renderer_settings.className = this.#renderer.constructor.name
+
+            this.#renderer.on_buffer_end = end => this.on_buffer_end(end)
+            this.#renderer.on_buffers = (buffers, duration) =>
+                this.#seekbar.set_buffers(buffers, duration)
+            this.#renderer.on_timeupdate = t => this.#seekbar.set_time(t)
+        }
+
+        {
+            const renderer_view = document.createElement("div")
+            e_view.appendChild(renderer_view)
+
+            const renderer_settings = document.createElement("div")
+            root.querySelector(".settings").appendChild(renderer_settings)
+
+            // this.#renderer_yt = new YoutubeRenderer(renderer_view, renderer_settings)
+        }
 
         // play button
         {
@@ -77,7 +121,7 @@ export default class GrassPlayer {
             const range_volume = root.querySelector(".range-volume")
             const range_volume_progress = root.querySelector(".range-volume-progress-track")
 
-            this.volume_change = (v) => {
+            this.volume_change = v => {
                 range_volume.value = v * 100
                 range_volume_progress.style.width = `${v * 100}%`
             }
@@ -135,9 +179,10 @@ export default class GrassPlayer {
                     clearTimeout(overlay_timeout)
                 }
 
-                if (e != null &&
-                    (e.target.closest(".settings") != null ||
-                        e.target.closest(".controls") != null)) {
+                if (
+                    e != null &&
+                    (e.target.closest(".settings") != null || e.target.closest(".controls") != null)
+                ) {
                     return
                 }
 

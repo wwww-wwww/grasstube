@@ -24,7 +24,6 @@ export default class EffectDehalo extends Effect {
             const update = (t) => {
                 if (scale == 1) { view.setInt32(i * 4, t / scale, true) }
                 else { view.setFloat32(i * 4, t / scale, true) }
-                console.log(t / scale)
                 if (this.#uniformBuffer == null) return
 
                 this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)

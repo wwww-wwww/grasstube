@@ -2,7 +2,7 @@ import SubtitlesOctopus from "../subtitles-octopus2"
 
 import Timer from "./timer"
 
-import { ResizerBestFit, ResizerStretch } from "./resizer"
+import { ResizerBestFit } from "./resizer"
 
 import EffectArt from "./effects/artcnn"
 import EffectDeband from "./effects/deband"
@@ -76,7 +76,7 @@ export default class WebGPURenderer {
         <div><span>Catchup</span><span class="videoinfo-catchup"></span></div>
         <div>
             <span>Method</span>
-            <select class="videoinfo-method">
+            <select class="videoinfo-method" disabled>
                 <option>Hybrid</option>
                 <option>requestVideoFrameCallback</option>
                 <option>requestAnimationFrame</option>
@@ -94,7 +94,6 @@ export default class WebGPURenderer {
 </div>
 <div>
     <div><span>Sampler</span><select class="select-sampler"></select></div>
-    <div class="sampler options"></div>
 </div>
 `
 
@@ -143,7 +142,6 @@ export default class WebGPURenderer {
             .catch(err => {
                 console.log("fonts:error fetching", err)
             })
-
     }
 
     #fonts
@@ -163,6 +161,8 @@ export default class WebGPURenderer {
                 this.#e_subtitles.removeChild(this.#e_subtitles.firstChild)
         }
 
+        if (subtitles == undefined || subtitles.length == 0) return
+
         this.#octopus = new SubtitlesOctopus({
             video: this.#e_video,
             canvasParent: this.#e_subtitles,
@@ -170,7 +170,7 @@ export default class WebGPURenderer {
             subUrl: subtitles,
             fallbackFont: "https://r2tube.grass.moe/fonts/arialbd.ttf",
             availableFonts: this.#fonts,
-            workerUrl: "/includes/subtitles-octopus-worker.js"
+            workerUrl: "/includes/subtitles-octopus-worker.js",
         })
     }
 
@@ -178,7 +178,10 @@ export default class WebGPURenderer {
         for (let i = 0; i < this.#e_video.buffered.length; i++) {
             const start = this.#e_video.buffered.start(i)
             const end = this.#e_video.buffered.end(i)
-            if ((start < this.#e_video.currentTime || start < 1) && end > this.#e_video.currentTime) {
+            if (
+                (start < this.#e_video.currentTime || start < 1) &&
+                end > this.#e_video.currentTime
+            ) {
                 if (this.on_buffer_end) {
                     this.on_buffer_end(end)
                 }
@@ -188,21 +191,16 @@ export default class WebGPURenderer {
         }
     }
 
-    #texturewidth
-    #textureheight
+    clear
     #sampler
     #effects
     #textures = {}
     #texture_views = {}
     async init(root, root_settings) {
-        const adapter = await navigator.gpu?.requestAdapter({
-            powerPreference: "high-performance",
-        })
+        const adapter = await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" })
         this.device = await adapter?.requestDevice({
             requiredFeatures: ["timestamp-query"],
-            requiredLimits: {
-                maxComputeWorkgroupStorageSize: 32768
-            }
+            requiredLimits: { maxComputeWorkgroupStorageSize: 32768 },
         })
 
         if (!this.device) {
@@ -214,8 +212,10 @@ export default class WebGPURenderer {
 
         const context = this.#e_canvas.getContext("webgpu")
         context.configure({
-            device: this.device, format: "rgba8unorm", colorSpace: "srgb",
-            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT
+            device: this.device,
+            format: "rgba8unorm",
+            colorSpace: "srgb",
+            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
         })
 
         this.clear = () => {
@@ -280,8 +280,9 @@ export default class WebGPURenderer {
 
             const div = root_settings.querySelector(".filters")
             this.#effects.forEach(e => {
-                console.log(e, e.get_storage("enabled") == "1")
-                e.on_update = () => { this.#have_frame = true }
+                e.on_update = () => {
+                    this.#have_frame = true
+                }
 
                 const el = create_element("div", div)
 
@@ -291,7 +292,6 @@ export default class WebGPURenderer {
                     check.type = "checkbox"
                     check.checked = e.enabled
                     check.addEventListener("input", () => {
-                        console.log("input")
                         e.enabled = check.checked
 
                         if (e.enabled && !e.initialized) {
@@ -299,7 +299,6 @@ export default class WebGPURenderer {
                         }
 
                         if (e.enabled) {
-                            console.log("on_enable")
                             e.on_enable()
                         } else {
                             e.on_disable()
@@ -333,7 +332,9 @@ export default class WebGPURenderer {
             const div = root_settings.querySelector(".sampler")
 
             select.addEventListener("change", () => {
-                while (div.firstChild) { div.removeChild(div.firstChild) }
+                while (div.firstChild) {
+                    div.removeChild(div.firstChild)
+                }
                 options[select.selectedIndex].create_settings(div)
                 options[select.selectedIndex].init()
                 this.#sampler = options[select.selectedIndex]
@@ -346,10 +347,10 @@ export default class WebGPURenderer {
             this.#sampler.create_settings(div)
         }
 
-        this.#prepare_textures(4, 4)
-
         this.#effects.forEach(e => {
-            if (e.enabled) { e.init() }
+            if (e.enabled) {
+                e.init()
+            }
         })
 
         const timer = new Timer(this.device)
@@ -390,7 +391,9 @@ export default class WebGPURenderer {
             let texture_video
             try {
                 texture_video = this.device.importExternalTexture({ source: this.#e_video })
-            } catch (e) { return }
+            } catch (e) {
+                return
+            }
 
             const texture_canvas = context.getCurrentTexture().createView()
 
@@ -401,12 +404,13 @@ export default class WebGPURenderer {
 
             this.#effects.forEach(e => {
                 if (!e.enabled) return
-
-                [last_tex, last_tex_res] = timer.run(e, video_time, last_tex, last_tex_res)
+                ;[last_tex, last_tex_res] = timer.run(e, video_time, last_tex, last_tex_res)
             })
 
-            timer.run(this.#sampler, video_time, last_tex, last_tex_res,
-                texture_canvas, [this.#e_canvas.width, this.#e_canvas.height])
+            timer.run(this.#sampler, video_time, last_tex, last_tex_res, texture_canvas, [
+                this.#e_canvas.width,
+                this.#e_canvas.height,
+            ])
 
             timer.finish()
 
@@ -414,15 +418,18 @@ export default class WebGPURenderer {
             this.device.queue.submit([encoder.finish()])
 
             if (timer.enabled) {
-                timer.results().then(({ sum, passes }) => {
-                    let txt = ""
-                    for (let i = 0; i < passes.length; i++) {
-                        txt += `${i} ${passes[i][0]}: ${passes[i][1]}\n`
-                    }
+                timer
+                    .results()
+                    .then(({ sum, passes }) => {
+                        let txt = ""
+                        for (let i = 0; i < passes.length; i++) {
+                            txt += `${i} ${passes[i][0]}: ${passes[i][1]}\n`
+                        }
 
-                    timing.textContent = txt
-                    gputime.textContent = (sum / 1000000).toFixed(4)
-                }).catch(() => { })
+                        timing.textContent = txt
+                        gputime.textContent = (sum / 1000000).toFixed(4)
+                    })
+                    .catch(() => {})
             }
 
             this.device.queue.onSubmittedWorkDone().then(() => {
@@ -455,7 +462,7 @@ export default class WebGPURenderer {
         const texture = this.device.createTexture({
             size: dims,
             format: "rgba16float",
-            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
         })
         const view = texture.createView()
 
@@ -470,14 +477,6 @@ export default class WebGPURenderer {
         return view
     }
 
-    #prepare_textures(width, height) {
-        this.#textures = {}
-        this.#texture_views = {}
-
-        this.#texturewidth = width
-        this.#textureheight = height
-    }
-
     resize() {
         this.#resizer.resize()
         this.#have_frame = true
@@ -487,24 +486,11 @@ export default class WebGPURenderer {
         this.#e_video.requestVideoFrameCallback(async () => {
             await this.#loaded
 
-            this.#prepare_textures(this.#e_video.videoWidth, this.#e_video.videoHeight)
+            this.#textures = {}
+            this.#texture_views = {}
 
             this.resize()
         })
-    }
-
-    clear() { }
-
-    set_captions(b) {
-        this.#e_subtitles.style.display = b ? "" : "none"
-    }
-
-    playing() {
-        return !this.#e_video.paused
-    }
-
-    duration() {
-        return this.#e_video.duration || 0
     }
 
     set_video(type, videos, subtitles) {
@@ -525,6 +511,18 @@ export default class WebGPURenderer {
 
     set_volume(v) {
         this.#e_video.volume = (Math.pow(10, v) - 1) / 9
+    }
+
+    set_captions(b) {
+        this.#e_subtitles.style.display = b ? "" : "none"
+    }
+
+    playing() {
+        return !this.#e_video.paused
+    }
+
+    duration() {
+        return this.#e_video.duration || 0
     }
 
     #speed = 1
@@ -587,7 +585,7 @@ export default class WebGPURenderer {
     #run_catchup() {
         if (this.#catchup_target == null || !this.playing()) return
         const elapsed = (Date.now() - this.#catchup_target_time) / 1000
-        const dist = (this.#catchup_target + elapsed) - this.current_time()
+        const dist = this.#catchup_target + elapsed - this.current_time()
 
         const dir = dist > 0 ? 1 : -1
         let catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
