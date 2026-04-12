@@ -35,7 +35,7 @@ export default class Effect {
 
     load() {
         if (!this.force) {
-            this.enabled = this.get_storage("enabled") || this.enabled == "1"
+            this.enabled = (this.get_storage("enabled") || (this.enabled && "1")) == "1"
         }
     }
 

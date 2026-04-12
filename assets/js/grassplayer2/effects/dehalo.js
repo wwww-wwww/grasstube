@@ -2,49 +2,55 @@ import Effect from "./_effect"
 
 export default class EffectDehalo extends Effect {
     enabled = true
-    create_settings(el) {
-        el.innerHTML = `
-<div><span>Bright strength</span><input class="input-strength1" type="number" value="50" max="100" min="0"/></div>
-<div><span>Dark strength</span><input class="input-strength2" type="number" value="20" max="100" min="0"/></div>
-<div><span>t</span><input class="input-t" type="number" value="4" max="10" min="0"/></div>
-<div><span>Radius</span><input class="input-radius" type="number" value="2" max="20" min="1"/></div>
+    #uniformData = new ArrayBuffer(16)
+    create_settings(root) {
+        root.innerHTML = `
+<div><span>Bright strength</span><button name="strength1" class="reset"></button><input name="strength1" type="number" value="50" max="100" min="0"/></div>
+<div><span>Dark strength</span><button name="strength2" class="reset"></button><input name="strength2" type="number" value="20" max="100" min="0"/></div>
+<div><span>t</span><button name="tightness" class="reset"></button><input name="tightness" type="number" value="4" max="10" min="0"/></div>
+<div><span>Radius</span><button name="radius" class="reset"></button><input name="radius" type="number" value="2" max="20" min="1"/></div>
 `
-        const data = new ArrayBuffer(16)
-        const view = new DataView(data)
-        view.setFloat32(0, .5, true)
-        view.setFloat32(4, .2, true)
-        view.setFloat32(8, .4, true)
-        view.setInt32(12, 2, true)
-        el.querySelector(".input-strength1").addEventListener("input", e => {
-            view.setFloat32(0, parseInt(e.target.value) / 100, true)
 
-            this.device.queue.writeBuffer(this.#uniformBuffer, 0, data)
-            this.on_update()
-        })
-        el.querySelector(".input-strength2").addEventListener("input", e => {
-            view.setFloat32(4, parseInt(e.target.value) / 100, true)
+        const view = new DataView(this.#uniformData)
 
-            this.device.queue.writeBuffer(this.#uniformBuffer, 0, data)
-            this.on_update()
-        })
-        el.querySelector(".input-t").addEventListener("input", e => {
-            view.setFloat32(8, parseInt(e.target.value) / 10, true)
+        Array.from([
+            ["strength1", .5, 100],
+            ["strength2", .2, 100],
+            ["tightness", .4, 10],
+            ["radius", 2, 1],
+        ]).forEach(([name, def, scale], i) => {
+            const val = parseInt(this.get_storage(name) || (def * scale))
 
-            this.device.queue.writeBuffer(this.#uniformBuffer, 0, data)
-            this.on_update()
-        })
-        el.querySelector(".input-radius").addEventListener("input", e => {
-            view.setInt32(12, parseInt(e.target.value), true);
+            const update = (t) => {
+                if (scale == 1) { view.setInt32(i * 4, t / scale, true) }
+                else { view.setFloat32(i * 4, t / scale, true) }
+                console.log(t / scale)
+                if (this.#uniformBuffer == null) return
 
-            this.device.queue.writeBuffer(this.#uniformBuffer, 0, data)
-            this.on_update()
+                this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
+                this.on_update()
+            }
+
+            update(val)
+
+            const el = root.querySelector(`input[name="${name}"]`)
+            el.value = val
+            el.addEventListener("input", () => {
+                update(el.value)
+                this.set_storage(name, el.value)
+            })
+
+            root.querySelector(`button[name="${name}"]`)
+                .addEventListener("click", () => {
+                    el.value = def * scale
+                    update(el.value)
+                    this.set_storage(name, el.value)
+                })
         })
     }
 
     #pipeline
-    #sampler
-    #uniformBuffer
-    #uniformData
+    #uniformBuffer = null
     #bindgroup_uniforms
     init() {
         super.init()
@@ -123,20 +129,12 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             size: 16,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         })
-
-        const data = new ArrayBuffer(16)
-        const view = new DataView(data)
-
-        view.setFloat32(0, .5, true)
-        view.setFloat32(4, .2, true)
-        view.setFloat32(8, .4, true)
-        view.setInt32(12, 2, true)
+        this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
 
         this.#bindgroup_uniforms = this.device.createBindGroup({
             layout: this.#pipeline.getBindGroupLayout(1),
             entries: [{ binding: 0, resource: this.#uniformBuffer }]
         })
-        this.device.queue.writeBuffer(this.#uniformBuffer, 0, data)
     }
 
     #compute_x

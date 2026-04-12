@@ -185,6 +185,7 @@ export default class GrassPlayer {
 
             root.addEventListener("dblclick", e => {
                 if (e.target.tagName == "INPUT") return
+                if (e.target.closest(".settings") != null) return
 
                 e.preventDefault()
                 this.#toggle_fullscreen()

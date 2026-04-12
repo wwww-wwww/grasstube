@@ -2,30 +2,41 @@ import Effect from "./_effect"
 
 export default class EffectDeband extends Effect {
     enabled = true
-    create_settings(el) {
-        el.innerHTML = `
-<div><span>Grain</span><input class="input-grain" type="number" value="64"/></div>
-<div><span>Threshold</span><input class="input-threshold" type="number" value="48"/></div>
-<div><span>Range</span><input class="input-range" type="number" value="15"/></div>
+    #uniformData = new Float32Array(4)
+    create_settings(root) {
+        root.innerHTML = `
+<div><span>Grain</span><button name="grain" class="reset"></button><input name="grain" type="number" value="64"/></div>
+<div><span>Threshold</span><button name="threshold" class="reset"></button><input name="threshold" type="number" value="48"/></div>
+<div><span>Range</span><button name="range" class="reset"></button><input name="range" type="number" value="15"/></div>
 `
-        el.querySelector(".input-grain").addEventListener("input", e => {
-            this.#uniformData[0] = parseInt(e.target.value)
-            this.on_update()
-        })
-        el.querySelector(".input-threshold").addEventListener("input", e => {
-            this.#uniformData[1] = parseInt(e.target.value)
-            this.on_update()
-        })
-        el.querySelector(".input-range").addEventListener("input", e => {
-            this.#uniformData[2] = parseInt(e.target.value)
-            this.on_update()
+
+        Array.from([
+            ["grain", 64],
+            ["threshold", 48],
+            ["range", 15],
+        ]).forEach(([name, def], i) => {
+            this.#uniformData[i] = parseInt(this.get_storage(name) || def)
+
+            const el = root.querySelector(`input[name="${name}"]`)
+            el.value = this.#uniformData[i]
+            el.addEventListener("input", () => {
+                this.#uniformData[i] = parseInt(el.value)
+                this.set_storage(name, el.value)
+                this.on_update()
+            })
+
+            root.querySelector(`button[name="${name}"]`).addEventListener("click", () => {
+                el.value = def
+                this.#uniformData[i] = def
+                this.set_storage(name, def)
+                this.on_update()
+            })
         })
     }
 
     #pipeline
     #sampler
     #uniformBuffer
-    #uniformData
     #bindgroup_uniforms
     init() {
         super.init()
@@ -33,7 +44,7 @@ export default class EffectDeband extends Effect {
         this.#pipeline = this.device.createComputePipeline({
             layout: "auto",
             compute: {
-                module: this.create_shader(/* wgsl */`
+                module: this.create_shader(/* wgsl */ `
 struct Uniforms {
     grain: f32,
     threshold: f32,
@@ -136,7 +147,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let rgb = ycbcr_to_rgb_rec709(debanded);
 
     textureStore(outputTexture, id.xy, vec4<f32>(rgb, sample.a));
-}`)
+}`),
             },
         })
 
@@ -146,15 +157,10 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             size: 16,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         })
-        this.#uniformData = new Float32Array(4)
-        this.#uniformData[0] = 64
-        this.#uniformData[1] = 48
-        this.#uniformData[2] = 15
-        this.#uniformData[3] = 0
 
         this.#bindgroup_uniforms = this.device.createBindGroup({
             layout: this.#pipeline.getBindGroupLayout(1),
-            entries: [{ binding: 0, resource: this.#uniformBuffer }]
+            entries: [{ binding: 0, resource: this.#uniformBuffer }],
         })
     }
 
@@ -183,7 +189,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                     { binding: 0, resource: tex1 },
                     { binding: 1, resource: tex2 },
                     { binding: 2, resource: this.#sampler },
-                ]
+                ],
             })
         }
 
