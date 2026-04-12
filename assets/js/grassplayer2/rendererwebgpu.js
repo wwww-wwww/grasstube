@@ -330,10 +330,10 @@ export default class WebGPURenderer {
             const div = root_settings.querySelector(".sampler")
 
             select.addEventListener("change", () => {
-                while (div.firstChild) {
-                    div.removeChild(div.firstChild)
-                }
-                options[select.selectedIndex].create_settings(div)
+                // while (div.firstChild) {
+                //     div.removeChild(div.firstChild)
+                // }
+                // options[select.selectedIndex].create_settings(div)
                 options[select.selectedIndex].init()
                 this.#sampler = options[select.selectedIndex]
                 this.#sampler.reset()
@@ -341,8 +341,8 @@ export default class WebGPURenderer {
             })
 
             this.#sampler = options[0]
+            // this.#sampler.create_settings(div)
             this.#sampler.init()
-            this.#sampler.create_settings(div)
         }
 
         this.#effects.forEach(e => {

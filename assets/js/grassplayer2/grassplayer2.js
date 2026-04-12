@@ -108,6 +108,7 @@ export default class GrassPlayer {
 
         {
             this.#renderer_yt_view = document.createElement("div")
+            this.#renderer_yt_view.style.display = "none"
             e_view.appendChild(this.#renderer_yt_view)
 
             const renderer_settings = document.createElement("div")

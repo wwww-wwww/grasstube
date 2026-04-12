@@ -6,7 +6,7 @@ export default class SamplerSphere extends EffectSampler {
     #uniformBuffer
     #uniformData
     init() {
-        const shader = this.create_shader(/* wgsl */`
+        const shader = this.create_shader(/* wgsl */ `
 struct Uniforms {
     aspect: f32,
     time: f32,
@@ -86,10 +86,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         this.#pipeline = this.device.createRenderPipeline({
             layout: "auto",
-            vertex: {
-                module: shader,
-                entryPoint: "vs_main",
-            },
+            vertex: { module: shader, entryPoint: "vs_main" },
             fragment: {
                 module: shader,
                 entryPoint: "fs_main",
@@ -112,6 +109,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         this.#uniformData = new Float32Array(4)
     }
 
+    create_settings(el) {}
+
     reset() {
         this.#tex1 = null
     }
@@ -133,31 +132,29 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 entries: [
                     { binding: 0, resource: tex1 },
                     { binding: 1, resource: this.#sampler },
-                ]
+                ],
             })
         }
 
-        this.#uniformData[1] = video_time / 2000
-        this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData);
+        this.#uniformData[1] = video_time
+        this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
 
         const pass = encoder.beginRenderPass({
             ...this.desc,
-            colorAttachments: [{
-                view: tex2,
-                clearValue: [0, 0, 0, 1],
-                loadOp: "clear",
-                storeOp: "store",
-            }]
+            colorAttachments: [
+                { view: tex2, clearValue: [0, 0, 0, 1], loadOp: "clear", storeOp: "store" },
+            ],
         })
 
-        pass.setPipeline(this.#pipeline);
+        pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
-        pass.setBindGroup(1, this.device.createBindGroup({
-            layout: this.#pipeline.getBindGroupLayout(1),
-            entries: [
-                { binding: 0, resource: { buffer: this.#uniformBuffer } },
-            ]
-        }))
+        pass.setBindGroup(
+            1,
+            this.device.createBindGroup({
+                layout: this.#pipeline.getBindGroupLayout(1),
+                entries: [{ binding: 0, resource: { buffer: this.#uniformBuffer } }],
+            }),
+        )
         pass.draw(3, 1, 0, 0)
         pass.end()
     }
