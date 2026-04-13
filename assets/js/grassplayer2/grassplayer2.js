@@ -333,7 +333,8 @@ export default class GrassPlayer {
             this.#current_renderer = this.#renderer
         }
 
-        this.#current_renderer.set_volume(this.#volume)
+        this.set_playing(false)
+        this.set_volume(this.#volume)
 
         this.#seekbar.reset()
     }
@@ -343,9 +344,9 @@ export default class GrassPlayer {
     }
 
     set_playing(playing) {
-        if (this.playing() == playing) return
-
         this.#e_chk_play.checked = playing
+
+        if (this.playing() == playing) return
 
         this.#current_renderer.set_playing(playing)
     }
