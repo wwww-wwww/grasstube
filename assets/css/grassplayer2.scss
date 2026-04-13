@@ -394,6 +394,7 @@
         }
 
         .messages {
+            color: rgba(255, 255, 255, 0.7);
             user-select: none;
             position: absolute;
             left: 25%;
@@ -560,6 +561,7 @@
         }
 
         .txt-time {
+            color: rgba(255, 255, 255, 0.7);
             padding: 8px;
             font-size: 18px;
             text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
@@ -567,6 +569,11 @@
 
         .volume {
             position: relative;
+            height: 48px;
+        }
+
+        input[type="range"] {
+            background: none;
         }
 
         .range-volume-progress {

@@ -175,7 +175,9 @@ export default class GrassPlayer {
             const chk = root.querySelector(".chk-captions")
             chk.addEventListener("input", () => {
                 this.#renderer.set_captions(!chk.checked)
-                this.#renderer_yt.set_captions(!chk.checked)
+                if (this.#renderer_yt != null) {
+                    this.#renderer_yt.set_captions(!chk.checked)
+                }
             })
         }
 
@@ -312,17 +314,21 @@ export default class GrassPlayer {
     #current_renderer
     set_video(type, videos, subtitles) {
         if (type == "yt") {
-            this.#renderer_yt_view.style.display = ""
             this.#renderer_view.style.display = "none"
-
-            this.#renderer_yt.set_video(videos)
             this.#renderer.set_video({}, "")
-            this.#current_renderer = this.#renderer_yt
-        } else {
-            this.#renderer_yt_view.style.display = "none"
-            this.#renderer_view.style.display = ""
 
-            this.#renderer_yt.set_video(null)
+            if (this.#renderer_yt != null) {
+                this.#renderer_yt_view.style.display = ""
+                this.#renderer_yt.set_video(videos)
+                this.#current_renderer = this.#renderer_yt
+            }
+        } else {
+            if (this.#renderer_yt != null) {
+                this.#renderer_yt_view.style.display = "none"
+                this.#renderer_yt.set_video(null)
+            }
+
+            this.#renderer_view.style.display = ""
             this.#renderer.set_video(videos, subtitles)
             this.#current_renderer = this.#renderer
         }
@@ -375,6 +381,9 @@ export default class GrassPlayer {
         }
 
         this.#current_renderer.seek(t, final)
+        if (final) {
+            this.create_message(seconds_to_hms(this.current_time(), true), 1000)
+        }
     }
 
     auto_seek(t) {

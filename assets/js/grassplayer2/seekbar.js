@@ -78,7 +78,7 @@ export default class Seekbar {
             const pointerup = e => {
                 e.preventDefault()
 
-                body.removeEventListener("pointermove", seek)
+                document.removeEventListener("pointermove", seek)
                 window.removeEventListener("pointerup", pointerup)
 
                 seek(e, true)
@@ -89,7 +89,7 @@ export default class Seekbar {
                 root.classList.toggle("seeking", false)
             }
 
-            body.addEventListener("pointermove", seek)
+            document.addEventListener("pointermove", seek)
             window.addEventListener("pointerup", pointerup)
 
             seek(e)
@@ -161,7 +161,7 @@ export default class Seekbar {
         this.set_buffers([])
     }
 
-    #enabled
+    #enabled = true
     set_enabled(b) {
         this.#enabled = b
         this.#root.classList.toggle("disabled", !b)

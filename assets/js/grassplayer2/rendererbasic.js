@@ -1,6 +1,8 @@
 import SubtitlesOctopus from "../subtitles-octopus2"
 
 export default class BasicRenderer {
+    on_buffer_end
+
     #e_video
     #e_subtitles
     #e_videoinfo_catchup
