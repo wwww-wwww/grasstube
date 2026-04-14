@@ -1,12 +1,14 @@
-import SubtitlesOctopus from "../subtitles-octopus2"
+import SubtitlesOctopus from "./subtitles-octopus2"
 
-export default class BasicRenderer {
+export default class RendererBasic {
+    player
+
     on_buffer_end
 
     #e_video
     #e_subtitles
     #e_videoinfo_catchup
-    constructor(root, root_settings) {
+    constructor(player, root, root_settings) {
         root.innerHTML = `
 <video crossorigin="anonymous"></video>
 <div class="subtitles"></div>
@@ -23,6 +25,7 @@ export default class BasicRenderer {
 </div>
 `
 
+        this.player = player
         this.#e_video = root.querySelector("video")
         this.#e_subtitles = root.querySelector("div.subtitles")
 
@@ -205,7 +208,7 @@ export default class BasicRenderer {
 
     #run_catchup() {
         if (this.#catchup_target == null || !this.playing()) return
-        const elapsed = (Date.now() - this.#catchup_target_time) / 1000
+        const elapsed = (performance.now() - this.#catchup_target_time) / 1000
         const dist = this.#catchup_target + elapsed - this.current_time()
 
         const dir = dist > 0 ? 1 : -1

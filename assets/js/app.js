@@ -256,10 +256,10 @@ const hooks = {
     speed: 1,
     mount_loaded: false,
     ping() {
-      this.ping_time = Date.now()
+      this.ping_time = performance.now()
       // if (!document.hidden) { console.info("video:ping") }
       this.pushEvent("ping", {}, () => {
-        this.last_ping = (Date.now() - this.ping_time) * 10
+        this.last_ping = (performance.now() - this.ping_time) * 10
         this.latency_rtt = this.last_ping * 0.25 + (this.latency_rtt || this.last_ping) * 0.75
         // this.stats_latency.textContent = this.latency_rtt.toFixed(2) + "ms"
         // if (!document.hidden) { console.info("video:pong", this.last_ping) }
@@ -399,7 +399,7 @@ const hooks = {
           player_state.player.auto_seek(offset_time)
         }
 
-        player_state.player.set_catchup(offset_time, Date.now())
+        player_state.player.set_catchup(offset_time, performance.now())
       }
 
       this.handleEvent("sync", data => {
@@ -434,7 +434,7 @@ const hooks = {
 
         player_state.player.auto_seek(offset_time)
 
-        player_state.player.set_catchup(offset_time, Date.now())
+        player_state.player.set_catchup(offset_time, performance.now())
       }
 
       this.handleEvent("seek", data => this.on_seek(data))

@@ -1,4 +1,4 @@
-import SubtitlesOctopus from "../subtitles-octopus2"
+import SubtitlesOctopus from "./subtitles-octopus2"
 
 import Timer from "./timer"
 
@@ -27,7 +27,8 @@ function create_element(tagname, root = null, classes = "") {
     return e
 }
 
-export default class WebGPURenderer {
+export default class RendererWebGPU {
+    player
     device
 
     #resizer
@@ -45,9 +46,9 @@ export default class WebGPURenderer {
     on_timeupdate
 
     #loaded
-    constructor(root, root_settings) {
+    constructor(player, root, root_settings) {
         root.innerHTML = `
-<canvas class="video" width="1920" height="1080"></canvas>
+<canvas class="video" width="1920" height="1080" style="width: 100%; height: 100%; object-fit: contain;"></canvas>
 <div class="subtitles"></div>
 `
 
@@ -97,6 +98,7 @@ export default class WebGPURenderer {
 </div>
 `
 
+        this.player = player
         this.#e_video = root_settings.querySelector("video")
         this.#e_canvas = root.querySelector("canvas.video")
         this.#e_subtitles = root.querySelector("div.subtitles")
@@ -164,6 +166,7 @@ export default class WebGPURenderer {
 
         if (subtitles == null || subtitles.length == 0) return
 
+        console.log("load subtitles")
         this.#octopus = new SubtitlesOctopus({
             video: this.#e_video,
             canvasParent: this.#e_subtitles,
@@ -588,7 +591,7 @@ export default class WebGPURenderer {
 
     #run_catchup() {
         if (this.#catchup_target == null || !this.playing()) return
-        const elapsed = (Date.now() - this.#catchup_target_time) / 1000
+        const elapsed = (performance.now() - this.#catchup_target_time) / 1000
         const dist = this.#catchup_target + elapsed - this.current_time()
 
         const dir = dist > 0 ? 1 : -1

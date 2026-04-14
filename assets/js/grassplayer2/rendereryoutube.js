@@ -1,4 +1,6 @@
-export default class YoutubeRenderer {
+export default class RendererYoutube {
+    player
+
     #e_video
     #e_videoinfo_catchup
 
@@ -6,7 +8,7 @@ export default class YoutubeRenderer {
     on_buffers
     on_timeupdate
 
-    constructor(root, root_settings) {
+    constructor(player, root, root_settings) {
         root.innerHTML = `<div class="youtube"></div>`
 
         root_settings.innerHTML = `
@@ -18,6 +20,8 @@ export default class YoutubeRenderer {
     </div>
 </div>
 `
+
+        this.player = player
 
         window.onYouTubeIframeAPIReady = () => {
             if (YT.loaded != 1) {
@@ -199,7 +203,7 @@ export default class YoutubeRenderer {
 
     #run_catchup() {
         if (this.#catchup_target == null || !this.playing()) return
-        const elapsed = (Date.now() - this.#catchup_target_time) / 1000
+        const elapsed = (performance.now() - this.#catchup_target_time) / 1000
         const dist = this.#catchup_target + elapsed - this.current_time()
 
         const dir = dist > 0 ? 1 : -1

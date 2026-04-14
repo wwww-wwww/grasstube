@@ -28,8 +28,8 @@ class ResizerBestFit extends Resizer {
     resize() {
         if (!this.video.videoWidth || !this.video.videoHeight) return
 
-        const view_width = this.root.getBoundingClientRect().width
-        const view_height = this.root.getBoundingClientRect().height
+        const view_width = this.root.getBoundingClientRect().width * window.devicePixelRatio
+        const view_height = this.root.getBoundingClientRect().height * window.devicePixelRatio
         const video_width = this.video.videoWidth
         const video_height = this.video.videoHeight
 
@@ -41,10 +41,10 @@ class ResizerBestFit extends Resizer {
 
         if (width / height > video_width / video_height) {
             scaled_video_height = Math.round(height)
-            scaled_video_width = Math.round(video_width / video_height * scaled_video_height)
+            scaled_video_width = Math.round((video_width / video_height) * scaled_video_height)
         } else {
             scaled_video_width = Math.round(width)
-            scaled_video_height = Math.round(video_height / video_width * scaled_video_width)
+            scaled_video_height = Math.round((video_height / video_width) * scaled_video_width)
         }
 
         this.canvas.width = scaled_video_width
@@ -58,15 +58,14 @@ class ResizerStretch extends Resizer {
     resize() {
         if (!this.video.videoWidth || !this.video.videoHeight) return
 
-        const view_width = this.root.getBoundingClientRect().width
-        const view_height = this.root.getBoundingClientRect().height
+        const view_width = this.root.getBoundingClientRect().width * window.devicePixelRatio
+        const view_height = this.root.getBoundingClientRect().height * window.devicePixelRatio
 
         let width = Math.max(1, Math.min(view_width, this.device.limits.maxTextureDimension2D))
         let height = Math.max(1, Math.min(view_height, this.device.limits.maxTextureDimension2D))
 
         this.canvas.width = width
         this.canvas.height = height
-        this.uniformData[0] = this.canvas.width / this.canvas.height;
     }
 }
 

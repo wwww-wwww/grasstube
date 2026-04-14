@@ -9,8 +9,7 @@ export default class EffectLut3d extends Effect {
 `
         this.#txt_3dlut_name = el.querySelector(".lut3d-name")
 
-        el.querySelector("button")
-            .addEventListener("click", () => this.#load_3dlut())
+        el.querySelector("button").addEventListener("click", () => this.#load_3dlut())
     }
 
     #pipeline
@@ -22,7 +21,7 @@ export default class EffectLut3d extends Effect {
         this.#pipeline = this.device.createComputePipeline({
             layout: "auto",
             compute: {
-                module: this.create_shader(/* wgsl */`
+                module: this.create_shader(/* wgsl */ `
 @group(0) @binding(0) var inputTexture: texture_2d<f32>;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(2) var lutTexture: texture_3d<f32>;
@@ -48,7 +47,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     var sample_lut = textureSampleLevel(lutTexture, samp, lutCoords, 0.0).rgb;
 
     textureStore(outputTexture, id.xy, vec4<f32>(sample_lut, sample.a));
-}`)
+}`),
             },
         })
 
@@ -60,9 +59,9 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 for (let g = 0; g < m; g++) {
                     for (let b = 0; b < m; b++) {
                         const loc = (b * m * m + g * m + r) * 4
-                        lut[loc + 0] = (r / (m - 1) * 65535 - 4096) / 56064
-                        lut[loc + 1] = (g / (m - 1) * 65535 - 4096) / 56064
-                        lut[loc + 2] = (b / (m - 1) * 65535 - 4096) / 56064
+                        lut[loc + 0] = ((r / (m - 1)) * 65535 - 4096) / 56064
+                        lut[loc + 1] = ((g / (m - 1)) * 65535 - 4096) / 56064
+                        lut[loc + 2] = ((b / (m - 1)) * 65535 - 4096) / 56064
                     }
                 }
             }
@@ -70,15 +69,15 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             this.#lut3dtexture = this.#generate_3d_texture(lut, m)
         }
 
-        navigator.storage.getDirectory()
+        navigator.storage
+            .getDirectory()
             .then(root => root.getFileHandle("main.3dlut"))
             .then(handle => handle.getFile())
             .then(file => file.arrayBuffer())
-            .then(buf => {
-                console.log(buf)
-                this.#lut3dtexture = this.#load_madvr(buf)
-                console.log("Loaded 3dlut")
-
+            .then(buf => this.#load_madvr(buf))
+            .then(lut => {
+                this.#lut3dtexture = this.#generate_3d_texture(lut, 256)
+                this.renderer.player.create_message("Loaded 3dlut", 1000)
                 this.#tex2 = null
                 this.#txt_3dlut_name.textContent = this.get_storage("filename")
 
@@ -90,7 +89,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             magFilter: "linear",
             addressModeU: "clamp-to-edge",
             addressModeV: "clamp-to-edge",
-            addressModeW: "clamp-to-edge"
+            addressModeW: "clamp-to-edge",
         })
     }
 
@@ -120,9 +119,10 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                     { binding: 1, resource: tex2 },
                     { binding: 2, resource: this.#lut3dtexture },
                     { binding: 3, resource: this.#sampler },
-                ]
+                ],
             })
         }
+
         const pass = encoder.beginComputePass(this.desc)
         pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
@@ -151,26 +151,13 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     }
 
     #load_madvr(buf) {
-        const data = buf.slice(16384)
-        const data_view = new Uint16Array(data)
-        const lut = new Float16Array(256 * 256 * 256 * 4)
-
-        for (let i = 0; i < 256 * 256 * 256; i++) {
-            const r = i >> 16
-            const g = (i >> 8) & 0xFF
-            const b = i & 0xFF
-
-            const old_r = (data_view[i * 3 + 2])
-            const old_g = (data_view[i * 3 + 1])
-            const old_b = (data_view[i * 3 + 0])
-
-            const loc = ((b << 16) + (g << 8) + r)
-            lut[loc * 4 + 0] = (old_r - 4096) / 56064
-            lut[loc * 4 + 1] = (old_g - 4096) / 56064
-            lut[loc * 4 + 2] = (old_b - 4096) / 56064
-        }
-
-        return this.#generate_3d_texture(lut, 256)
+        return new Promise((resolve, reject) => {
+            const worker = new Worker("/assets/grassplayer2/effects/lut3d-worker.js")
+            worker.onmessage = e => {
+                resolve(e.data)
+            }
+            worker.postMessage(buf)
+        })
     }
 
     #load_3dlut() {
@@ -181,32 +168,32 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         input.onchange = e => {
             const file = e.target.files[0]
 
-            const reader = new FileReader()
-            reader.readAsArrayBuffer(file)
+            file.arrayBuffer().then(buf => {
+                this.#load_madvr(buf).then(lut => {
+                    this.#lut3dtexture = this.#generate_3d_texture(lut, 256)
+                    console.info("Loaded 3dlut")
+                    this.renderer.player.create_message("Loaded 3dlut", 1000)
 
-            reader.onload = readerEvent => {
-                try {
-                    this.#lut3dtexture = this.#load_madvr(readerEvent.target.result)
-
-                    navigator.storage.getDirectory()
+                    navigator.storage
+                        .getDirectory()
                         .then(root => root.getFileHandle("main.3dlut", { create: true }))
                         .then(handle => handle.createWritable())
                         .then(async file => {
-                            await file.write(readerEvent.target.result)
+                            await file.write(buf)
                             await file.close()
                         })
                         .then(() => {
                             this.set_storage("filename", file.name)
-                            console.log("Saved 3dlut")
+                            console.info("Saved 3dlut")
+                            this.renderer.player.create_message("Saved 3dlut", 1000)
                         })
 
                     this.#tex2 = null
                     this.#txt_3dlut_name.textContent = file.name
 
                     this.on_update()
-                }
-                catch (e) { console.log(e) }
-            }
+                })
+            })
         }
     }
 }

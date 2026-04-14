@@ -96,7 +96,7 @@ export default class SubtitlesOctopus extends EventTarget {
     this._worker.onerror = e => this._error(e)
 
     const canvas2 = document.createElement('canvas')
-    const ctx2 = canvas2.getContext('2d')
+    const ctx2 = canvas2.getContext('2d', { willReadFrequently: false })
 
     // Test for alpha bug, where e.g. WebKit can render a transparent pixel
     // (with alpha == 0) as non-black which then leads to visual artifacts.

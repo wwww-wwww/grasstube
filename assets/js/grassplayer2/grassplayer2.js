@@ -1,6 +1,6 @@
-import BasicRenderer from "./rendererbasic"
-import WebGPURenderer from "./rendererwebgpu"
-import YoutubeRenderer from "./rendereryoutube"
+import RendererBasic from "./rendererbasic"
+import RendererWebGPU from "./rendererwebgpu"
+import RendererYoutube from "./rendereryoutube"
 
 import Seekbar, { seconds_to_hms } from "./seekbar"
 
@@ -73,7 +73,7 @@ export default class GrassPlayer {
 
         // Create default renderer
         {
-            const renderers = [WebGPURenderer, BasicRenderer]
+            const renderers = [RendererWebGPU, RendererBasic]
             const n_renderer = parseInt(this.get_storage("renderer") || 0)
 
             {
@@ -91,7 +91,7 @@ export default class GrassPlayer {
             const renderer_settings = document.createElement("div")
             root.querySelector(".settings").appendChild(renderer_settings)
 
-            this.#renderer = new renderers[n_renderer](this.#renderer_view, renderer_settings)
+            this.#renderer = new renderers[n_renderer](this, this.#renderer_view, renderer_settings)
             this.#renderer_view.className = this.#renderer.constructor.name
             renderer_settings.className = this.#renderer.constructor.name
 
@@ -114,7 +114,7 @@ export default class GrassPlayer {
             const renderer_settings = document.createElement("div")
             root.querySelector(".settings").appendChild(renderer_settings)
 
-            this.#renderer_yt = new YoutubeRenderer(this.#renderer_yt_view, renderer_settings)
+            this.#renderer_yt = new RendererYoutube(this, this.#renderer_yt_view, renderer_settings)
             this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
             renderer_settings.className = this.#renderer_yt.constructor.name
 
@@ -187,9 +187,10 @@ export default class GrassPlayer {
             chk.addEventListener("input", () => {
                 this.#toggle_fullscreen()
             })
-            document.addEventListener("fullscreenchange", () => {
+            this.events_fullscreenchange = () => {
                 chk.checked = document.fullscreenElement == this.#e_main
-            })
+            }
+            document.addEventListener("fullscreenchange", this.events_fullscreenchange)
         }
 
         // overlay show/hide
@@ -224,7 +225,7 @@ export default class GrassPlayer {
 
         // shortcuts
         {
-            window.addEventListener("keydown", e => {
+            this.events_keydown = e => {
                 if (document.activeElement.closest(".grassplayer2") == null) return
 
                 if (e.key == "f") {
@@ -249,7 +250,8 @@ export default class GrassPlayer {
                     e.preventDefault()
                     this.#toggle_playing()
                 }
-            })
+            }
+            window.addEventListener("keydown", this.events_keydown)
 
             root.addEventListener("dblclick", e => {
                 if (e.target.tagName == "INPUT") return
@@ -259,6 +261,11 @@ export default class GrassPlayer {
                 this.#toggle_fullscreen()
             })
         }
+    }
+
+    destroy() {
+        window.removeEventListener("keydown", this.events_keydown)
+        document.removeEventListener("fullscreenchange", this.events_fullscreenchange)
     }
 
     get_storage(name) {

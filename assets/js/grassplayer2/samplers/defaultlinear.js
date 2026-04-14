@@ -13,7 +13,7 @@ class EffectLinear extends Effect {
         this.#pipeline = this.device.createComputePipeline({
             layout: "auto",
             compute: {
-                module: this.create_shader(/* wgsl */`
+                module: this.create_shader(/* wgsl */ `
 @group(0) @binding(0) var inputTexture: texture_2d<f32>;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
 
@@ -31,12 +31,12 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let linear = to_linear_fast(sample.rgb);
 
     textureStore(outputTexture, id.xy, vec4<f32>(linear, sample.a));
-}`)
+}`),
             },
         })
     }
 
-    resize(w, h) { }
+    resize(w, h) {}
 
     #compute_x
     #compute_y
@@ -62,7 +62,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 entries: [
                     { binding: 0, resource: tex1 },
                     { binding: 1, resource: tex2 },
-                ]
+                ],
             })
         }
 
@@ -87,7 +87,7 @@ export default class SamplerDefaultLinear extends EffectSampler {
         this.#pipeline = this.device.createComputePipeline({
             layout: "auto",
             compute: {
-                module: this.create_shader(/* wgsl */`
+                module: this.create_shader(/* wgsl */ `
 @group(0) @binding(0) var tex: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
 @group(1) @binding(0) var outputTexture: texture_storage_2d<rgba8unorm, write>;
@@ -111,7 +111,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let srgb = to_srgb_fast(color.rgb);
 
     textureStore(outputTexture, id.xy, vec4(srgb, color.a));
-}`)
+}`),
             },
         })
 
@@ -120,11 +120,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             magFilter: "linear",
             addressModeU: "clamp-to-edge",
             addressModeV: "clamp-to-edge",
-            addressModeW: "clamp-to-edge"
+            addressModeW: "clamp-to-edge",
         })
     }
 
-    create_settings(el) { }
+    create_settings(el) {}
 
     reset() {
         this.#tex1 = null
@@ -132,14 +132,18 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
     #compute_x
     #compute_y
-    #tex_out_res
+    #tex_out
     #tex1
     #bindgroup
     run(encoder, video_time, tex_in, tex_in_res, tex_out, tex_out_res) {
         const [tex1, tex1_res] = this.#linear.run(encoder, video_time, tex_in, tex_in_res)
 
-        if (this.#tex_out_res != tex_out_res) {
-            this.#tex_out_res = tex_out_res
+        if (this.#tex_out != tex_out || this.#tex1 != tex1) {
+            this.desc = { label: `${this.constructor.name} (${tex1_res}->${tex_out_res})` }
+        }
+
+        if (this.#tex_out != tex_out) {
+            this.#tex_out = tex_out
             this.#compute_x = Math.ceil(tex_out_res[0] / 16)
             this.#compute_y = Math.ceil(tex_out_res[1] / 16)
         }
@@ -147,23 +151,25 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         if (this.#tex1 != tex1) {
             console.log("Recreating bind group")
             this.#tex1 = tex1
-            this.desc = { label: `${this.constructor.name} (${tex1_res}->${tex_out_res})` }
             this.#bindgroup = this.device.createBindGroup({
                 layout: this.#pipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: tex1 },
                     { binding: 1, resource: this.#sampler },
-                ]
+                ],
             })
         }
 
         const pass = encoder.beginComputePass(this.desc)
         pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
-        pass.setBindGroup(1, this.device.createBindGroup({
-            layout: this.#pipeline.getBindGroupLayout(1),
-            entries: [{ binding: 0, resource: tex_out }]
-        }))
+        pass.setBindGroup(
+            1,
+            this.device.createBindGroup({
+                layout: this.#pipeline.getBindGroupLayout(1),
+                entries: [{ binding: 0, resource: tex_out }],
+            }),
+        )
         pass.dispatchWorkgroups(this.#compute_x, this.#compute_y)
         pass.end()
     }
