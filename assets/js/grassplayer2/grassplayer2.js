@@ -96,9 +96,12 @@ export default class GrassPlayer {
             renderer_settings.className = this.#renderer.constructor.name
 
             this.#renderer.on_buffer_end = end => this.on_buffer_end(end)
-            this.#renderer.on_buffers = buffers =>
+            this.#renderer.on_buffers = buffers => {
+                if (this.#current_renderer != this.#renderer) return
                 this.#seekbar.set_buffers(buffers, this.duration())
+            }
             this.#renderer.on_timeupdate = t => {
+                if (this.#current_renderer != this.#renderer) return
                 this.#seekbar.set_time(t / this.duration())
                 e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
             }
@@ -118,12 +121,15 @@ export default class GrassPlayer {
             this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
             renderer_settings.className = this.#renderer_yt.constructor.name
 
+            this.#renderer_yt.on_buffers = buffers => {
+                if (this.#current_renderer != this.#renderer_yt) return
+                this.#seekbar.set_buffers(buffers, this.duration())
+            }
             this.#renderer_yt.on_timeupdate = t => {
+                if (this.#current_renderer != this.#renderer_yt) return
                 this.#seekbar.set_time(t / this.duration())
                 e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
             }
-            this.#renderer_yt.on_buffers = buffers =>
-                this.#seekbar.set_buffers(buffers, this.duration())
         }
 
         // play button

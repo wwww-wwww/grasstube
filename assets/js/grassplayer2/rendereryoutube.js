@@ -30,6 +30,8 @@ export default class RendererYoutube {
             }
 
             const player = new YT.Player(this.#e_video, {
+                width: "100%",
+                height: "100%",
                 playerVars: { controls: 0, autoplay: 0, cc_lang_pref: "en" },
                 events: {
                     onReady: e => {
