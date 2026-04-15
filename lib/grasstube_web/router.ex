@@ -7,10 +7,10 @@ defmodule GrasstubeWeb.Router do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
-    plug :put_root_layout, {GrasstubeWeb.LayoutView, :root}
+    plug :put_root_layout, html: {GrasstubeWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :fetch_current_user
+    plug :fetch_current_scope_for_user
     plug :fetch_geo
   end
 
@@ -18,69 +18,48 @@ defmodule GrasstubeWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", GrasstubeWeb do
-    pipe_through :browser
+  # Enable LiveDashboard in development
+  if Application.compile_env(:grasstube, :dev_routes) do
+    # If you want to use the LiveDashboard in production, you should put
+    # it behind authentication and allow only admins to access it.
+    # If your application does not have an admins-only section yet,
+    # you can use Plug.BasicAuth to set up some basic authentication
+    # as long as you are also using SSL (which you should anyway).
+    import Phoenix.LiveDashboard.Router
 
-    live_session :default, on_mount: GrasstubeWeb.UserAuth do
-      live "/", RoomsLive
-      get "/gdrive", PageController, :gdrive
+    scope "/dev" do
+      pipe_through :browser
 
-      scope "/r" do
-        live "/:room/auth", AuthLive
-
-        live "/:room", RoomLive
-
-        scope "/" do
-          pipe_through :require_authenticated_user
-
-          live "/:room/edit", EditRoomLive
-        end
-      end
-
-      scope "/" do
-        pipe_through :redirect_if_user_is_authenticated
-
-        live "/sign_in", SignInLive
-        post "/sign_in", UserController, :sign_in
-
-        live "/sign_up", SignUpLive
-        post "/sign_up", UserController, :sign_up
-      end
-
-      live "/u/:username", UserLive
-
-      scope "/" do
-        pipe_through :require_authenticated_user
-
-        live "/create_room", CreateRoomLive
-
-        post "/add_emote", UserController, :add_emote
-        post "/import_emotes", UserController, :import_emotes
-        post "/delete_emote", UserController, :delete_emote
-        post "/create_room", UserController, :create_room
-        post "/close_room", UserController, :close_room
-      end
-    end
-
-    get "/sign_out", UserController, :sign_out
-    get "/emote/:id", UserController, :emote
-
-    scope "/api" do
-      pipe_through :api
-
-      get "/list_rooms", PageController, :list_rooms
-      get "/emotes/r/:room", PageController, :emotes
-      get "/emotes/u/:username", UserController, :emotes_json
-      get "/yt_search", YTController, :yt_search
+      live_dashboard "/dashboard", metrics: GrasstubeWeb.Telemetry
     end
   end
 
-  if Mix.env() in [:dev, :test] do
-    import Phoenix.LiveDashboard.Router
+  scope "/", GrasstubeWeb do
+    pipe_through [:browser, :require_authenticated_user]
 
-    scope "/" do
-      pipe_through :browser
-      live_dashboard "/dashboard", metrics: GrasstubeWeb.Telemetry
+    live_session :require_authenticated_user,
+      on_mount: [{GrasstubeWeb.UserAuth, :require_authenticated}] do
+      live "/user/settings", UserLive.Settings, :edit
+
+      live "/create-room", RoomCreateLive
     end
+
+    post "/user/update-password", UserSessionController, :update_password
+  end
+
+  scope "/", GrasstubeWeb do
+    pipe_through [:browser]
+
+    live_session :current_user,
+      on_mount: [{GrasstubeWeb.UserAuth, :mount_current_scope}] do
+      live "/", IndexLive
+      live "/room/:name", RoomLive
+
+      live "/user/register", UserLive.Registration, :new
+      live "/user/log-in", UserLive.Login, :new
+    end
+
+    post "/user/log-in", UserSessionController, :create
+    delete "/user/log-out", UserSessionController, :delete
   end
 end

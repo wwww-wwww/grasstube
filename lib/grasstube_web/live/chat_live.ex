@@ -1,107 +1,41 @@
 defmodule GrasstubeWeb.ChatLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{Presence, ChatAgent}
+  alias Grasstube.{Room, Repo, ProcessRegistry, ChatAgent}
 
   def render(assigns) do
-    GrasstubeWeb.PageView.render("chat_live.html", assigns)
+    ~H"""
+    <div class="messages">
+      <%= for m <- @messages do %>
+        {inspect(m)}
+      <% end %>
+    </div>
+    <form phx-submit="send-message">
+      <input name="message"/>
+    </form>
+    """
   end
 
-  def mount(
-        _params,
-        %{"room" => room, "current_user" => current_user, "chat" => chat} = assigns,
-        socket
-      ) do
-    topic = "chat:#{room}"
+  def mount(:not_mounted_at_router, params, socket) do
+    mount(params, nil, socket)
+  end
 
-    geo = Map.get(assigns, "geo")
+  def mount(%{"room_id" => room_id}, _session, socket) do
+    room = Repo.get(Room, room_id)
 
-    user_id =
-      if connected?(socket) do
-        GrasstubeWeb.Endpoint.subscribe(topic)
-
-        {user_id, meta} =
-          case current_user do
-            %Grasstube.User{username: username} -> {username, %{}}
-            "$" <> user_id -> {current_user, %{nickname: "anon#{user_id}"}}
-          end
-
-        # meta = %{meta | geo: geo}
-
-        Presence.track(self(), topic, user_id, meta)
-        Presence.track(self(), "geo:" <> topic, user_id, %{geo: geo})
-        GrasstubeWeb.RoomsLive.update()
-        user_id
-      else
-        nil
-      end
+    chat =
+      ProcessRegistry.get(room_id, ChatAgent)
+      |> IO.inspect()
 
     socket =
       socket
       |> assign(room: room)
-      |> assign(topic: topic)
-      |> assign(user: current_user)
-      |> assign(user_id: user_id)
-      |> assign(chat: chat)
-      |> assign(history: ChatAgent.get_history(chat))
-      |> assign(emotes: ChatAgent.get_emotes(chat))
-      |> assign(users: Presence.list_with_nicknames(topic))
-
-    send(self(), %{event: "user", payload: %{user_id: user_id}})
-
-    case ChatAgent.get_motd(chat, true) do
-      "" -> nil
-      motd -> send(self(), %{event: "chat", payload: %{sender: "sys", name: room, content: motd}})
-    end
+      |> assign(history: chat.history)
 
     {:ok, socket}
   end
 
-  def terminate(_reason, socket) do
-    Presence.untrack(self(), socket.assigns.topic, socket.assigns.user_id)
-    Presence.untrack(self(), "geo" <> socket.assigns.topic, socket.assigns.user_id)
-
-    if Grasstube.Room.get_room(socket.assigns.room).user_username == nil and
-         Presence.list(socket.assigns.topic) |> Map.to_list() |> length == 0 do
-      case Nostrum.Api.request(
-             :get,
-             "/applications/#{Nostrum.Cache.Me.get().id}/activity-instances/#{socket.assigns.room}"
-           ) do
-        {:error, %Nostrum.Error.ApiError{status_code: 404}} ->
-          Grasstube.ProcessRegistry.delete_room(socket.assigns.room)
-
-        _ ->
-          :ok
-      end
-    end
-
-    GrasstubeWeb.RoomsLive.update()
-    :ok
-  end
-
-  def handle_event("chat", %{"message" => message}, socket) do
-    message = String.trim(message)
-
-    if String.length(message) > 0 do
-      ChatAgent.chat(socket.assigns.chat, {socket, self()}, message)
-    end
-
+  def handle_event("send-message", %{"message" => message}, socket) do
     {:noreply, socket}
-  end
-
-  def handle_info(%{event: "presence_diff"}, socket) do
-    {:noreply, socket |> assign(users: Presence.list_with_nicknames(socket.assigns.topic))}
-  end
-
-  def handle_info(%{event: "chat", payload: payload}, socket) do
-    {:noreply, push_event(socket, "chat", payload)}
-  end
-
-  def handle_info(%{event: "clear"}, socket) do
-    {:noreply, push_event(socket, "clear", %{})}
-  end
-
-  def handle_info(%{event: "user", payload: payload}, socket) do
-    {:noreply, push_event(socket, "user", payload)}
   end
 end

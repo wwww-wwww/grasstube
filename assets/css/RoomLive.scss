@@ -1,0 +1,214 @@
+.RoomLive {
+    max-width: 100%;
+    padding: 0;
+
+    >.main {
+        background-color: black;
+        position: relative;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+
+        >.player {
+            z-index: 0;
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        @keyframes hide {
+            0% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        >.left,
+        >.right {
+            z-index: 1;
+            position: absolute;
+            top: 0;
+            height: 100%;
+            padding: 16px;
+            transition: 0.25s transform, 0.25s opacity;
+            animation: hide 2s;
+
+            &:not(:hover) {
+                opacity: 0;
+                transition-delay: 0.5s;
+            }
+
+            &:hover {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        >.left {
+            left: 0;
+            padding-right: 32px;
+            transform: translateX(calc(-100% + 32px));
+
+            .presence {
+                color: rgba(255, 255, 255, 0.8);
+                text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+                border-radius: 8px;
+            }
+        }
+
+        >.right {
+            right: 0;
+            padding-right: 32px;
+            transform: translateX(calc(100% - 32px));
+        }
+    }
+
+    .ChatComponent {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+
+        .messages {
+            display: flex;
+            flex-direction: column-reverse;
+            flex: 1;
+            overflow-y: scroll;
+            padding: 8px;
+        }
+
+        form {
+            width: 100%;
+
+            input {
+                padding: 8px;
+                width: 100%;
+                border: 1px solid rgba(0, 0, 0, 0.3);
+                border-radius: 4px;
+            }
+        }
+    }
+
+    .bottom {
+        // padding: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+
+        >* {
+            flex: 1;
+        }
+    }
+
+    .interaction-area {
+        background: rgba(0, 0, 0, 0.1);
+        // box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: 800px;
+        max-width: 100%;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .interactions {
+        padding: 8px;
+        display: flex;
+        height: 48px;
+        align-items: center;
+        gap: 8px;
+        justify-content: space-between;
+
+        >* {
+            button {
+                height: 32px;
+            }
+        }
+    }
+
+    .playlist-form {
+        // box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+        padding: 8px;
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        justify-content: center;
+
+        >* {
+            display: block;
+        }
+    }
+
+
+    .playlist {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow-y: scroll;
+        // height: 300px;
+        padding: 8px;
+        border-radius: 0 0 8px 8px;
+
+        >* {
+            user-select: none;
+            display: flex;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+
+            // height: 24px;
+            span {
+                flex: 1;
+            }
+
+            &.current {
+                background: rgb(220, 220, 220);
+
+            }
+        }
+    }
+}
+
+nav:has(~ main > .RoomLive) {
+    position: absolute;
+    top: 0;
+    transform: translateY(calc(-100% + 16px));
+
+    &:not(:hover) {
+        transition-delay: 1s;
+
+        >div {
+            transition-delay: 1s;
+        }
+    }
+
+    >div {
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+    }
+
+    &:hover {
+        transform: translateY(0);
+
+        >div {
+            opacity: 1;
+        }
+    }
+}
+
+main:has(.RoomLive) {
+    width: 100%;
+    padding: 0;
+}
+
+body:has(.RoomLive) {
+    scrollbar-width: none;
+}
