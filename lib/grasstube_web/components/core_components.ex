@@ -505,4 +505,13 @@ defmodule GrasstubeWeb.CoreComponents do
     s = rem(seconds, 60)
     :io_lib.format("~2..0B:~2..0B:~2..0B", [h, m, s]) |> IO.iodata_to_binary()
   end
+
+  def cc_emoji(nil), do: ""
+
+  def cc_emoji(cc) do
+    charlist =
+      cc |> String.to_charlist() |> Enum.map(&(&1 + 127_397)) |> to_charlist()
+
+    "#{charlist}"
+  end
 end

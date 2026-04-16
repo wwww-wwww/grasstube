@@ -31,7 +31,7 @@ defmodule Grasstube.ChatAgent do
   def get(pid), do: Agent.get(pid, & &1)
 
   def chat(pid, user, message) do
-    message = {user.username, message}
+    message = %{sender: user.username, message: message}
 
     state =
       Agent.get_and_update(pid, fn state ->
@@ -52,12 +52,4 @@ defmodule Grasstube.ChatAgent do
 
     Endpoint.broadcast("chat:#{state.room_id}", "clear", nil)
   end
-
-  # def reload_room(room) do
-  #   ProcessRegistry.lookup(room.id, __MODULE__)
-  #   |> Agent.update(fn state ->
-  #     new_room = Repo.get(Room, room.id) |> Repo.preload([:user, :mods, [emotelists: :emotes]])
-  #     %{state | room: new_room}
-  #   end)
-  # end
 end

@@ -213,4 +213,10 @@ const poll_form = {
     },
 }
 
-export default { video, modal_fullscreen, media_directories, poll_form }
+const chat = {
+    mounted() {
+        console.log(this.el)
+    },
+}
+
+export default { video, modal_fullscreen, media_directories, poll_form, chat }

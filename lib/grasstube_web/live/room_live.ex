@@ -35,10 +35,11 @@ defmodule GrasstubeWeb.RoomLive do
             <div>
               <%= for meta <- metas do %>
                 <span>
+                  {cc_emoji(meta.country_code)}
                   <%= if meta.user != nil do %>
-                    {meta.user.username} {meta.country_code}
+                    {meta.user.username}
                   <% else %>
-                    guest:{meta.guest} {meta.country_code}
+                    guest:{meta.guest}
                   <% end %>
                 </span>
               <% end %>

@@ -281,7 +281,7 @@ defmodule GrasstubeWeb.UserAuth do
     country_code =
       case :locus.lookup(:country, ip) do
         :not_found -> nil
-        cc -> cc
+        {:ok, %{"country_code" => cc}} -> cc
       end
 
     put_session(conn, :country_code, country_code)

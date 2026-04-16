@@ -5,7 +5,7 @@ defmodule GrasstubeWeb.ChatComponent do
 
   def render(assigns) do
     ~H"""
-    <div class="ChatComponent">
+    <div class="ChatComponent" id={"chat-#{@state.room_id}"} phx-hook="chat" phx-update="ignore">
       <div class="messages">
         <%= for {sender, message} <- @state.history |> Enum.reverse do %>
           <div>
@@ -13,9 +13,7 @@ defmodule GrasstubeWeb.ChatComponent do
           </div>
         <% end %>
       </div>
-      <form phx-submit="send_message" phx-target={@myself}>
-        <input name="message" autocomplete="off" />
-      </form>
+      <input name="message" autocomplete="off" />
     </div>
     """
   end
@@ -37,8 +35,8 @@ defmodule GrasstubeWeb.ChatComponent do
 
   defmacro __using__(_opts) do
     quote do
-      def handle_info(%{topic: "chat:" <> _, event: "update", payload: state}, socket) do
-        # GrasstubeWeb.ChatComponent.update_assigns(state.room_id, state: state)
+      def handle_info(%{topic: "chat:" <> _, event: "message", payload: message}, socket) do
+        socket = push_event(socket, "message", message)
         {:noreply, socket}
       end
     end
