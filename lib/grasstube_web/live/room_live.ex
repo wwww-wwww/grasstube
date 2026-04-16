@@ -1,18 +1,30 @@
 defmodule GrasstubeWeb.RoomLive do
   use GrasstubeWeb, :live_view
   use GrasstubeWeb.ChatComponent
+  use GrasstubeWeb.PollComponent
+
+  import Ecto.Query, only: [from: 2]
 
   alias GrasstubeWeb.Endpoint
-  alias Grasstube.{ChatAgent, Room, Repo, ProcessRegistry, PlaylistAgent, VideoAgent, Presence}
+
+  alias Grasstube.{
+    ChatAgent,
+    Room,
+    Repo,
+    ProcessRegistry,
+    PlaylistAgent,
+    VideoAgent,
+    Presence,
+    Poll
+  }
 
   def render(assigns) do
     ~H"""
     <div class="main">
-      <div id="video" class="player" phx-hook="video" phx-update="ignore">
-      </div>
+      <div id="video" class="player" phx-hook="video" phx-update="ignore"></div>
       <.live_component
         module={GrasstubeWeb.ChatComponent}
-        id={GrasstubeWeb.ChatComponent.id(@room.id)}
+        id={to_string(@room.id)}
         current_scope={@current_scope}
         pid={@chat_pid}
         state={@chat}
@@ -22,68 +34,164 @@ defmodule GrasstubeWeb.RoomLive do
           <%= for {_id, %{metas: metas}} <- @presence do %>
             <div>
               <%= for meta <- metas do %>
-              <span>
-                <%= if meta.user != nil do %>
-                  {meta.user.username} {meta.country_code}
-                <% else %>
-                  guest:{meta.guest} {meta.country_code}
-                <% end %>
-              </span>
+                <span>
+                  <%= if meta.user != nil do %>
+                    {meta.user.username} {meta.country_code}
+                  <% else %>
+                    guest:{meta.guest} {meta.country_code}
+                  <% end %>
+                </span>
               <% end %>
             </div>
           <% end %>
         </div>
-        <div class="polls">
+      </div>
+      <div class="right"></div>
+
+      <div
+        id="playlist_form"
+        phx-update="ignore"
+        phx-hook="media_directories"
+        directories={(@room.media_directories || []) |> Jason.encode!()}
+      >
+        <div>
+          <div class="top">
+            <button class="close"></button>
+            <form class="playlist-form" phx-submit="playlist_add">
+              <input name="video_url" value="" placeholder="Video url" autocomplete="off" />
+              <input name="subtitles_url" value="" placeholder="Subtitles url" autocomplete="off" />
+              <input type="submit" value="Add" />
+            </form>
+          </div>
+          <div class="list"></div>
         </div>
       </div>
-      <div class="right">
+    </div>
+
+    <div class="interactions" id="interactions" phx-update="ignore">
+      <div>
+        <label class="btn-chk" for="chk_show_polls">
+          <input type="checkbox" id="chk_show_polls" />
+          <span>Polls</span>
+        </label>
+        <label class="btn-chk" for="chk_create_poll">
+          <input type="checkbox" id="chk_create_poll" />
+          <span>Create poll</span>
+        </label>
+      </div>
+      <div>
+        <label class="btn-chk" for="chk_show_playlist_form">
+          <input type="checkbox" id="chk_show_playlist_form" />
+          <span>Add to playlist</span>
+        </label>
+      </div>
+
+      <div id="polls-form" phx-update="ignore" phx-hook="poll_form">
+        <div>
+          <form id="polls_form" phx-submit="poll_create">
+            <input name="name" placeholder="Name" autocomplete="off" />
+            <input name="0" value="" placeholder="Option" autocomplete="off" />
+            <input name="1" value="" placeholder="Option" autocomplete="off" />
+          </form>
+          <button class="btn-add-option">Add option</button>
+          <input type="submit" value="Create" form="polls_form" />
+        </div>
       </div>
     </div>
 
     <div class="bottom">
-      <div class="interaction-area">
-        <div class="interactions">
-          <div>
-            <button>Reset height</button>
-          </div>
-          <div>
-            <button>Add to playlist</button>
-          </div>
-        </div>
-        <div class="playlist">
-          <%= for v <- @playlist do %>
-            <div class={if @current_video != nil and @current_video.id == v.id, do: "current"}>
-              <span>{v.title}</span>
-              <button phx-click="playlist_remove" phx-value-id={v.id}>delete</button>
-              <button phx-click="playlist_set" phx-value-id={v.id} disabled={@current_video != nil and @current_video.id == v.id}>set</button>
-            </div>
+      <div class="polls">
+        <%= for p <- @polls do %>
+          <.live_component
+            module={GrasstubeWeb.PollComponent}
+            id={to_string(p.id)}
+            current_scope={@current_scope}
+            poll={p}
+          />
+        <% end %>
+      </div>
+      <div class="playlist">
+        <% playlist_top =
+          @playlist
+          |> Enum.drop_while(&(&1.id != (@current_video != nil and @current_video.id)))
+
+        playlist_rest =
+          @playlist
+          |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
+        <%= if @current_video != nil do %>
+          <table>
+            <%= for {v, i} <- Enum.with_index(playlist_top) do %>
+              <tr class={if i == 0, do: "current"}>
+                <td class="inserted_at">{v.inserted_at}</td>
+                <td class="title">{v.title}</td>
+                <td>{to_hhmmss(v.duration)}</td>
+                <td>
+                  <div>
+                    <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
+                    <button
+                      phx-click="playlist_set"
+                      phx-value-id={v.id}
+                      disabled={@current_video != nil and @current_video.id == v.id}
+                      class="set"
+                    >
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </table>
+        <% end %>
+        <table>
+          <%= for v <- playlist_rest do %>
+            <tr>
+              <td class="inserted_at">{v.inserted_at}</td>
+              <td class="title">{v.title}</td>
+              <td>{to_hhmmss(v.duration)}</td>
+              <td>
+                <div>
+                  <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
+                  <button
+                    phx-click="playlist_set"
+                    phx-value-id={v.id}
+                    disabled={@current_video != nil and @current_video.id == v.id}
+                    class="set"
+                  >
+                  </button>
+                </div>
+              </td>
+            </tr>
           <% end %>
-        </div>
+        </table>
       </div>
     </div>
-          <form class="playlist-form" phx-submit="playlist_add">
-            <input name="video_url" value="https://bc.grass.moe/public/video/assaultlily05.mp4" autocomplete="off"/>
-            <input name="subtitles_url" value="https://bc.grass.moe/public/video/assaultlily05.ass" autocomplete="off"/>
-            <input type="submit" value="add"/>
-          </form>
     """
   end
 
-  def mount(%{"name" => room_name}, _session, socket) do
+  def mount(%{"title" => room_name}, _session, socket) do
     room = Repo.get_by(Room, title: room_name)
 
     chat_pid = ProcessRegistry.lookup(room.id, ChatAgent)
     chat = ChatAgent.get(chat_pid)
 
     playlist_pid = ProcessRegistry.lookup(room.id, PlaylistAgent)
-    playlist = PlaylistAgent.get(playlist_pid).videos
+
+    playlist =
+      PlaylistAgent.get(playlist_pid).videos
+      |> Enum.sort_by(& &1.inserted_at)
 
     video_pid = ProcessRegistry.lookup(room.id, VideoAgent)
     video = VideoAgent.get(video_pid)
 
+    polls =
+      from(p in Poll, where: p.room_id == ^room.id)
+      |> Repo.all()
+      |> Repo.preload(:votes)
+      |> Enum.sort_by(& &1.inserted_at, :desc)
+
     if connected?(socket) do
       Endpoint.subscribe("video:#{room.id}")
       Endpoint.subscribe("playlist:#{room.id}")
+      Endpoint.subscribe("polls:#{room.id}")
 
       if video.current_video != nil do
         send(self(), %{topic: "video:", event: "set", payload: video.current_video})
@@ -117,6 +225,7 @@ defmodule GrasstubeWeb.RoomLive do
       |> assign(playlist: playlist)
       |> assign(video_pid: video_pid)
       |> assign(current_video: video.current_video)
+      |> assign(polls: polls)
       |> assign(presence: Presence.list("room:#{room.id}"))
 
     {:ok, socket}
@@ -131,21 +240,42 @@ defmodule GrasstubeWeb.RoomLive do
     :ok
   end
 
+  def update_polls(room_id) do
+    polls =
+      from(p in Poll, where: p.room_id == ^room_id)
+      |> Repo.all()
+      |> Repo.preload(:votes)
+      |> Enum.sort_by(& &1.inserted_at, :desc)
+
+    Endpoint.broadcast("polls:#{room_id}", "polls", polls)
+  end
+
   def handle_info(%{topic: "playlist:" <> _, payload: playlist}, socket) do
-    IO.inspect("playlist")
-    socket = assign(socket, playlist: playlist)
-    {:noreply, socket}
+    playlist =
+      playlist
+      |> Enum.sort_by(& &1.inserted_at)
+
+    {:noreply, assign(socket, playlist: playlist)}
   end
 
   def handle_info(%{topic: "video:" <> _, event: "set", payload: video}, socket) do
+    video_info =
+      case video do
+        nil ->
+          %{type: "default", video_url: nil, subtitles_url: nil}
+
+        _ ->
+          %{
+            type: video.type,
+            video_url: video.video_url,
+            subtitles_url: video.subtitles_url
+          }
+      end
+
     socket =
       socket
       |> assign(current_video: video)
-      |> push_event("video_set", %{
-        type: video.type,
-        video_url: video.video_url,
-        subtitles_url: video.subtitles_url
-      })
+      |> push_event("video_set", video_info)
 
     {:noreply, socket}
   end
@@ -164,6 +294,10 @@ defmodule GrasstubeWeb.RoomLive do
 
   def handle_info(%{topic: "presence:" <> _, payload: presence}, socket) do
     {:noreply, assign(socket, presence: presence)}
+  end
+
+  def handle_info(%{topic: "polls:" <> _, payload: polls}, socket) do
+    {:noreply, assign(socket, polls: polls)}
   end
 
   def handle_event(
@@ -185,6 +319,25 @@ defmodule GrasstubeWeb.RoomLive do
     {:noreply, socket}
   end
 
+  def handle_event("playlist_next", _params, socket) do
+    next_video =
+      case socket.assigns.current_video do
+        nil ->
+          socket.assigns.playlist |> Enum.take(1)
+
+        current_video ->
+          socket.assigns.playlist
+          |> Enum.drop_while(&(&1.id != current_video.id))
+          |> Enum.drop(1)
+          |> Enum.take(1)
+      end
+      |> Enum.map(& &1.id)
+      |> Enum.at(0)
+
+    VideoAgent.set_video(socket.assigns.video_pid, next_video)
+    {:noreply, socket}
+  end
+
   def handle_event("video_playing", %{"playing" => playing, "offset" => offset}, socket) do
     if playing do
       VideoAgent.set_dtime(socket.assigns.video_pid, offset)
@@ -202,5 +355,24 @@ defmodule GrasstubeWeb.RoomLive do
 
   def handle_event("ping", _, socket) do
     {:reply, %{}, socket}
+  end
+
+  def handle_event("poll_create", %{"name" => name} = params, socket) do
+    params
+    |> Enum.reject(&(elem(&1, 0) == "name"))
+    |> Enum.filter(&(String.length(elem(&1, 1)) > 0))
+    |> Enum.map(&elem(&1, 1))
+    |> case do
+      [] ->
+        nil
+
+      options ->
+        %Poll{name: name, options: options, room_id: socket.assigns.room.id}
+        |> Repo.insert()
+
+        update_polls(socket.assigns.room.id)
+    end
+
+    {:noreply, socket}
   end
 end

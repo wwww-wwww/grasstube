@@ -62,7 +62,9 @@ defmodule GrasstubeWeb do
     quote do
       use Phoenix.LiveComponent
 
-      def id(n), do: "#{__MODULE__}-#{n}"
+      defp id(n) when is_integer(n), do: to_string(n)
+
+      defp id(n), do: n
 
       def update_assigns(n, opts), do: send_update(__MODULE__, [{:id, id(n)} | opts])
 

@@ -35,8 +35,7 @@ defmodule GrasstubeWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
-    </header>
+    <header class="navbar px-4 sm:px-6 lg:px-8"></header>
 
     <main class="px-4 py-20 sm:px-6 lg:px-8">
       <div class="mx-auto max-w-2xl space-y-4">

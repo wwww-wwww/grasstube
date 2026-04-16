@@ -494,13 +494,11 @@ export default class RendererWebGPU {
         })
     }
 
-    set_video(videos, subtitles) {
+    set_video(video, subtitles) {
         this.set_playing(false)
 
-        const keys = Object.keys(videos)
-
-        if (keys.length > 0) {
-            this.#e_video.src = videos["default"]
+        if (video != null && video.length > 0) {
+            this.#e_video.src = video
             this.reload()
         } else {
             this.#e_video.src = ""

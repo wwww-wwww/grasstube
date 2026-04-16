@@ -1,11 +1,21 @@
 defmodule GrasstubeWeb.UserLive.Settings do
   use GrasstubeWeb, :live_view
+  import Ecto.Query, only: [from: 2]
 
-  alias Grasstube.Accounts
+  alias Grasstube.{Accounts, Room, Repo}
 
   @impl true
   def render(assigns) do
     ~H"""
+    <h2>Rooms</h2>
+    <%= for r <- @rooms do %>
+      <div>
+        <.link href={~p"/room/#{r.title}"}>{r.title}</.link>
+        <.link href={~p"/room/#{r.title}/edit"}>Edit</.link>
+      </div>
+    <% end %>
+
+    <h2>Password</h2>
     <.form
       for={@password_form}
       id="password_form"
@@ -49,11 +59,17 @@ defmodule GrasstubeWeb.UserLive.Settings do
     user = socket.assigns.current_scope.user
     password_changeset = Accounts.change_user_password(user, %{}, hash_password: false)
 
+    rooms =
+      from(r in Room, where: r.user_id == ^user.id)
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at)
+
     socket =
       socket
       |> assign(:current_username, user.username)
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:trigger_submit, false)
+      |> assign(:rooms, rooms)
 
     {:ok, socket}
   end

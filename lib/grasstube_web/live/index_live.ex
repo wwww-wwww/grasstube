@@ -10,7 +10,7 @@ defmodule GrasstubeWeb.IndexLive do
     ~H"""
     <div>
       <%= if @current_scope.user do %>
-      <.link href="/create-room">Create Room</.link>
+        <.link href="/create-room">Create Room</.link>
       <% end %>
 
       <div class="roomlist">

@@ -9,13 +9,12 @@ defmodule GrasstubeWeb.ChatComponent do
       <div class="messages">
         <%= for {sender, message} <- @state.history |> Enum.reverse do %>
           <div>
-            <span>{sender}</span>:
-            <span>{message}</span>
+            <span>{sender}</span>: <span>{message}</span>
           </div>
         <% end %>
       </div>
       <form phx-submit="send_message" phx-target={@myself}>
-        <input name="message" autocomplete="off"/>
+        <input name="message" autocomplete="off" />
       </form>
     </div>
     """

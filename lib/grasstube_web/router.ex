@@ -42,6 +42,7 @@ defmodule GrasstubeWeb.Router do
       live "/user/settings", UserLive.Settings, :edit
 
       live "/create-room", RoomCreateLive
+      live "/room/:title/edit", RoomEditLive
     end
 
     post "/user/update-password", UserSessionController, :update_password
@@ -53,7 +54,7 @@ defmodule GrasstubeWeb.Router do
     live_session :current_user,
       on_mount: [{GrasstubeWeb.UserAuth, :mount_current_scope}] do
       live "/", IndexLive
-      live "/room/:name", RoomLive
+      live "/room/:title", RoomLive
 
       live "/user/register", UserLive.Registration, :new
       live "/user/log-in", UserLive.Login, :new

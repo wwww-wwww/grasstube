@@ -17,7 +17,7 @@ defmodule Grasstube.RoomSupervisor do
       {Grasstube.ChatAgent, room},
       {Grasstube.VideoAgent, room},
       {Grasstube.VideoScheduler, room},
-      {Grasstube.PlaylistAgent, room},
+      {Grasstube.PlaylistAgent, room}
       # {Grasstube.PollsAgent, room}
     ]
 

@@ -31,7 +31,7 @@ defmodule Grasstube.Accounts.Scope do
 
   def for_user(nil) do
     id = Grasstube.Counter.inc()
-     %__MODULE__{guest: id, id: "guest:#{id}"}
+    %__MODULE__{guest: id, id: "guest:#{id}"}
   end
 end
 

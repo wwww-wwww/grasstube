@@ -5,12 +5,19 @@ defmodule GrasstubeWeb.RoomCreateLive do
 
   def render(assigns) do
     ~H"""
-      <.form for={@form} id="registration_form" phx-submit="create">
-        <.input field={@form[:title]} type="text" label="Title" spellcheck="false" required phx-mounted={JS.focus()}/>
-        <.input field={@form[:password]} type="text" label="Password" spellcheck="false"/>
+    <.form for={@form} id="registration_form" phx-submit="create">
+      <.input
+        field={@form[:title]}
+        type="text"
+        label="Title"
+        spellcheck="false"
+        required
+        phx-mounted={JS.focus()}
+      />
+      <.input field={@form[:password]} type="text" label="Password" spellcheck="false" />
 
-        <.button phx-disable-with="Creating room...">Create</.button>
-      </.form>
+      <.button phx-disable-with="Creating room...">Create</.button>
+    </.form>
     """
   end
 

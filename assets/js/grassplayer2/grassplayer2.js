@@ -261,6 +261,7 @@ export default class GrassPlayer {
 
             root.addEventListener("dblclick", e => {
                 if (e.target.tagName == "INPUT") return
+                if (e.target.tagName == "BUTTON") return
                 if (e.target.closest(".settings") != null) return
 
                 e.preventDefault()
@@ -325,14 +326,14 @@ export default class GrassPlayer {
     }
 
     #current_renderer
-    set_video(type, videos, subtitles) {
+    set_video(type, video, subtitles) {
         if (type == "yt") {
             this.#renderer_view.style.display = "none"
-            this.#renderer.set_video({}, "")
+            this.#renderer.set_video(null, null)
 
             if (this.#renderer_yt != null) {
                 this.#renderer_yt_view.style.display = ""
-                this.#renderer_yt.set_video(videos)
+                this.#renderer_yt.set_video(video)
                 this.#current_renderer = this.#renderer_yt
             }
         } else {
@@ -342,7 +343,7 @@ export default class GrassPlayer {
             }
 
             this.#renderer_view.style.display = ""
-            this.#renderer.set_video(videos, subtitles)
+            this.#renderer.set_video(video, subtitles)
             this.#current_renderer = this.#renderer
         }
 
@@ -393,6 +394,8 @@ export default class GrassPlayer {
             this.on_seek(t)
             return
         }
+
+        if (t >= this.duration()) return
 
         this.#current_renderer.seek(t, final)
         if (final) {

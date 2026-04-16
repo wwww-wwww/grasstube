@@ -1,15 +1,15 @@
 .RoomLive {
-    max-width: 100%;
+    max-width: 100vw;
+    width: 100vw;
     padding: 0;
 
-    >.main {
-        background-color: black;
+    > .main {
         position: relative;
         width: 100%;
         height: 100vh;
         overflow: hidden;
 
-        >.player {
+        > .player {
             z-index: 0;
             position: relative;
             height: 100%;
@@ -29,14 +29,16 @@
             }
         }
 
-        >.left,
-        >.right {
+        > .left,
+        > .right {
             z-index: 1;
             position: absolute;
             top: 0;
-            height: 100%;
+            height: calc(100% - 96px);
             padding: 16px;
-            transition: 0.25s transform, 0.25s opacity;
+            transition:
+                0.25s transform,
+                0.25s opacity;
             animation: hide 2s;
 
             &:not(:hover) {
@@ -50,7 +52,7 @@
             }
         }
 
-        >.left {
+        > .left {
             left: 0;
             padding-right: 32px;
             transform: translateX(calc(-100% + 32px));
@@ -62,7 +64,7 @@
             }
         }
 
-        >.right {
+        > .right {
             right: 0;
             padding-right: 32px;
             transform: translateX(calc(100% - 32px));
@@ -94,29 +96,10 @@
         }
     }
 
-    .bottom {
-        // padding: 16px;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-
-        >* {
-            flex: 1;
-        }
-    }
-
-    .interaction-area {
-        background: rgba(0, 0, 0, 0.1);
-        // box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        width: 800px;
-        max-width: 100%;
-        border-radius: 0 0 8px 8px;
-    }
-
     .interactions {
+        position: relative;
+        align-self: stretch;
+        background: rgba(0, 0, 0, 0.1);
         padding: 8px;
         display: flex;
         height: 48px;
@@ -124,55 +107,78 @@
         gap: 8px;
         justify-content: space-between;
 
-        >* {
-            button {
-                height: 32px;
-            }
-        }
-    }
-
-    .playlist-form {
-        // box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
-        padding: 8px;
-        display: flex;
-        flex-direction: row;
-        gap: 8px;
-        justify-content: center;
-
-        >* {
-            display: block;
-        }
-    }
-
-
-    .playlist {
-        background: rgba(255, 255, 255, 1);
-        box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        overflow-y: scroll;
-        // height: 300px;
-        padding: 8px;
-        border-radius: 0 0 8px 8px;
-
-        >* {
-            user-select: none;
+        > * {
             display: flex;
             gap: 8px;
-            padding: 8px;
-            border-radius: 4px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+    }
 
-            // height: 24px;
-            span {
-                flex: 1;
+    .bottom {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        position: relative;
+        padding: 0 8px;
+        gap: 8px;
+    }
+
+    .playlist {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+
+        table {
+            border-spacing: 0 8px;
+            border-collapse: separate;
+            place-items: center;
+        }
+
+        td {
+            white-space: nowrap;
+            width: 1px;
+            padding: 8px;
+
+            > div {
+                display: flex;
+                align-items: center;
+                gap: 0.5em;
             }
+        }
+
+        tr {
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
 
             &.current {
                 background: rgb(220, 220, 220);
-
             }
+        }
+
+        .title {
+            width: auto;
+        }
+
+        .inserted_at {
+            font-size: 12px;
+        }
+
+        .close,
+        .set {
+            padding: 4px;
+            width: 24px;
+            height: 24px;
+            font-family: "Material Symbols Rounded";
+        }
+
+        .close::after {
+            content: "close";
+        }
+
+        .set::after {
+            content: "play_arrow";
         }
     }
 }
@@ -185,12 +191,12 @@ nav:has(~ main > .RoomLive) {
     &:not(:hover) {
         transition-delay: 1s;
 
-        >div {
+        > div {
             transition-delay: 1s;
         }
     }
 
-    >div {
+    > div {
         background: rgba(255, 255, 255, 0.5);
         opacity: 0;
     }
@@ -198,7 +204,7 @@ nav:has(~ main > .RoomLive) {
     &:hover {
         transform: translateY(0);
 
-        >div {
+        > div {
             opacity: 1;
         }
     }
@@ -207,8 +213,196 @@ nav:has(~ main > .RoomLive) {
 main:has(.RoomLive) {
     width: 100%;
     padding: 0;
+    overflow-x: hidden;
 }
 
-body:has(.RoomLive) {
+html:has(.RoomLive) {
     scrollbar-width: none;
 }
+
+*:has(* #chk_show_playlist_form:checked) {
+    #playlist_form {
+        display: flex;
+    }
+}
+
+#playlist_form {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    padding: 16px;
+    max-height: 100%;
+    overflow: hidden;
+
+    > div {
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+        background: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(5px);
+        border-radius: 8px;
+        max-height: 100%;
+        overflow: hidden;
+    }
+
+    .top {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+
+        .close {
+            font-family: "Material Symbols Rounded";
+            border-radius: 100%;
+            padding: 0;
+            font-size: 1em;
+            line-height: 1em;
+            width: 1.5em;
+            height: 1.5em;
+
+            &::after {
+                content: "close";
+            }
+        }
+    }
+
+    form {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        justify-content: center;
+
+        > * {
+            display: block;
+        }
+    }
+
+    .list {
+        overflow: scroll;
+        word-break: break-all;
+        white-space: wrap;
+        font-size: 0.8em;
+        line-height: 1em;
+
+        .refresh,
+        .add {
+            font-family: "Material Symbols Rounded";
+            border-radius: 100%;
+            padding: 0;
+            font-size: 1em;
+            line-height: 1em;
+            margin: -0.25em;
+            width: 1.5em;
+            height: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .refresh::after {
+            content: "refresh";
+        }
+
+        .add::after {
+            content: "add";
+        }
+
+        .file {
+            padding: 0.5em;
+            display: flex;
+            border-radius: 4px;
+            gap: 0.5em;
+        }
+
+        .header {
+            padding: 0.5em;
+            display: flex;
+            cursor: pointer;
+            gap: 0.5em;
+        }
+
+        .folder {
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+
+            > .body {
+                display: none;
+                flex-direction: column;
+                padding-left: 1em;
+                gap: 0.25em;
+            }
+
+            &.uncollapsed {
+                > .body {
+                    display: flex;
+                }
+            }
+        }
+    }
+}
+
+#polls-form {
+    z-index: 1;
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    padding: 8px;
+    overflow: hidden;
+
+    > div {
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+        background: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(5px);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .close {
+        padding: 4px;
+        width: 24px;
+        height: 24px;
+
+        &::after {
+            font-family: "Material Symbols Rounded";
+            content: "close";
+        }
+    }
+
+    form {
+        > div {
+            display: flex;
+            gap: 0.5em;
+        }
+    }
+}
+
+.polls {
+    display: none;
+    flex-direction: column;
+    gap: 0.5em;
+    width: 200px;
+    padding: 8px 0;
+}
+
+*:has(* #chk_create_poll:checked) {
+    #polls-form {
+        display: flex;
+    }
+}
+
+*:has(* #chk_show_polls:checked) {
+    .polls {
+        display: flex;
+    }
+}
+
+@import "PollComponent";

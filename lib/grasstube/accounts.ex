@@ -79,7 +79,6 @@ defmodule Grasstube.Accounts do
     %User{}
     |> User.username_password_changeset(attrs)
     |> Repo.insert()
-    |> IO.inspect
   end
 
   @doc """

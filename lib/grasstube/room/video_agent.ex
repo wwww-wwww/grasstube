@@ -27,13 +27,19 @@ defmodule Grasstube.VideoAgent do
   end
 
   def set_video(pid, id) do
-    video = Repo.get(Video, id)
+    video =
+      case id do
+        nil -> nil
+        _ -> Repo.get(Video, id)
+      end
 
-    Agent.update(pid, fn state ->
-      %{state | current_video: video}
-    end)
+    room_id =
+      Agent.get_and_update(pid, fn state ->
+        {state.room_id,
+         %{state | playing: false, time: 0, time_started: current_time(), current_video: video}}
+      end)
 
-    Endpoint.broadcast("video:#{video.room_id}", "set", video)
+    Endpoint.broadcast("video:#{room_id}", "set", video)
 
     pid
   end

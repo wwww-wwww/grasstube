@@ -495,4 +495,14 @@ defmodule GrasstubeWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  def to_hhmmss(nil), do: ""
+
+  def to_hhmmss(seconds) do
+    seconds = trunc(seconds)
+    h = div(seconds, 3600)
+    m = div(rem(seconds, 3600), 60)
+    s = rem(seconds, 60)
+    :io_lib.format("~2..0B:~2..0B:~2..0B", [h, m, s]) |> IO.iodata_to_binary()
+  end
 end

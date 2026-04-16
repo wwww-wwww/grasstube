@@ -115,16 +115,10 @@ export default class RendererBasic {
         }
     }
 
-    set_video(videos, subtitles) {
+    set_video(video, subtitles) {
         this.set_playing(false)
 
-        const keys = Object.keys(videos)
-
-        if (keys.length > 0) {
-            this.#e_video.src = videos["default"]
-        } else {
-            this.#e_video.src = ""
-        }
+        this.#e_video.src = video || ""
 
         this.set_subtitles(subtitles)
     }

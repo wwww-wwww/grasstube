@@ -1,0 +1,46 @@
+.PollComponent {
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+
+    > div:first-child {
+        display: flex;
+        align-items: center;
+
+        :first-child {
+            flex: 1;
+        }
+    }
+
+    > div:nth-child(2) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+
+        > * {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5em;
+            align-items: center;
+        }
+    }
+
+    > div:last-child {
+        font-size: 0.75em;
+    }
+
+    .close {
+        padding: 4px;
+        width: 24px;
+        height: 24px;
+        border-radius: 100%;
+
+        &::after {
+            font-family: "Material Symbols Rounded";
+            content: "close";
+        }
+    }
+}

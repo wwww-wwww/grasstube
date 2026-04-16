@@ -52,7 +52,7 @@ main {
         0.5s width,
         0.5s padding;
 
-    >div {
+    > div {
         flex: 1;
         box-sizing: border-box;
         max-width: 1000px;
@@ -76,7 +76,7 @@ nav {
     padding: 0 16px 16px 16px;
     transition: 0.25s transform;
 
-    >div {
+    > div {
         padding: 0;
         background: rgba(255, 255, 255, 1);
         box-sizing: border-box;
@@ -89,7 +89,7 @@ nav {
             0.5s transform,
             0.5s opacity;
 
-        >* {
+        > * {
             white-space: nowrap;
             box-sizing: border-box;
             height: 32px;
@@ -99,7 +99,7 @@ nav {
         }
     }
 
-    >* {
+    > * {
         padding: 0 0.5em;
     }
 }
@@ -115,9 +115,17 @@ form {
     align-items: start;
 }
 
-button {
+input {
+    padding: 4px 8px;
     border: none;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+button,
+input[type="submit"] {
+    border: none;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
     background: rgba(255, 255, 255, 0.5);
     border-radius: 4px;
     padding: 4px 8px;
@@ -125,5 +133,91 @@ button {
 
     &:hover {
         background: rgba(220, 220, 220, 1);
+    }
+
+    &:active {
+        box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+        background: rgba(220, 220, 220, 1);
+    }
+}
+
+.btn-chk {
+    border-radius: 4px;
+    padding: 0.5em;
+    user-select: none;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 1em;
+    height: 2em;
+    display: flex;
+
+    cursor: pointer;
+
+    > span {
+        font-size: 0.8em;
+    }
+
+    > input {
+        display: none;
+    }
+
+    &:has(> input:checked) {
+        background: rgba(255, 255, 255, 0.5);
+        box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
+    }
+
+    &:hover {
+        background: rgba(230, 230, 230, 1);
+    }
+}
+
+.modal-fullscreen {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    > div {
+        border-radius: 8px;
+        backdrop-filter: blur(5px);
+        background: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+
+    .header {
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        display: flex;
+
+        :first-child {
+            flex: 1;
+        }
+
+        .close {
+            box-shadow: none;
+            border-radius: 0;
+
+            &:hover {
+                background: rgba(255, 50, 50, 0.5);
+                color: white;
+            }
+
+            &::after {
+                font-family: "Material Symbols Rounded";
+                content: "close";
+                box-shadow: none;
+            }
+        }
     }
 }

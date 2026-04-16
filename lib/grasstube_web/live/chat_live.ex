@@ -11,7 +11,7 @@ defmodule GrasstubeWeb.ChatLive do
       <% end %>
     </div>
     <form phx-submit="send-message">
-      <input name="message"/>
+      <input name="message" />
     </form>
     """
   end
