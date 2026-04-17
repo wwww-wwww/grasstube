@@ -1,5 +1,6 @@
 defmodule Grasstube.ChatAgent do
   use Agent
+  use GrasstubeWeb, :html
 
   alias GrasstubeWeb.Endpoint
 
@@ -30,8 +31,9 @@ defmodule Grasstube.ChatAgent do
 
   def get(pid), do: Agent.get(pid, & &1)
 
-  def chat(pid, user, message) do
-    message = %{sender: user.username, message: message}
+  def chat(pid, user, message, fun_reply) when message != "" do
+    opts = %{notify: true, effect: "bullet"}
+    message = %{sender: sender(user.username), html: basic_message(message), opts: opts}
 
     state =
       Agent.get_and_update(pid, fn state ->
@@ -41,6 +43,36 @@ defmodule Grasstube.ChatAgent do
       end)
 
     Endpoint.broadcast("chat:#{state.room_id}", "message", message)
+  end
+
+  def chat(_, _, _, _), do: nil
+
+  def sender(sender) do
+    assigns = %{sender: sender}
+
+    ~H"""
+    {@sender}
+    """
+    |> Phoenix.HTML.Safe.to_iodata()
+    |> IO.iodata_to_binary()
+  end
+
+  def basic_message(message) do
+    assigns = %{message: message}
+
+    ~H"""
+    <span>{@message}</span>
+    """
+    |> Phoenix.HTML.Safe.to_iodata()
+    |> IO.iodata_to_binary()
+  end
+
+  def broadcast_to(message, sender, room_id, opts \\ %{}) do
+    Endpoint.broadcast("chat:#{room_id}", "message", %{
+      sender: sender(sender),
+      html: message,
+      opts: opts
+    })
   end
 
   def clear(pid) do

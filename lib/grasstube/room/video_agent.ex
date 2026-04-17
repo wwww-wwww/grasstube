@@ -3,14 +3,15 @@ defmodule Grasstube.VideoAgent do
 
   alias GrasstubeWeb.Endpoint
 
-  alias Grasstube.{Repo, Video, VideoScheduler, ProcessRegistry}
+  alias Grasstube.{ProcessRegistry, Repo, Video, VideoScheduler, PlaylistAgent}
 
   defstruct room_id: nil,
             current_video: nil,
             playing: false,
             time: 0,
             time_started: 0,
-            speed: 1
+            speed: 1,
+            room: nil
 
   def start_link(room) do
     Agent.start_link(fn -> %__MODULE__{room_id: room.id} end,
@@ -39,20 +40,45 @@ defmodule Grasstube.VideoAgent do
          %{state | playing: false, time: 0, time_started: current_time(), current_video: video}}
       end)
 
+    ProcessRegistry.lookup(room_id, VideoScheduler)
+    |> VideoScheduler.stop_next()
+
     Endpoint.broadcast("video:#{room_id}", "set", video)
 
     pid
+  end
+
+  def next_video(pid) do
+    state = get(pid)
+
+    videos =
+      ProcessRegistry.get(state.room_id, PlaylistAgent).videos
+      |> Enum.sort_by(& &1.inserted_at)
+
+    next_video =
+      case state do
+        %{current_video: nil} ->
+          videos |> Enum.take(1)
+
+        %{current_video: current_video} ->
+          videos
+          |> Enum.drop_while(&(&1.id != current_video.id))
+          |> Enum.drop(1)
+          |> Enum.take(1)
+      end
+      |> Enum.map(& &1.id)
+      |> Enum.at(0)
+
+    set_video(pid, next_video)
   end
 
   def set_playing(pid, playing) do
     room_id =
       Agent.get_and_update(pid, fn state ->
         state =
-          if playing != state.playing do
-            %{state | playing: playing, time: get_time(state), time_started: current_time()}
-          else
-            state
-          end
+          if playing != state.playing,
+            do: %{state | playing: playing, time: get_time(state), time_started: current_time()},
+            else: state
 
         {state.room_id, state}
       end)
@@ -60,9 +86,9 @@ defmodule Grasstube.VideoAgent do
     scheduler = ProcessRegistry.lookup(room_id, VideoScheduler)
 
     if playing do
-      VideoScheduler.start_timer(scheduler, 0)
+      VideoScheduler.start_sync(scheduler)
     else
-      VideoScheduler.stop_timer(scheduler)
+      VideoScheduler.stop_sync(scheduler)
     end
 
     Endpoint.broadcast("video:#{room_id}", "playing", playing)
@@ -71,12 +97,9 @@ defmodule Grasstube.VideoAgent do
   end
 
   def get_time(%__MODULE__{} = state) do
-    if state.playing do
-      now = current_time()
-      state.time + (now - state.time_started) * state.speed
-    else
-      state.time
-    end
+    if state.playing,
+      do: state.time + (current_time() - state.time_started) * state.speed,
+      else: state.time
   end
 
   def get_time(pid) do

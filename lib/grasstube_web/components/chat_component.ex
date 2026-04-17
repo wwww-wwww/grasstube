@@ -13,7 +13,7 @@ defmodule GrasstubeWeb.ChatComponent do
           </div>
         <% end %>
       </div>
-      <input name="message" autocomplete="off" />
+      <input class="message-input" autocomplete="off" />
     </div>
     """
   end
@@ -22,13 +22,16 @@ defmodule GrasstubeWeb.ChatComponent do
     socket =
       socket
       |> subscribe_once("chat:#{assigns.state.room_id}")
+      |> subscribe_once("chat_user:#{assigns.current_scope.id}")
       |> assign(assigns)
 
     {:ok, socket}
   end
 
   def handle_event("send_message", %{"message" => message}, socket) do
-    ChatAgent.chat(socket.assigns.pid, socket.assigns.current_scope.user, message)
+    ChatAgent.chat(socket.assigns.pid, socket.assigns.current_scope.user, message, fn message ->
+      push_event(socket, "message", message)
+    end)
 
     {:noreply, socket}
   end

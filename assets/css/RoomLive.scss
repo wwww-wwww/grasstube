@@ -3,13 +3,13 @@
     width: 100vw;
     padding: 0;
 
-    > .main {
+    >.main {
         position: relative;
         width: 100%;
         height: 100vh;
         overflow: hidden;
 
-        > .player {
+        >.player {
             z-index: 0;
             position: relative;
             height: 100%;
@@ -29,8 +29,8 @@
             }
         }
 
-        > .left,
-        > .right {
+        >.left,
+        >.right {
             z-index: 1;
             position: absolute;
             top: 0;
@@ -52,7 +52,7 @@
             }
         }
 
-        > .left {
+        >.left {
             left: 0;
             padding-right: 32px;
             transform: translateX(calc(-100% + 32px));
@@ -64,38 +64,10 @@
             }
         }
 
-        > .right {
+        >.right {
             right: 0;
             padding-right: 32px;
             transform: translateX(calc(100% - 32px));
-        }
-    }
-
-    .ChatComponent {
-        height: 100%;
-        position: absolute;
-        top: 0;
-        left: 0;
-        display: flex;
-        flex-direction: column;
-
-        .messages {
-            display: flex;
-            flex-direction: column-reverse;
-            flex: 1;
-            overflow-y: scroll;
-            padding: 8px;
-        }
-
-        form {
-            width: 100%;
-
-            input {
-                padding: 8px;
-                width: 100%;
-                border: 1px solid rgba(0, 0, 0, 0.3);
-                border-radius: 4px;
-            }
         }
     }
 
@@ -110,7 +82,7 @@
         gap: 8px;
         justify-content: space-between;
 
-        > * {
+        >* {
             display: flex;
             gap: 8px;
         }
@@ -142,7 +114,7 @@
             width: 1px;
             padding: 8px;
 
-            > div {
+            >div {
                 display: flex;
                 align-items: center;
                 gap: 0.5em;
@@ -194,12 +166,12 @@ nav:has(~ main > .RoomLive) {
     &:not(:hover) {
         transition-delay: 1s;
 
-        > div {
+        >div {
             transition-delay: 1s;
         }
     }
 
-    > div {
+    >div {
         background: rgba(255, 255, 255, 0.5);
         opacity: 0;
     }
@@ -207,7 +179,7 @@ nav:has(~ main > .RoomLive) {
     &:hover {
         transform: translateY(0);
 
-        > div {
+        >div {
             opacity: 1;
         }
     }
@@ -238,7 +210,7 @@ html:has(.RoomLive) {
     max-height: 100%;
     overflow: hidden;
 
-    > div {
+    >div {
         padding: 8px;
         display: flex;
         flex-direction: column;
@@ -278,7 +250,7 @@ html:has(.RoomLive) {
         gap: 8px;
         justify-content: center;
 
-        > * {
+        >* {
             display: block;
         }
     }
@@ -332,7 +304,7 @@ html:has(.RoomLive) {
             box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
             border-radius: 4px;
 
-            > .body {
+            >.body {
                 display: none;
                 flex-direction: column;
                 padding-left: 1em;
@@ -340,7 +312,7 @@ html:has(.RoomLive) {
             }
 
             &.uncollapsed {
-                > .body {
+                >.body {
                     display: flex;
                 }
             }
@@ -357,7 +329,7 @@ html:has(.RoomLive) {
     padding: 8px;
     overflow: hidden;
 
-    > div {
+    >div {
         padding: 8px;
         display: flex;
         flex-direction: column;
@@ -381,7 +353,7 @@ html:has(.RoomLive) {
     }
 
     form {
-        > div {
+        >div {
             display: flex;
             gap: 0.5em;
         }
@@ -409,3 +381,112 @@ html:has(.RoomLive) {
 }
 
 @import "PollComponent";
+
+.ChatComponent {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    width: 100%;
+    height: calc(100% - 64px);
+
+    .messages {
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: start;
+        flex: 1;
+        overflow-y: scroll;
+        padding: 8px;
+
+        @keyframes message {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .message {
+            color: rgba(255, 255, 255, 0.5);
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            pointer-events: all;
+
+            &.visible {
+                animation: message 0.2s;
+            }
+        }
+
+        @keyframes flyleft {
+            from {
+                right: 0%;
+                transform: translateX(100%);
+            }
+
+            to {
+                right: 100%;
+                transform: translateX(0%);
+            }
+        }
+
+        .bullet {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 2em;
+            font-weight: bold;
+            right: 100%;
+            transform: translateX(0%);
+            position: absolute;
+            animation: flyleft 5s linear;
+            white-space: nowrap;
+            color: white;
+            opacity: 0.8;
+            text-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+            -webkit-text-stroke: 1px black;
+
+            right: 0%;
+            transform: translateX(100%);
+
+            >img {
+                max-height: 4em;
+            }
+        }
+    }
+
+    &:has(input.visible) {
+        .messages {
+            pointer-events: all;
+        }
+
+        .message {
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 0 3px rgba(0, 0, 0, 1);
+        }
+    }
+
+    &:has(input:not(.visible)) {
+        .message:not(.visible) {
+            display: none;
+        }
+    }
+
+    input {
+        pointer-events: all;
+        padding: 8px;
+        width: 100%;
+        border: none;
+        box-shadow:
+            inset 0 0 3px rgba(255, 255, 255, 0.3),
+            0 0 5px rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.1);
+        color: rgba(255, 255, 255, 0.8);
+
+        &:not(.visible) {
+            display: none;
+        }
+    }
+}

@@ -7,6 +7,7 @@ defmodule Grasstube.Room do
     field :password, :string, default: ""
     field :public_controls, :boolean, default: false
     field :media_directories, {:array, :string}
+    field :autopause, :boolean, default: false
 
     has_many :videos, Grasstube.Video
 

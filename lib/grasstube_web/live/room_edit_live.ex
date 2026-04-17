@@ -6,9 +6,29 @@ defmodule GrasstubeWeb.RoomEditLive do
   def render(assigns) do
     ~H"""
     <div>
-      <h2>Media directories</h2>
-      <form phx-submit="media_directories_save">
-        <textarea name="media_directories" style="width: 100%">{(@room.media_directories || []) |> Enum.join("\n")}</textarea>
+      <h1>{@room.title}</h1>
+      <form phx-submit="save">
+        <div>
+          <label for="password">Password</label>
+          <input name="password" id="password" type="text" value={@room.password} />
+        </div>
+        <div>
+          <label for="public_controls">Public controls</label>
+          <input
+            name="public_controls"
+            id="public_controls"
+            type="checkbox"
+            checked={@room.public_controls}
+          />
+        </div>
+        <div>
+          <label for="autopause">Autopause</label>
+          <input name="autopause" id="autopause" type="checkbox" checked={@room.autopause} />
+        </div>
+        <div>
+          <label for="media_directories">Media directories</label>
+          <textarea name="media_directories" id="media_directories" style="width: 100%">{(@room.media_directories || []) |> Enum.join("\n")}</textarea>
+        </div>
         <input type="submit" value="Save" />
       </form>
     </div>
@@ -25,7 +45,14 @@ defmodule GrasstubeWeb.RoomEditLive do
     end
   end
 
-  def handle_event("media_directories_save", %{"media_directories" => media_directories}, socket) do
+  def handle_event(
+        "save",
+        %{"password" => password, "media_directories" => media_directories} = params,
+        socket
+      ) do
+    public_controls = params |> Map.get("public_controls") |> Kernel.==("on")
+    autopause = params |> Map.get("autopause") |> Kernel.==("on")
+
     media_directories =
       media_directories
       |> String.trim()
@@ -35,7 +62,12 @@ defmodule GrasstubeWeb.RoomEditLive do
     {:ok, room} =
       Repo.transact(fn ->
         Repo.reload(socket.assigns.room)
-        |> Ecto.Changeset.change(media_directories: media_directories)
+        |> Ecto.Changeset.change(%{
+          password: password,
+          media_directories: media_directories,
+          public_controls: public_controls,
+          autopause: autopause
+        })
         |> Repo.update()
       end)
 

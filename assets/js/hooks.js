@@ -24,7 +24,6 @@ const video = {
         this.pushEvent("ping", {}, () => {
             this.last_ping = performance.now() - ping_time
             this.latency_rtt = this.last_ping * 0.25 + (this.latency_rtt || this.last_ping) * 0.75
-            console.log(this.last_ping, this.latency_rtt)
         })
     },
     mounted() {
@@ -77,7 +76,7 @@ const video = {
         })
 
         player.on_next = () => {
-            this.pushEvent("playlist_next", {})
+            this.pushEvent("video_next", {})
         }
 
         player.on_buffer_end = buffered => {
@@ -215,7 +214,73 @@ const poll_form = {
 
 const chat = {
     mounted() {
-        console.log(this.el)
+        const input = this.el.querySelector(".message-input")
+
+        document.addEventListener("keypress", e => {
+            if (e.target.tagName == "INPUT") return
+            if (e.key == "Enter") {
+                e.preventDefault()
+                input.classList.toggle("visible", true)
+                input.focus()
+            }
+        })
+
+        input.addEventListener("keypress", e => {
+            if (e.key == "Enter") {
+                e.preventDefault()
+                this.pushEventTo(this.el, "send_message", { message: input.value })
+                input.value = ""
+                input.classList.toggle("visible", false)
+            }
+        })
+
+        const messages = this.el.querySelector(".messages")
+
+        let title_notifying = false
+        let original_title = document.title
+        let unread_messages = 0
+
+        window.addEventListener("focus", () => {
+            unread_messages = 0
+            document.title = original_title
+            title_notifying = false
+        })
+
+        this.handleEvent("message", data => {
+            const el = document.createElement("div")
+            el.classList.toggle("message", true)
+            el.classList.toggle("visible", true)
+            messages.prepend(el)
+            el.innerHTML = `<span>${data.sender}</span>: ${data.html}`
+            setTimeout(() => {
+                el.classList.toggle("visible", false)
+            }, 5000)
+
+            const opts = data.opts || {}
+
+            if (opts.notify && !document.hasFocus()) {
+                unread_messages++
+
+                if (!title_notifying) {
+                    original_title = document.title
+                    title_notifying = true
+                }
+
+                document.title = `${unread_messages} • ${original_title}`
+            }
+
+            if (opts.effect == "bullet") {
+                const el = document.createElement("div")
+                el.innerHTML = data.html
+                el.className = "bullet"
+                el.style.top = `${Math.random() * 90}%`
+                messages.appendChild(el)
+
+                setTimeout(() => {
+                    messages.removeChild(el)
+                }, 5000)
+            }
+        })
     },
 }
 

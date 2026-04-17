@@ -53,6 +53,7 @@ export default class GrassPlayer {
     #e_messages
     #e_chk_play
     #e_btn_next
+    #e_txt_time
 
     on_toggle_playing = null
     on_seek = null
@@ -69,7 +70,7 @@ export default class GrassPlayer {
 
         const e_view = root.querySelector(".view")
 
-        const e_txt_time = root.querySelector(".txt-time")
+        this.#e_txt_time = root.querySelector(".txt-time")
 
         // Create default renderer
         {
@@ -103,7 +104,7 @@ export default class GrassPlayer {
             this.#renderer.on_timeupdate = t => {
                 if (this.#current_renderer != this.#renderer) return
                 this.#seekbar.set_time(t / this.duration())
-                e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+                this.#e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
             }
 
             this.#current_renderer = this.#renderer
@@ -117,19 +118,19 @@ export default class GrassPlayer {
             const renderer_settings = document.createElement("div")
             root.querySelector(".settings").appendChild(renderer_settings)
 
-            this.#renderer_yt = new RendererYoutube(this, this.#renderer_yt_view, renderer_settings)
-            this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
-            renderer_settings.className = this.#renderer_yt.constructor.name
+            // this.#renderer_yt = new RendererYoutube(this, this.#renderer_yt_view, renderer_settings)
+            // this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
+            // renderer_settings.className = this.#renderer_yt.constructor.name
 
-            this.#renderer_yt.on_buffers = buffers => {
-                if (this.#current_renderer != this.#renderer_yt) return
-                this.#seekbar.set_buffers(buffers, this.duration())
-            }
-            this.#renderer_yt.on_timeupdate = t => {
-                if (this.#current_renderer != this.#renderer_yt) return
-                this.#seekbar.set_time(t / this.duration())
-                e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
-            }
+            // this.#renderer_yt.on_buffers = buffers => {
+            //     if (this.#current_renderer != this.#renderer_yt) return
+            //     this.#seekbar.set_buffers(buffers, this.duration())
+            // }
+            // this.#renderer_yt.on_timeupdate = t => {
+            //     if (this.#current_renderer != this.#renderer_yt) return
+            //     this.#seekbar.set_time(t / this.duration())
+            //     this.#e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+            // }
         }
 
         // play button
@@ -327,6 +328,9 @@ export default class GrassPlayer {
 
     #current_renderer
     set_video(type, video, subtitles) {
+        this.#e_txt_time.textContent = ""
+        this.set_playing(false)
+
         if (type == "yt") {
             this.#renderer_view.style.display = "none"
             this.#renderer.set_video(null, null)
@@ -347,7 +351,6 @@ export default class GrassPlayer {
             this.#current_renderer = this.#renderer
         }
 
-        this.set_playing(false)
         this.set_volume(this.#volume)
 
         this.#seekbar.reset()

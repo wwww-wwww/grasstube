@@ -99,12 +99,18 @@ defmodule Grasstube.PlaylistAgent do
   end
 
   def remove_from_queue(pid, id) do
-    Repo.get(Video, id)
-    |> case do
+    room_id = get(pid).room_id
+    video_pid = ProcessRegistry.lookup(room_id, VideoAgent)
+
+    case Repo.get(Video, id) do
       nil ->
         nil
 
       video ->
+        if VideoAgent.get(video_pid).current_video.id == video.id do
+          VideoAgent.set_video(video_pid, nil)
+        end
+
         Repo.delete(video)
         update_videos(pid)
     end

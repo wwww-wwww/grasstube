@@ -36,7 +36,7 @@ defmodule GrasstubeWeb.RoomLive do
               <%= for meta <- metas do %>
                 <span>
                   {cc_emoji(meta.country_code)}
-                  <%= if meta.user != nil do %>
+                  <%= if meta.user do %>
                     {meta.user.username}
                   <% else %>
                     guest:{meta.guest}
@@ -119,7 +119,7 @@ defmodule GrasstubeWeb.RoomLive do
         playlist_rest =
           @playlist
           |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
-        <%= if @current_video != nil do %>
+        <%= if @current_video do %>
           <table>
             <%= for {v, i} <- Enum.with_index(playlist_top) do %>
               <tr class={if i == 0, do: "current"}>
@@ -194,7 +194,7 @@ defmodule GrasstubeWeb.RoomLive do
       Endpoint.subscribe("playlist:#{room.id}")
       Endpoint.subscribe("polls:#{room.id}")
 
-      if video.current_video != nil do
+      if video.current_video do
         send(self(), %{topic: "video:", event: "set", payload: video.current_video})
 
         send(self(), %{
@@ -320,22 +320,8 @@ defmodule GrasstubeWeb.RoomLive do
     {:noreply, socket}
   end
 
-  def handle_event("playlist_next", _params, socket) do
-    next_video =
-      case socket.assigns.current_video do
-        nil ->
-          socket.assigns.playlist |> Enum.take(1)
-
-        current_video ->
-          socket.assigns.playlist
-          |> Enum.drop_while(&(&1.id != current_video.id))
-          |> Enum.drop(1)
-          |> Enum.take(1)
-      end
-      |> Enum.map(& &1.id)
-      |> Enum.at(0)
-
-    VideoAgent.set_video(socket.assigns.video_pid, next_video)
+  def handle_event("video_next", _params, socket) do
+    VideoAgent.next_video(socket.assigns.video_pid)
     {:noreply, socket}
   end
 
