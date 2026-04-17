@@ -66,22 +66,18 @@ defmodule GrasstubeWeb.RoomLive do
     </div>
 
     <div class="interactions" id="interactions" phx-update="ignore">
-      <div>
-        <label class="btn-chk" for="chk_show_polls">
-          <input type="checkbox" id="chk_show_polls" />
-          <span>Polls</span>
-        </label>
-        <label class="btn-chk" for="chk_create_poll">
-          <input type="checkbox" id="chk_create_poll" />
-          <span>Create poll</span>
-        </label>
-      </div>
-      <div>
-        <label class="btn-chk" for="chk_show_playlist_form">
-          <input type="checkbox" id="chk_show_playlist_form" />
-          <span>Add to playlist</span>
-        </label>
-      </div>
+      <label class="btn-chk" for="chk_show_playlist_form">
+        <input type="checkbox" id="chk_show_playlist_form" />
+        <span>Add to playlist</span>
+      </label>
+      <label class="btn-chk" for="chk_show_polls">
+        <input type="checkbox" id="chk_show_polls" />
+        <span>Polls</span>
+      </label>
+      <label class="btn-chk" for="chk_create_poll">
+        <input type="checkbox" id="chk_create_poll" />
+        <span>Create poll</span>
+      </label>
 
       <div id="polls-form" phx-update="ignore" phx-hook="poll_form">
         <div>
@@ -98,6 +94,9 @@ defmodule GrasstubeWeb.RoomLive do
 
     <div class="bottom">
       <div class="polls">
+        <%= if length(@polls) == 0 do %>
+          No polls
+        <% end %>
         <%= for p <- @polls do %>
           <.live_component
             module={GrasstubeWeb.PollComponent}
@@ -115,44 +114,38 @@ defmodule GrasstubeWeb.RoomLive do
         playlist_rest =
           @playlist
           |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
-        <%= if @current_video do %>
-          <table>
-            <tr :for={{v, i} <- Enum.with_index(playlist_top)} class={if i == 0, do: "current"}>
-              <td class="inserted_at">{v.inserted_at}</td>
-              <td class="title">{v.title}</td>
-              <td>{to_hhmmss(v.duration)}</td>
-              <td>
-                <div>
-                  <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
-                  <button
-                    phx-click="playlist_set"
-                    phx-value-id={v.id}
-                    disabled={@current_video != nil and @current_video.id == v.id}
-                    class="set"
-                  >
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </table>
-        <% end %>
-        <table>
-          <tr :for={v <- playlist_rest}>
-            <td class="inserted_at">{v.inserted_at}</td>
+        <table class={if @current_video, do: "visible"}>
+          <tr :for={{v, i} <- Enum.with_index(playlist_top)} class={if i == 0, do: "current"}>
+            <td>
+              <button
+                phx-click="playlist_set"
+                phx-value-id={v.id}
+                disabled={@current_video != nil and @current_video.id == v.id}
+                class="set"
+              >
+              </button>
+            </td>
             <td class="title">{v.title}</td>
             <td>{to_hhmmss(v.duration)}</td>
+            <td class="inserted_at">{v.inserted_at}</td>
+            <td><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
+          </tr>
+        </table>
+        <table class={if length(playlist_rest) > 0, do: "visible"}>
+          <tr :for={v <- playlist_rest}>
             <td>
-              <div>
-                <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
-                <button
-                  phx-click="playlist_set"
-                  phx-value-id={v.id}
-                  disabled={@current_video != nil and @current_video.id == v.id}
-                  class="set"
-                >
-                </button>
-              </div>
+              <button
+                phx-click="playlist_set"
+                phx-value-id={v.id}
+                disabled={@current_video != nil and @current_video.id == v.id}
+                class="set"
+              >
+              </button>
             </td>
+            <td class="title">{v.title}</td>
+            <td>{to_hhmmss(v.duration)}</td>
+            <td class="inserted_at">{v.inserted_at}</td>
+            <td><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
           </tr>
         </table>
       </div>

@@ -3,13 +3,13 @@
     width: 100vw;
     padding: 0;
 
-    >.main {
+    > .main {
         position: relative;
         width: 100%;
         height: 100vh;
         overflow: hidden;
 
-        >.player {
+        > .player {
             z-index: 0;
             position: relative;
             height: 100%;
@@ -29,8 +29,8 @@
             }
         }
 
-        >.left,
-        >.right {
+        > .left,
+        > .right {
             z-index: 1;
             position: absolute;
             top: 0;
@@ -52,7 +52,7 @@
             }
         }
 
-        >.left {
+        > .left {
             left: 0;
             padding-right: 32px;
             transform: translateX(calc(-100% + 32px));
@@ -64,7 +64,7 @@
             }
         }
 
-        >.right {
+        > .right {
             right: 0;
             padding-right: 32px;
             transform: translateX(calc(100% - 32px));
@@ -80,9 +80,8 @@
         height: 48px;
         align-items: center;
         gap: 8px;
-        justify-content: space-between;
 
-        >* {
+        > * {
             display: flex;
             gap: 8px;
         }
@@ -107,6 +106,10 @@
             border-spacing: 0 8px;
             border-collapse: separate;
             place-items: center;
+
+            &:not(.visible) {
+                display: none;
+            }
         }
 
         td {
@@ -114,7 +117,11 @@
             width: 1px;
             padding: 8px;
 
-            >div {
+            &:not(:first-child) {
+                padding-left: 0;
+            }
+
+            > div {
                 display: flex;
                 align-items: center;
                 gap: 0.5em;
@@ -143,8 +150,9 @@
         .close,
         .set {
             padding: 4px;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
+            border-radius: 100%;
             font-family: "Material Symbols Rounded";
         }
 
@@ -166,12 +174,12 @@ nav:has(~ main > .RoomLive) {
     &:not(:hover) {
         transition-delay: 1s;
 
-        >div {
+        > div {
             transition-delay: 1s;
         }
     }
 
-    >div {
+    > div {
         background: rgba(255, 255, 255, 0.5);
         opacity: 0;
     }
@@ -179,7 +187,7 @@ nav:has(~ main > .RoomLive) {
     &:hover {
         transform: translateY(0);
 
-        >div {
+        > div {
             opacity: 1;
         }
     }
@@ -201,16 +209,54 @@ html:has(.RoomLive) {
     }
 }
 
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(32px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-32px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-right {
+    from {
+        opacity: 0;
+        transform: translateX(-32px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 #playlist_form {
+    z-index: 2;
     display: none;
     position: absolute;
     bottom: 0;
-    right: 0;
+    left: 0;
     padding: 8px;
     max-height: 100%;
     overflow: hidden;
+    animation: slide-up 0.2s;
 
-    >div {
+    > div {
         padding: 8px;
         display: flex;
         flex-direction: column;
@@ -250,7 +296,7 @@ html:has(.RoomLive) {
         gap: 8px;
         justify-content: center;
 
-        >* {
+        > * {
             display: block;
         }
     }
@@ -304,7 +350,7 @@ html:has(.RoomLive) {
             box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
             border-radius: 4px;
 
-            >.body {
+            > .body {
                 display: none;
                 flex-direction: column;
                 padding-left: 1em;
@@ -312,7 +358,7 @@ html:has(.RoomLive) {
             }
 
             &.uncollapsed {
-                >.body {
+                > .body {
                     display: flex;
                 }
             }
@@ -328,8 +374,9 @@ html:has(.RoomLive) {
     left: 0;
     padding: 8px;
     overflow: hidden;
+    animation: slide-down 0.2s;
 
-    >div {
+    > div {
         padding: 8px;
         display: flex;
         flex-direction: column;
@@ -353,7 +400,7 @@ html:has(.RoomLive) {
     }
 
     form {
-        >div {
+        > div {
             display: flex;
             gap: 0.5em;
         }
@@ -361,6 +408,7 @@ html:has(.RoomLive) {
 }
 
 .polls {
+    animation: slide-right 0.2s;
     display: none;
     flex-direction: column;
     gap: 0.5em;
@@ -450,7 +498,7 @@ html:has(.RoomLive) {
             right: 0%;
             transform: translateX(100%);
 
-            >img {
+            > img {
                 max-height: 4em;
             }
         }
@@ -464,6 +512,10 @@ html:has(.RoomLive) {
         .message {
             color: rgba(255, 255, 255, 0.7);
             text-shadow: 0 0 3px rgba(0, 0, 0, 1);
+        }
+
+        .message:not(.visible) {
+            animation: slide-right 0.2s;
         }
     }
 
@@ -484,6 +536,10 @@ html:has(.RoomLive) {
         border-radius: 8px;
         background: rgba(0, 0, 0, 0.1);
         color: rgba(255, 255, 255, 0.8);
+
+        &.visible {
+            animation: slide-up 0.2s;
+        }
 
         &:not(.visible) {
             display: none;
