@@ -31,20 +31,16 @@ defmodule GrasstubeWeb.RoomLive do
       />
       <div class="left">
         <div class="presence">
-          <%= for {_id, %{metas: metas}} <- @presence do %>
-            <div>
-              <%= for meta <- metas do %>
-                <span>
-                  {cc_emoji(meta.country_code)}
-                  <%= if meta.user do %>
-                    {meta.user.username}
-                  <% else %>
-                    guest:{meta.guest}
-                  <% end %>
-                </span>
+          <div :for={{_id, %{metas: metas}} <- @presence}>
+            <span :for={meta <- metas}>
+              {cc_emoji(meta.country_code)}
+              <%= if meta.user do %>
+                {meta.user.username}
+              <% else %>
+                guest:{meta.guest}
               <% end %>
-            </div>
-          <% end %>
+            </span>
+          </div>
         </div>
       </div>
       <div class="right"></div>
@@ -121,30 +117,7 @@ defmodule GrasstubeWeb.RoomLive do
           |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
         <%= if @current_video do %>
           <table>
-            <%= for {v, i} <- Enum.with_index(playlist_top) do %>
-              <tr class={if i == 0, do: "current"}>
-                <td class="inserted_at">{v.inserted_at}</td>
-                <td class="title">{v.title}</td>
-                <td>{to_hhmmss(v.duration)}</td>
-                <td>
-                  <div>
-                    <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
-                    <button
-                      phx-click="playlist_set"
-                      phx-value-id={v.id}
-                      disabled={@current_video != nil and @current_video.id == v.id}
-                      class="set"
-                    >
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </table>
-        <% end %>
-        <table>
-          <%= for v <- playlist_rest do %>
-            <tr>
+            <tr :for={{v, i} <- Enum.with_index(playlist_top)} class={if i == 0, do: "current"}>
               <td class="inserted_at">{v.inserted_at}</td>
               <td class="title">{v.title}</td>
               <td>{to_hhmmss(v.duration)}</td>
@@ -161,7 +134,26 @@ defmodule GrasstubeWeb.RoomLive do
                 </div>
               </td>
             </tr>
-          <% end %>
+          </table>
+        <% end %>
+        <table>
+          <tr :for={v <- playlist_rest}>
+            <td class="inserted_at">{v.inserted_at}</td>
+            <td class="title">{v.title}</td>
+            <td>{to_hhmmss(v.duration)}</td>
+            <td>
+              <div>
+                <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
+                <button
+                  phx-click="playlist_set"
+                  phx-value-id={v.id}
+                  disabled={@current_video != nil and @current_video.id == v.id}
+                  class="set"
+                >
+                </button>
+              </div>
+            </td>
+          </tr>
         </table>
       </div>
     </div>

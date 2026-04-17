@@ -13,22 +13,20 @@ defmodule GrasstubeWeb.PollComponent do
         <span>{@poll.name}</span><button phx-click="delete" phx-target={@myself} class="close"></button>
       </div>
       <div>
-        <%= for {o, i} <- Enum.with_index(@poll.options) do %>
-          <div>
-            <button
-              phx-click="select_option"
-              phx-target={@myself}
-              phx-value-option={i}
-              disabled={
-                @current_scope.user != nil and
-                  Enum.any?(@votes[i] || [], &(@current_scope.user.id == &1.user_id))
-              }
-            >
-              {(@votes[i] || []) |> length}
-            </button>
-            <span>{o}</span>
-          </div>
-        <% end %>
+        <div :for={{o, i} <- Enum.with_index(@poll.options)}>
+          <button
+            phx-click="select_option"
+            phx-target={@myself}
+            phx-value-option={i}
+            disabled={
+              @current_scope.user != nil and
+                Enum.any?(@votes[i] || [], &(@current_scope.user.id == &1.user_id))
+            }
+          >
+            {(@votes[i] || []) |> length}
+          </button>
+          <span>{o}</span>
+        </div>
       </div>
       <div>{@poll.inserted_at}</div>
     </div>

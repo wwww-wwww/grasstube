@@ -1,0 +1,20 @@
+.Settings {
+    .upload-entry {
+        display: flex;
+        flex-direction: column;
+
+        img {
+            width: 128px;
+            height: 128px;
+            object-fit: contain;
+        }
+    }
+
+    .emotelist {
+        img {
+            width: 128px;
+            height: 128px;
+            object-fit: contain;
+        }
+    }
+}

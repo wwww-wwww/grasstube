@@ -7,11 +7,9 @@ defmodule GrasstubeWeb.ChatComponent do
     ~H"""
     <div class="ChatComponent" id={"chat-#{@state.room_id}"} phx-hook="chat" phx-update="ignore">
       <div class="messages">
-        <%= for {sender, message} <- @state.history |> Enum.reverse do %>
-          <div>
-            <span>{sender}</span>: <span>{message}</span>
-          </div>
-        <% end %>
+        <div :for={{sender, message} <- @state.history |> Enum.reverse()}>
+          <span>{sender}</span>: <span>{message}</span>
+        </div>
       </div>
       <input class="message-input" autocomplete="off" />
     </div>

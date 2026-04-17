@@ -31,18 +31,20 @@ defmodule Grasstube.ChatAgent do
 
   def get(pid), do: Agent.get(pid, & &1)
 
-  def chat(pid, user, message, fun_reply) when message != "" do
-    opts = %{notify: true, effect: "bullet"}
-    message = %{sender: sender(user.username), html: basic_message(message), opts: opts}
+  def chat(pid, user, message, fun_reply) do
+    if String.length(String.trim(message)) > 0 do
+      opts = %{notify: true, effect: "bullet"}
+      message = %{sender: sender(user.username), html: basic_message(message), opts: opts}
 
-    state =
-      Agent.get_and_update(pid, fn state ->
-        new_history = state.history ++ [message]
-        new_state = %{state | history: new_history}
-        {new_state, new_state}
-      end)
+      state =
+        Agent.get_and_update(pid, fn state ->
+          new_history = state.history ++ [message]
+          new_state = %{state | history: new_history}
+          {new_state, new_state}
+        end)
 
-    Endpoint.broadcast("chat:#{state.room_id}", "message", message)
+      Endpoint.broadcast("chat:#{state.room_id}", "message", message)
+    end
   end
 
   def chat(_, _, _, _), do: nil

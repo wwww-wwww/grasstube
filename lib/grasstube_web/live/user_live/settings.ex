@@ -2,19 +2,11 @@ defmodule GrasstubeWeb.UserLive.Settings do
   use GrasstubeWeb, :live_view
   import Ecto.Query, only: [from: 2]
 
-  alias Grasstube.{Accounts, Room, Repo}
+  alias Grasstube.{Accounts, Room, Repo, Emote}
 
   @impl true
   def render(assigns) do
     ~H"""
-    <h2>Rooms</h2>
-    <%= for r <- @rooms do %>
-      <div>
-        <.link href={~p"/room/#{r.title}"}>{r.title}</.link>
-        <.link href={~p"/room/#{r.title}/edit"}>Edit</.link>
-      </div>
-    <% end %>
-
     <h2>Password</h2>
     <.form
       for={@password_form}
@@ -51,6 +43,44 @@ defmodule GrasstubeWeb.UserLive.Settings do
         Save Password
       </.button>
     </.form>
+
+    <h2>Rooms</h2>
+    <div :for={r <- @rooms}>
+      <.link href={~p"/room/#{r.title}"}>{r.title}</.link>
+      <.link href={~p"/room/#{r.title}/edit"}>Edit</.link>
+    </div>
+
+    <h2>Emotes</h2>
+    <form id="emote-form" phx-change="emote_validate" phx-submit="emote_add">
+      <input name="name" placeholder="name" autocomplete="off" required />
+
+      <.live_file_input upload={@uploads.emote} />
+
+      <article :for={entry <- @uploads.emote.entries} class="upload-entry">
+        <.live_img_preview entry={entry} />
+        <div>
+          <progress value={entry.progress} max="100">{entry.progress}% </progress>
+          <button
+            type="button"
+            phx-click="cancel-upload"
+            phx-value-ref={entry.ref}
+            aria-label="cancel"
+          >
+            &times;
+          </button>
+        </div>
+      </article>
+
+      <input type="submit" value="Add" />
+    </form>
+
+    <table class="emotelist">
+      <tr :for={e <- @emotes}>
+        <td>{e.name}</td>
+        <td><img src={~p"/emotes/#{to_string(e.id) <> ".png"}"} /></td>
+        <td><button phx-click="emote_delete" phx-value-id={e.id}>Delete</button></td>
+      </tr>
+    </table>
     """
   end
 
@@ -64,12 +94,19 @@ defmodule GrasstubeWeb.UserLive.Settings do
       |> Repo.all()
       |> Enum.sort_by(& &1.inserted_at)
 
+    emotes =
+      from(e in Emote, where: e.user_id == ^user.id)
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at)
+
     socket =
       socket
-      |> assign(:current_username, user.username)
-      |> assign(:password_form, to_form(password_changeset))
-      |> assign(:trigger_submit, false)
-      |> assign(:rooms, rooms)
+      |> assign(current_username: user.username)
+      |> assign(password_form: to_form(password_changeset))
+      |> assign(trigger_submit: false)
+      |> assign(rooms: rooms)
+      |> assign(emotes: emotes)
+      |> allow_upload(:emote, accept: ~w(.jpg .jpeg .png .webp), max_entries: 1)
 
     {:ok, socket}
   end
@@ -98,6 +135,55 @@ defmodule GrasstubeWeb.UserLive.Settings do
 
       changeset ->
         {:noreply, assign(socket, password_form: to_form(changeset, action: :insert))}
+    end
+  end
+
+  def handle_event("emote_validate", params, socket) do
+    IO.inspect("validate")
+    {:noreply, socket}
+  end
+
+  def handle_event("emote_add", %{"name" => name}, socket) do
+    consume_uploaded_entries(socket, :emote, fn %{path: path}, _entry ->
+      Repo.transact(fn ->
+        {:ok, emote} =
+          %Emote{name: name, user_id: socket.assigns.current_scope.user.id}
+          |> Repo.insert()
+
+        dest =
+          Path.join(Application.app_dir(:grasstube, "priv/static/emotes"), "#{emote.id}.png")
+
+        case File.cp(path, dest) do
+          :ok -> {:ok, emote}
+          err -> {:error, err}
+        end
+      end)
+    end)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("emote_delete", %{"id" => id}, socket) do
+    case Repo.get(Emote, id) do
+      emote ->
+        if emote.user_id == socket.assigns.current_scope.user.id do
+          Repo.delete(emote)
+
+          Path.join(Application.app_dir(:grasstube, "priv/static/emotes"), "#{emote.id}.png")
+          |> File.rm()
+
+          emotes =
+            from(e in Emote, where: e.user_id == ^socket.assigns.current_scope.user.id)
+            |> Repo.all()
+            |> Enum.sort_by(& &1.inserted_at)
+
+          {:noreply, assign(socket, emotes: emotes)}
+        else
+          {:noreply, socket}
+        end
+
+      nil ->
+        {:noreply, socket}
     end
   end
 end
