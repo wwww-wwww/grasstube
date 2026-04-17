@@ -5,7 +5,7 @@ config :grasstube, Grasstube.Repo,
   username: "w",
   password: "w",
   hostname: "localhost",
-  database: "grasstube_dev",
+  database: "grasstube2",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
