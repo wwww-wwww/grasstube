@@ -83,10 +83,11 @@ class video extends ViewHook {
             this.pushEvent("video_next", {})
         }
 
+        let last_buffered = 0
         player.on_buffer_end = buffered => {
-            // if (buffered == last_buffered) return
-            // last_buffered = buffered
-            // this.pushEvent("buffered", { buffered: buffered })
+            if (buffered == last_buffered) return
+            last_buffered = buffered
+            this.pushEvent("buffered", { buffered: buffered })
         }
 
         player.on_toggle_playing = playing => {

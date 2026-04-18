@@ -1,6 +1,5 @@
 defmodule Grasstube.Video do
   use Ecto.Schema
-  import Ecto.Changeset
 
   schema "video" do
     field :title, :string

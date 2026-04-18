@@ -336,6 +336,7 @@ export default class GrassPlayer {
     set_video(type: string, video: string, subtitles: string) {
         this.#e_txt_time.textContent = ""
         this.set_playing(false)
+        this.on_buffer_end?.(0)
 
         if (type == "yt") {
             this.#renderer_view.style.display = "none"

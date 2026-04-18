@@ -1,7 +1,7 @@
 defmodule GrasstubeWeb.RoomEditLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{Room, Repo}
+  alias Grasstube.{Room, Repo, ProcessRegistry, VideoAgent}
 
   def render(assigns) do
     ~H"""
@@ -37,7 +37,7 @@ defmodule GrasstubeWeb.RoomEditLive do
     room = Repo.get_by(Room, title: title)
 
     if socket.assigns.current_scope.user.id != room.user_id do
-      {:ok, socket |> put_flash(:error, "You can't edit this room!") |> push_redirect(to: ~p"/")}
+      {:ok, socket |> put_flash(:error, "You can't edit this room!") |> push_navigate(to: ~p"/")}
     else
       {:ok, socket |> assign(room: room)}
     end
@@ -68,6 +68,9 @@ defmodule GrasstubeWeb.RoomEditLive do
         })
         |> Repo.update()
       end)
+
+    ProcessRegistry.lookup(socket.assigns.room.id, VideoAgent)
+    |> VideoAgent.set_autopause(autopause)
 
     socket = socket |> assign(room: room)
 

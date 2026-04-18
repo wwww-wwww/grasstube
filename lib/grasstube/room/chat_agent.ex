@@ -4,7 +4,7 @@ defmodule Grasstube.ChatAgent do
 
   alias GrasstubeWeb.Endpoint
 
-  alias Grasstube.{ProcessRegistry, Repo, Room}
+  alias Grasstube.{Repo, Room}
 
   require AutoLinker
 
@@ -49,14 +49,14 @@ defmodule Grasstube.ChatAgent do
       [before | [emote | [tail]]] ->
         case Enum.find(emotes, &(String.downcase(emote) == ":" <> &1.name <> ":")) do
           nil ->
-            parse_emote(":" <> tail, acc <> before <> String.slice(emote, 0..-2), emotes)
+            parse_emote(":" <> tail, acc <> before <> String.slice(emote, 0..-2//-1), emotes)
 
           %{id: id, name: name} ->
-            assigns = %{id: id}
+            assigns = %{id: id, name: name}
 
             emote_html =
               ~H"""
-              <img src={~p"/emotes/#{to_string(id) <> ".png"}"} alt={name} title={name} />
+              <img src={~p"/emotes/#{to_string(@id) <> ".png"}"} alt={@name} title={@name} />
               """
               |> Phoenix.HTML.Safe.to_iodata()
               |> IO.iodata_to_binary()
@@ -93,8 +93,6 @@ defmodule Grasstube.ChatAgent do
       Endpoint.broadcast("chat:#{state.room_id}", "message", message)
     end
   end
-
-  def chat(_, _, _, _), do: nil
 
   def sender(sender) do
     assigns = %{sender: sender}

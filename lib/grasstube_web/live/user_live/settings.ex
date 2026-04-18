@@ -79,11 +79,18 @@ defmodule GrasstubeWeb.UserLive.Settings do
         <td>{e.name}</td>
         <td><img src={~p"/emotes/#{to_string(e.id) <> ".png"}"} /></td>
         <td>
-        <form phx-submit="emote_save_keybind">
-          <input type="hidden" name="id" value={e.id} />
-          <input type="text" name="key" value={e.keybind || ""} placeholder="Keybind" autocomplete="off" />
-          <input type="submit" value="Save"/>
-        </form></td>
+          <form phx-submit="emote_save_keybind">
+            <input type="hidden" name="emote-id" value={e.id} />
+            <input
+              type="text"
+              name="key"
+              value={e.keybind || ""}
+              placeholder="Keybind"
+              autocomplete="off"
+            />
+            <input type="submit" value="Save" />
+          </form>
+        </td>
         <td><button phx-click="emote_delete" phx-value-id={e.id}>Delete</button></td>
       </tr>
     </table>
@@ -160,8 +167,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
     end
   end
 
-  def handle_event("emote_validate", params, socket) do
-    IO.inspect("validate")
+  def handle_event("emote_validate", _params, socket) do
     {:noreply, socket}
   end
 
@@ -211,7 +217,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
     end
   end
 
-  def handle_event("emote_save_keybind", %{"id" => id, "key" => key}, socket) do
+  def handle_event("emote_save_keybind", %{"emote-id" => id, "key" => key}, socket) do
     case Repo.get(Emote, id) do
       nil ->
         {:noreply, socket}

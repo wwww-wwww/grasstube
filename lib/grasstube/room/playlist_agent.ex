@@ -2,7 +2,7 @@ defmodule Grasstube.PlaylistAgent do
   use Agent
   import Ecto.Query, only: [from: 2]
 
-  alias Grasstube.{Repo, Room, VideoAgent, Video, ProcessRegistry}
+  alias Grasstube.{Repo, VideoAgent, Video, ProcessRegistry}
   alias GrasstubeWeb.Endpoint
 
   @ffprobe_timeout 10000
@@ -52,7 +52,7 @@ defmodule Grasstube.PlaylistAgent do
       %URI{host: nil} ->
         update_video(video, %{title: "Invalid video"})
 
-      %URI{host: host, query: query} ->
+      %URI{host: _host, query: _query} ->
         info_task = Task.Supervisor.async_nolink(Tasks, fn -> get_file_duration(video_url) end)
 
         case Task.yield(info_task, @ffprobe_timeout) || Task.shutdown(info_task) do
@@ -72,7 +72,7 @@ defmodule Grasstube.PlaylistAgent do
     end
   end
 
-  def add_to_queue(pid, video_url, subtitles_url, alts) do
+  def add_to_queue(pid, video_url, subtitles_url, _alts) do
     room_id = get(pid).room_id
 
     %Video{
@@ -94,6 +94,7 @@ defmodule Grasstube.PlaylistAgent do
         update_videos(pid)
 
       {:error, error} ->
+        IO.inspect(error)
         nil
     end
   end

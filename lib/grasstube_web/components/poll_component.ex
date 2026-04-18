@@ -3,7 +3,7 @@ defmodule GrasstubeWeb.PollComponent do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Grasstube.{Poll, PollVote, User, Repo}
+  alias Grasstube.{PollVote, User, Repo}
   alias GrasstubeWeb.Endpoint
 
   def render(assigns) do

@@ -31,6 +31,7 @@
 
         >.left,
         >.right {
+            color: rgba(255, 255, 255, 0.8);
             z-index: 1;
             position: absolute;
             top: 0;
@@ -58,7 +59,6 @@
             transform: translateX(calc(-100% + 32px));
 
             .presence {
-                color: rgba(255, 255, 255, 0.8);
                 text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
                 border-radius: 8px;
             }

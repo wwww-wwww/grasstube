@@ -16,7 +16,7 @@ defmodule Grasstube.Accounts.Scope do
   growing application requirements.
   """
 
-  alias Grasstube.{User, Guest}
+  alias Grasstube.User
 
   defstruct id: nil, user: nil, guest: nil, country_code: nil
 

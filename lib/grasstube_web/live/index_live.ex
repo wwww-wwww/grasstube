@@ -1,7 +1,7 @@
 defmodule GrasstubeWeb.IndexLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{Repo, Room, ProcessRegistry, RoomAgent, Presence}
+  alias Grasstube.{ProcessRegistry, RoomAgent, Presence}
   alias GrasstubeWeb.Endpoint
 
   @topic "room_list"
@@ -36,16 +36,15 @@ defmodule GrasstubeWeb.IndexLive do
   end
 
   def get_rooms() do
-    rooms =
-      ProcessRegistry.list_rooms()
-      |> Enum.map(fn id ->
-        users =
-          Presence.list("room:#{id}")
-          |> Map.to_list()
-          |> length
+    ProcessRegistry.list_rooms()
+    |> Enum.map(fn id ->
+      users =
+        Presence.list("room:#{id}")
+        |> Map.to_list()
+        |> length
 
-        {ProcessRegistry.get(id, RoomAgent), users}
-      end)
+      {ProcessRegistry.get(id, RoomAgent), users}
+    end)
   end
 
   def update() do

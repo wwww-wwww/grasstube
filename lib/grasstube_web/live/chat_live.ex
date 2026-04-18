@@ -2,7 +2,7 @@ defmodule GrasstubeWeb.ChatLive do
   use GrasstubeWeb, :live_view
 
   alias GrasstubeWeb.Endpoint
-  alias Grasstube.{Room, Repo, ProcessRegistry, ChatAgent}
+  alias Grasstube.{ProcessRegistry, ChatAgent}
 
   def render(assigns) do
     ~H"""

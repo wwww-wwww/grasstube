@@ -1,7 +1,7 @@
 defmodule Grasstube.VideoScheduler do
   use GenServer
 
-  alias Grasstube.{ProcessRegistry, VideoAgent, RoomAgent, ChatAgent}
+  alias Grasstube.{ProcessRegistry, VideoAgent, ChatAgent}
   alias GrasstubeWeb.Endpoint
 
   @time_to_next 5
@@ -30,13 +30,14 @@ defmodule Grasstube.VideoScheduler do
     video = VideoAgent.get(pid)
 
     if video.current_video do
-      room = ProcessRegistry.get(state.room_id, RoomAgent)
       time = VideoAgent.get_time(video)
 
       Endpoint.broadcast("video:#{state.room_id}", "sync", %{
         time: time,
-        playing: video.playing
+        playing: video.playing and not video.autopaused
       })
+
+      VideoAgent.check_autopause(pid)
 
       if time - video.current_video.duration > 0 do
         VideoAgent.set_playing(pid, false)

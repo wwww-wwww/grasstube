@@ -26,15 +26,17 @@ defmodule GrasstubeWeb.RoomLive do
         session: %{"current_scope" => @current_scope, "room_id" => @room.id}
       )}
       <div class="left">
+        <div>Autopause {if @autopause, do: "on", else: "off"}</div>
         <div class="presence">
           <div :for={{_id, %{metas: metas}} <- @presence}>
-            <span :for={meta <- metas}>
-              {cc_emoji(meta.country_code)}
-              <%= if meta.user do %>
-                {meta.user.username}
+            <span :for={%{scope: scope, buffered: buffered} <- metas}>
+              {cc_emoji(scope.country_code)}
+              <%= if scope.user do %>
+                {scope.user.username}
               <% else %>
-                guest:{meta.guest}
+                guest:{scope.guest}
               <% end %>
+              {buffered}
             </span>
           </div>
         </div>
@@ -170,6 +172,8 @@ defmodule GrasstubeWeb.RoomLive do
       |> Repo.preload(:votes)
       |> Enum.sort_by(& &1.inserted_at, :desc)
 
+    topic = "room:#{room.id}"
+
     if connected?(socket) do
       Endpoint.subscribe("video:#{room.id}")
       Endpoint.subscribe("playlist:#{room.id}")
@@ -181,20 +185,23 @@ defmodule GrasstubeWeb.RoomLive do
         send(self(), %{
           topic: "video:",
           event: "sync",
-          payload: %{playing: video.playing, time: VideoAgent.get_time(video)}
+          payload: %{
+            playing: video.playing and not video.autopaused,
+            time: VideoAgent.get_time(video)
+          }
         })
       end
 
       Presence.track(
         self(),
-        "room:#{room.id}",
+        topic,
         socket.assigns.current_scope.id,
-        socket.assigns.current_scope
+        %{scope: socket.assigns.current_scope, buffered: 0}
       )
 
       GrasstubeWeb.IndexLive.update()
 
-      Endpoint.broadcast("presence:#{room.id}", "update", Presence.list("room:#{room.id}"))
+      Endpoint.broadcast("presence:#{room.id}", "update", Presence.list(topic))
       Endpoint.subscribe("presence:#{room.id}")
     end
 
@@ -208,15 +215,34 @@ defmodule GrasstubeWeb.RoomLive do
       |> assign(video_pid: video_pid)
       |> assign(current_video: video.current_video)
       |> assign(polls: polls)
-      |> assign(presence: Presence.list("room:#{room.id}"))
+      |> assign(topic: topic)
+      |> assign(presence: Presence.list(topic))
+      |> assign(autopause: video.autopause)
 
     {:ok, socket}
   end
 
   def terminate(_reason, socket) do
     room_id = socket.assigns.room.id
-    Presence.untrack(self(), "room:#{room_id}", socket.assigns.current_scope.id)
-    Endpoint.broadcast("presence:#{room_id}", "update", Presence.list("room:#{room_id}"))
+    Presence.untrack(self(), socket.assigns.topic, socket.assigns.current_scope.id)
+
+    presences = Presence.list(socket.assigns.topic)
+    Endpoint.broadcast("presence:#{room_id}", "update", presences)
+
+    time =
+      presences
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.map(& &1.metas)
+      |> List.flatten()
+      |> Enum.map(& &1.buffered)
+      |> case do
+        [] -> 0
+        times -> Enum.min(times)
+      end
+
+    ProcessRegistry.lookup(socket.assigns.room.id, VideoAgent)
+    |> VideoAgent.set_autopause_time(time)
+
     GrasstubeWeb.IndexLive.update()
 
     :ok
@@ -272,6 +298,10 @@ defmodule GrasstubeWeb.RoomLive do
 
   def handle_info(%{topic: "video:" <> _, event: "sync", payload: data}, socket) do
     {:noreply, push_event(socket, "video_sync", data)}
+  end
+
+  def handle_info(%{topic: "video:" <> _, event: "autopause", payload: autopause}, socket) do
+    {:noreply, assign(socket, autopause: autopause)}
   end
 
   def handle_info(%{topic: "presence:" <> _, payload: presence}, socket) do
@@ -340,6 +370,33 @@ defmodule GrasstubeWeb.RoomLive do
 
         update_polls(socket.assigns.room.id)
     end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("buffered", %{"buffered" => buffered}, socket) do
+    Presence.update(self(), socket.assigns.topic, socket.assigns.current_scope.id, %{
+      scope: socket.assigns.current_scope,
+      buffered: buffered
+    })
+
+    presences = Presence.list(socket.assigns.topic)
+
+    Endpoint.broadcast("presence:#{socket.assigns.room.id}", "update", presences)
+
+    time =
+      presences
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.map(& &1.metas)
+      |> List.flatten()
+      |> Enum.map(& &1.buffered)
+      |> case do
+        [] -> 0
+        times -> Enum.min(times)
+      end
+
+    ProcessRegistry.lookup(socket.assigns.room.id, VideoAgent)
+    |> VideoAgent.set_autopause_time(time)
 
     {:noreply, socket}
   end

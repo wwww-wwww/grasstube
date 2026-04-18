@@ -11,10 +11,12 @@ defmodule Grasstube.VideoAgent do
             time: 0,
             time_started: 0,
             speed: 1,
-            room: nil
+            autopause: false,
+            autopaused: false,
+            autopause_time: 0
 
   def start_link(room) do
-    Agent.start_link(fn -> %__MODULE__{room_id: room.id} end,
+    Agent.start_link(fn -> %__MODULE__{room_id: room.id, autopause: room.autopause} end,
       name: Grasstube.ProcessRegistry.via_tuple(__MODULE__, room.id)
     )
   end
@@ -76,9 +78,17 @@ defmodule Grasstube.VideoAgent do
     room_id =
       Agent.get_and_update(pid, fn state ->
         state =
-          if playing != state.playing,
-            do: %{state | playing: playing, time: get_time(state), time_started: current_time()},
-            else: state
+          if playing != state.playing do
+            %{
+              state
+              | playing: playing,
+                time: get_time(state),
+                time_started: current_time(),
+                autopaused: false
+            }
+          else
+            %{state | autopaused: false}
+          end
 
         {state.room_id, state}
       end)
@@ -93,11 +103,13 @@ defmodule Grasstube.VideoAgent do
 
     Endpoint.broadcast("video:#{room_id}", "playing", playing)
 
+    check_autopause(pid)
+
     pid
   end
 
   def get_time(%__MODULE__{} = state) do
-    if state.playing,
+    if state.playing and not state.autopaused,
       do: state.time + (current_time() - state.time_started) * state.speed,
       else: state.time
   end
@@ -114,6 +126,8 @@ defmodule Grasstube.VideoAgent do
 
     Endpoint.broadcast("video:#{room_id}", "time", t)
 
+    check_autopause(pid)
+
     pid
   end
 
@@ -126,5 +140,51 @@ defmodule Grasstube.VideoAgent do
     Endpoint.broadcast("video:#{room_id}", "time", t)
 
     pid
+  end
+
+  def set_autopause(pid, b) do
+    room_id = Agent.get_and_update(pid, &{&1.room_id, %{&1 | autopause: b}})
+    Endpoint.broadcast("video:#{room_id}", "autopause", b)
+  end
+
+  def set_autopause_time(pid, time) do
+    Agent.update(pid, &%{&1 | autopause_time: time})
+    check_autopause(pid)
+  end
+
+  def check_autopause(pid) do
+    Agent.get_and_update(pid, fn state ->
+      time = get_time(state)
+
+      cond do
+        not state.autopause ->
+          {nil, state}
+
+        state.autopaused and time < state.autopause_time ->
+          {{:play, state.room_id}, %{state | autopaused: false, time_started: current_time()}}
+
+        state.playing and time >= state.autopause_time ->
+          t =
+            if time - state.autopause_time < 1,
+              do: state.autopause_time,
+              else: time
+
+          {{:pause, state.room_id},
+           %{state | autopaused: true, time: t, time_started: current_time()}}
+
+        true ->
+          {nil, state}
+      end
+    end)
+    |> case do
+      {:play, room_id} ->
+        Endpoint.broadcast("video:#{room_id}", "playing", true)
+
+      {:pause, room_id} ->
+        Endpoint.broadcast("video:#{room_id}", "playing", false)
+
+      _ ->
+        nil
+    end
   end
 end
