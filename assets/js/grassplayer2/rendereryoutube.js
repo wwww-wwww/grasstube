@@ -142,11 +142,12 @@ export default class RendererYoutube {
 
     #playing = false
     set_playing(playing) {
+        this.#playing = playing
+
         if (this.playing() == playing) return
 
         this.#catchup_done = false
 
-        this.#playing = playing
         if (this.#player == null) return
 
         if (playing) {
