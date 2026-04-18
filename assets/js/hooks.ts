@@ -229,6 +229,7 @@ class chat extends ViewHook {
         const input: HTMLInputElement = this.el.querySelector(".message-input")!
         const emotes: HTMLElement = this.el.querySelector(".emotes")!
         const messages: HTMLElement = this.el.querySelector(".messages")!
+        const keybinds: Record<string, string> = JSON.parse(this.el.getAttribute("keybinds")!)
 
         document.addEventListener("keypress", (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName == "INPUT") return
@@ -286,7 +287,7 @@ class chat extends ViewHook {
                 const el = document.createElement("div")
                 el.innerHTML = data.html
                 el.className = "bullet"
-                el.style.top = `${Math.random() * 90}%`
+                el.style.top = `${Math.random() * 100}%`
                 messages.appendChild(el)
 
                 setTimeout(() => {
@@ -299,7 +300,12 @@ class chat extends ViewHook {
             if ((e.target as HTMLElement).tagName == "INPUT") return
 
             if (e.key == "e") {
+                e.preventDefault()
                 emotes.classList.toggle("visible")
+            }
+            if (e.key in keybinds) {
+                e.preventDefault()
+                this.send_message(keybinds[e.key])
             }
         })
 

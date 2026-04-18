@@ -521,20 +521,26 @@ html:has(.RoomLive) {
                 object-fit: contain;
             }
 
+            &:not(:hover) {
+                .time {
+                    display: none;
+                }
+            }
+
             .time {
-                font-size: 0.6em;
+                font-size: 0.8em;
             }
         }
 
         @keyframes flyleft {
             from {
                 right: 0%;
-                transform: translateX(100%);
+                transform: translateX(100%) translateY(-50%);
             }
 
             to {
                 right: 100%;
-                transform: translateX(0%);
+                transform: translateX(0%) translateY(-50%);
             }
         }
 
@@ -543,7 +549,6 @@ html:has(.RoomLive) {
             font-size: 2em;
             font-weight: bold;
             right: 100%;
-            transform: translateX(0%);
             position: absolute;
             animation: flyleft 5s linear;
             white-space: nowrap;
@@ -553,7 +558,7 @@ html:has(.RoomLive) {
             -webkit-text-stroke: 1px rgba(0, 0, 0, 0.5);
 
             right: 0%;
-            transform: translateX(100%);
+            transform: translateX(100%) translateY(-50%);
 
             img {
                 width: 128px;

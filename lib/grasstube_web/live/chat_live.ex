@@ -6,7 +6,7 @@ defmodule GrasstubeWeb.ChatLive do
 
   def render(assigns) do
     ~H"""
-    <div id={"chat-#{@room_id}"} phx-hook="chat" phx-update="ignore">
+    <div id={"chat-#{@room_id}"} phx-hook="chat" phx-update="ignore" keybinds={@keybinds}>
       <div class="emotes">
         <div>
           <div :for={e <- @emotes} class="emote" name={e.name}>
@@ -16,7 +16,7 @@ defmodule GrasstubeWeb.ChatLive do
         </div>
       </div>
       <div class="messages">
-        <div :for={%{time: time, sender: sender, html: html} <- Enum.reverse(@history)} class="message">
+        <div :for={%{time: time, sender: sender, html: html} <- @history} class="message">
           <span class="time">[{time}]</span><span><span>{sender}</span>:</span><span>{raw(html)}</span>
         </div>
       </div>
@@ -36,12 +36,20 @@ defmodule GrasstubeWeb.ChatLive do
     pid = ProcessRegistry.lookup(room_id, ChatAgent)
     chat = ChatAgent.get(pid)
 
+    keybinds =
+      chat.emotes
+      |> Enum.filter(&(&1.keybind != nil and String.length(&1.keybind) > 0))
+      |> Enum.map(&{&1.keybind, ":#{&1.name}:"})
+      |> Map.new()
+      |> Jason.encode!()
+
     socket =
       socket
       |> assign(room_id: room_id)
       |> assign(pid: pid)
       |> assign(history: chat.history)
       |> assign(emotes: chat.emotes)
+      |> assign(keybinds: keybinds)
 
     if connected?(socket) do
       Endpoint.subscribe("chat:#{room_id}")

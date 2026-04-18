@@ -83,7 +83,10 @@ defmodule Grasstube.ChatAgent do
       }
 
       Agent.update(pid, fn state ->
-        new_history = state.history ++ [message]
+        new_history =
+          ([message] ++ state.history)
+          |> Enum.take(20)
+
         %{state | history: new_history}
       end)
 

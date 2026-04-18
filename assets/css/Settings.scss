@@ -11,10 +11,26 @@
     }
 
     .emotelist {
+        border-collapse: collapse;
+
+        td {
+            border: 1px solid black;
+        }
+
         img {
             width: 128px;
             height: 128px;
             object-fit: contain;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            input[type="text"] {
+                width: 5em;
+            }
         }
     }
 }

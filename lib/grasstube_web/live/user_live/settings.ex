@@ -78,6 +78,12 @@ defmodule GrasstubeWeb.UserLive.Settings do
       <tr :for={e <- @emotes}>
         <td>{e.name}</td>
         <td><img src={~p"/emotes/#{to_string(e.id) <> ".png"}"} /></td>
+        <td>
+        <form phx-submit="emote_save_keybind">
+          <input type="hidden" name="id" value={e.id} />
+          <input type="text" name="key" value={e.keybind || ""} placeholder="Keybind" autocomplete="off" />
+          <input type="submit" value="Save"/>
+        </form></td>
         <td><button phx-click="emote_delete" phx-value-id={e.id}>Delete</button></td>
       </tr>
     </table>
@@ -109,6 +115,22 @@ defmodule GrasstubeWeb.UserLive.Settings do
       |> allow_upload(:emote, accept: ~w(.jpg .jpeg .png .webp .gif), max_entries: 1)
 
     {:ok, socket}
+  end
+
+  defp update_emotes(socket) do
+    emotes =
+      from(e in Emote, where: e.user_id == ^socket.assigns.current_scope.user.id)
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, :desc)
+
+    from(r in Room, where: r.user_id == ^socket.assigns.current_scope.user.id)
+    |> Repo.all()
+    |> Enum.each(fn room ->
+      ProcessRegistry.lookup(room.id, ChatAgent)
+      |> ChatAgent.update_emotes(emotes)
+    end)
+
+    emotes
   end
 
   @impl true
@@ -163,23 +185,16 @@ defmodule GrasstubeWeb.UserLive.Settings do
       end)
     end)
 
-    emotes =
-      from(e in Emote, where: e.user_id == ^socket.assigns.current_scope.user.id)
-      |> Repo.all()
-      |> Enum.sort_by(& &1.inserted_at, :desc)
+    emotes = update_emotes(socket)
 
-    from(r in Room, where: r.user_id == ^socket.assigns.current_scope.user.id)
-    |> Repo.all()
-    |> Enum.each(fn room ->
-      ProcessRegistry.lookup(room.id, ChatAgent)
-      |> ChatAgent.update_emotes(emotes)
-    end)
-
-    {:noreply, socket}
+    {:noreply, assign(socket, emotes: emotes)}
   end
 
   def handle_event("emote_delete", %{"id" => id}, socket) do
     case Repo.get(Emote, id) do
+      nil ->
+        {:noreply, socket}
+
       emote ->
         if emote.user_id == socket.assigns.current_scope.user.id do
           Repo.delete(emote)
@@ -187,25 +202,31 @@ defmodule GrasstubeWeb.UserLive.Settings do
           Path.join(Application.app_dir(:grasstube, "priv/static/emotes"), "#{emote.id}.png")
           |> File.rm()
 
-          emotes =
-            from(e in Emote, where: e.user_id == ^socket.assigns.current_scope.user.id)
-            |> Repo.all()
-            |> Enum.sort_by(& &1.inserted_at, :desc)
-
-          from(r in Room, where: r.user_id == ^socket.assigns.current_scope.user.id)
-          |> Repo.all()
-          |> Enum.each(fn room ->
-            ProcessRegistry.lookup(room.id, ChatAgent)
-            |> ChatAgent.update_emotes(emotes)
-          end)
+          emotes = update_emotes(socket)
 
           {:noreply, assign(socket, emotes: emotes)}
         else
           {:noreply, socket}
         end
+    end
+  end
 
+  def handle_event("emote_save_keybind", %{"id" => id, "key" => key}, socket) do
+    case Repo.get(Emote, id) do
       nil ->
         {:noreply, socket}
+
+      emote ->
+        if emote.user_id == socket.assigns.current_scope.user.id do
+          emote
+          |> Ecto.Changeset.change(%{keybind: key})
+          |> Repo.update()
+
+          emotes = update_emotes(socket)
+          {:noreply, assign(socket, emotes: emotes)}
+        else
+          {:noreply, socket}
+        end
     end
   end
 end

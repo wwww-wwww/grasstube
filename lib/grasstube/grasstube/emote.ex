@@ -5,6 +5,8 @@ defmodule Grasstube.Emote do
     field :name, :string
     belongs_to :user, Grasstube.User
 
+    field :keybind, :string
+
     timestamps()
   end
 end
