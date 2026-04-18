@@ -7,6 +7,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
   @impl true
   def render(assigns) do
     ~H"""
+    <h1>{@user.id}:{@user.username}</h1>
     <h2>Password</h2>
     <.form
       for={@password_form}
@@ -114,6 +115,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
 
     socket =
       socket
+      |> assign(user: user)
       |> assign(current_username: user.username)
       |> assign(password_form: to_form(password_changeset))
       |> assign(trigger_submit: false)

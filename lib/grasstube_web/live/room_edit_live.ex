@@ -1,7 +1,7 @@
 defmodule GrasstubeWeb.RoomEditLive do
   use GrasstubeWeb, :live_view
 
-  alias Grasstube.{Room, Repo, ProcessRegistry, VideoAgent}
+  alias Grasstube.{Room, Repo, User, ProcessRegistry, VideoAgent, RoomMod, RoomAgent}
 
   def render(assigns) do
     ~H"""
@@ -30,16 +30,34 @@ defmodule GrasstubeWeb.RoomEditLive do
       </div>
       <input type="submit" value="Save" />
     </form>
+    <h2>Operators</h2>
+    <div :for={u <- @room.mods}>
+      <div>
+        <span>{u.username}</span><button class="close" phx-click="mod_remove" phx-value-id={u.id}></button>
+      </div>
+    </div>
+    <br />
+    <form phx-submit="mod_add">
+      <div>
+        <label for="mod-add-username">Username</label>
+        <input name="username" id="mod-add-username" autocomplete="off" />
+      </div>
+      <input type="submit" value="Add" />
+    </form>
     """
   end
 
   def mount(%{"title" => title}, _session, socket) do
-    room = Repo.get_by(Room, title: title)
+    room = Repo.get_by(Room, title: title) |> Repo.preload(:mods)
 
     if socket.assigns.current_scope.user.id != room.user_id do
       {:ok, socket |> put_flash(:error, "You can't edit this room!") |> push_navigate(to: ~p"/")}
     else
-      {:ok, socket |> assign(room: room)}
+      socket =
+        socket
+        |> assign(room: room)
+
+      {:ok, socket}
     end
   end
 
@@ -69,10 +87,45 @@ defmodule GrasstubeWeb.RoomEditLive do
         |> Repo.update()
       end)
 
+    room = room |> Repo.preload(:mods, force: true)
+
     ProcessRegistry.lookup(socket.assigns.room.id, VideoAgent)
     |> VideoAgent.set_autopause(autopause)
 
     socket = socket |> assign(room: room)
+
+    ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
+    |> RoomAgent.reload()
+
+    {:noreply, socket}
+  end
+
+  def handle_event("mod_add", %{"username" => username}, socket) do
+    case Repo.get_by(User, username: username) do
+      nil ->
+        {:noreply, socket}
+
+      user ->
+        %RoomMod{user_id: user.id, room_id: socket.assigns.room.id}
+        |> Repo.insert()
+
+        room = socket.assigns.room |> Repo.preload(:mods, force: true)
+        socket = assign(socket, room: room)
+
+        ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
+        |> RoomAgent.reload()
+
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("mod_remove", %{"id" => id}, socket) do
+    Repo.get_by(RoomMod, user_id: id, room_id: socket.assigns.room.id) |> Repo.delete()
+    room = socket.assigns.room |> Repo.preload(:mods, force: true)
+    socket = assign(socket, room: room)
+
+    ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
+    |> RoomAgent.reload()
 
     {:noreply, socket}
   end

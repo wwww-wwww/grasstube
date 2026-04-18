@@ -7,11 +7,12 @@ defmodule GrasstubeWeb.RoomLive do
   alias GrasstubeWeb.Endpoint
 
   alias Grasstube.{
-    ChatAgent,
     Room,
     Repo,
     ProcessRegistry,
+    ChatAgent,
     PlaylistAgent,
+    RoomAgent,
     VideoAgent,
     Presence,
     Poll
@@ -20,7 +21,7 @@ defmodule GrasstubeWeb.RoomLive do
   def render(assigns) do
     ~H"""
     <div class="main">
-      <div id="video" class="player" phx-hook="video" phx-update="ignore"></div>
+      <div id="video" class="player" phx-hook="video" phx-update="ignore" controls={@controls}></div>
       {live_render(@socket, GrasstubeWeb.ChatLive,
         id: GrasstubeWeb.ChatLive,
         session: %{"current_scope" => @current_scope, "room_id" => @room.id}
@@ -43,7 +44,7 @@ defmodule GrasstubeWeb.RoomLive do
       </div>
       <div class="right"></div>
 
-      <div
+      <div :if={@controls}
         id="playlist_form"
         phx-update="ignore"
         phx-hook="media_directories"
@@ -64,7 +65,7 @@ defmodule GrasstubeWeb.RoomLive do
     </div>
 
     <div class="interactions" id="interactions" phx-update="ignore">
-      <label class="btn-chk" for="chk_show_playlist_form">
+      <label :if={@controls} class="btn-chk" for="chk_show_playlist_form">
         <input type="checkbox" id="chk_show_playlist_form" />
         <span>Add to playlist</span>
       </label>
@@ -72,7 +73,7 @@ defmodule GrasstubeWeb.RoomLive do
         <input type="checkbox" id="chk_show_polls" />
         <span>Polls</span>
       </label>
-      <label class="btn-chk" for="chk_create_poll">
+      <label :if={@controls} class="btn-chk" for="chk_create_poll">
         <input type="checkbox" id="chk_create_poll" />
         <span>Create poll</span>
       </label>
@@ -114,7 +115,7 @@ defmodule GrasstubeWeb.RoomLive do
           |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
         <table class={if @current_video, do: "visible"}>
           <tr :for={{v, i} <- Enum.with_index(playlist_top)} class={if i == 0, do: "current"}>
-            <td>
+            <td :if={@controls} >
               <button
                 phx-click="playlist_set"
                 phx-value-id={v.id}
@@ -126,12 +127,12 @@ defmodule GrasstubeWeb.RoomLive do
             <td class="title">{v.title}</td>
             <td>{to_hhmmss(v.duration)}</td>
             <td class="inserted_at">{v.inserted_at}</td>
-            <td><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
+            <td :if={@controls} ><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
           </tr>
         </table>
         <table class={if length(playlist_rest) > 0, do: "visible"}>
           <tr :for={v <- playlist_rest}>
-            <td>
+            <td :if={@controls} >
               <button
                 phx-click="playlist_set"
                 phx-value-id={v.id}
@@ -143,7 +144,7 @@ defmodule GrasstubeWeb.RoomLive do
             <td class="title">{v.title}</td>
             <td>{to_hhmmss(v.duration)}</td>
             <td class="inserted_at">{v.inserted_at}</td>
-            <td><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
+            <td :if={@controls} ><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
           </tr>
         </table>
       </div>
@@ -153,6 +154,7 @@ defmodule GrasstubeWeb.RoomLive do
 
   def mount(%{"title" => room_name}, _session, socket) do
     room = Repo.get_by(Room, title: room_name)
+    room_pid = ProcessRegistry.lookup(room.id, RoomAgent)
 
     chat_pid = ProcessRegistry.lookup(room.id, ChatAgent)
     chat = ChatAgent.get(chat_pid)
@@ -218,6 +220,7 @@ defmodule GrasstubeWeb.RoomLive do
       |> assign(topic: topic)
       |> assign(presence: Presence.list(topic))
       |> assign(autopause: video.autopause)
+      |> assign(controls: RoomAgent.controls?(room_pid, socket.assigns.current_scope))
 
     {:ok, socket}
   end

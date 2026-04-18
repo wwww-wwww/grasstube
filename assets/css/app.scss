@@ -228,3 +228,8 @@ input[type="file"] {
         }
     }
 }
+
+.close::after {
+    font-family: "Material Symbols Rounded";
+    content: "close";
+}

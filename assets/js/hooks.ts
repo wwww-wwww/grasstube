@@ -31,7 +31,11 @@ class video extends ViewHook {
     }
 
     mounted() {
+        const controls = this.el.hasAttribute("controls")
         const player = new GrassPlayer(this.el)
+        player.fullscreen_element = document.querySelector("main>div")!
+        player.set_controls(controls)
+
         state.player = player
 
         this.handleEvent("video_set", data => {
@@ -232,7 +236,7 @@ class chat extends ViewHook {
         const messages: HTMLElement = this.el.querySelector(".messages")!
         const keybinds: Record<string, string> = JSON.parse(this.el.getAttribute("keybinds")!)
 
-        document.addEventListener("keypress", (e: KeyboardEvent) => {
+        document.addEventListener("keydown", (e: KeyboardEvent) => {
             if ((e.target as HTMLElement).tagName == "INPUT") return
             if (e.key == "Enter") {
                 e.preventDefault()
@@ -241,7 +245,7 @@ class chat extends ViewHook {
             }
         })
 
-        input.addEventListener("keypress", (e: KeyboardEvent) => {
+        input.addEventListener("keydown", (e: KeyboardEvent) => {
             if (e.key == "Enter") {
                 e.preventDefault()
                 this.send_message(input.value)
@@ -297,7 +301,7 @@ class chat extends ViewHook {
             }
         })
 
-        document.addEventListener("keypress", e => {
+        document.addEventListener("keydown", e => {
             if ((e.target as HTMLElement).tagName == "INPUT") return
 
             if (e.key == "e") {

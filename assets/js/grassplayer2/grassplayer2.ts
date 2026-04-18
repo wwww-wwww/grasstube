@@ -51,6 +51,7 @@ export default class GrassPlayer {
     #renderer_yt_view: HTMLElement
     #seekbar: Seekbar
 
+    fullscreen_element: HTMLElement
     #e_main: HTMLElement
     #e_messages: HTMLElement
     #e_chk_play: HTMLInputElement
@@ -64,12 +65,12 @@ export default class GrassPlayer {
     on_seek: ((t: number) => void) | null = null
     on_next: (() => void) | null = null
     on_buffer_end: ((end: number) => void) | null = null
-    on_fullscreen: (() => void) | null = null
 
     constructor(root: Element) {
         root.innerHTML = html
 
         this.#e_main = root.querySelector(".grassplayer2")!
+        this.fullscreen_element = this.#e_main
         this.#e_messages = root.querySelector(".messages")!
 
         this.#seekbar = new Seekbar(root.querySelector(".seekbar")!, this)
@@ -201,7 +202,7 @@ export default class GrassPlayer {
                 this.#toggle_fullscreen()
             })
             this.#events_fullscreenchange = () => {
-                chk.checked = document.fullscreenElement == this.#e_main
+                chk.checked = document.fullscreenElement == this.fullscreen_element
             }
             document.addEventListener("fullscreenchange", this.#events_fullscreenchange)
         }
@@ -245,9 +246,11 @@ export default class GrassPlayer {
                 if (e.key == "f") {
                     this.#toggle_fullscreen()
                 } else if (e.key == "ArrowLeft") {
+                    if (!this.#controls) return
                     e.preventDefault()
                     this.seek(this.current_time() - 5, true)
                 } else if (e.key == "ArrowRight") {
+                    if (!this.#controls) return
                     e.preventDefault()
                     this.seek(this.current_time() + 5, true)
                 } else if (e.key == "ArrowUp") {
@@ -261,6 +264,7 @@ export default class GrassPlayer {
                     const m = this.create_message(Math.round(this.#volume * 100), 1000)
                     m.classList.toggle("volume-down")
                 } else if (e.key == " ") {
+                    if (!this.#controls) return
                     e.preventDefault()
                     this.#toggle_playing(!this.playing())
                 }
@@ -416,15 +420,10 @@ export default class GrassPlayer {
     }
 
     #toggle_fullscreen() {
-        if (this.on_fullscreen) {
-            this.on_fullscreen()
-            return
-        }
-
-        if (document.fullscreenElement == this.#e_main) {
+        if (document.fullscreenElement == this.fullscreen_element) {
             document.exitFullscreen()
         } else {
-            this.#e_main.requestFullscreen()
+            this.fullscreen_element.requestFullscreen()
         }
     }
 
@@ -432,7 +431,9 @@ export default class GrassPlayer {
         this.#current_renderer.set_catchup(target, time)
     }
 
+    #controls = true
     set_controls(b: boolean) {
+        this.#controls = b
         this.#e_chk_play.disabled = !b
         this.#e_btn_next.disabled = !b
         this.#seekbar.set_enabled(b)
