@@ -166,7 +166,6 @@ export default class RendererWebGPU {
 
         if (subtitles == null || subtitles.length == 0) return
 
-        console.log("load subtitles")
         this.#octopus = new SubtitlesOctopus({
             video: this.#e_video,
             canvasParent: this.#e_subtitles,
