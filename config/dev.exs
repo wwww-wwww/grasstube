@@ -25,6 +25,8 @@ config :grasstube, GrasstubeWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "UbnM3c4/vbSP8xQLcFHBL/KYfs6cKq9o5trB0kDJ+hXo5LKm6cMj0EWckke9G0PG",
   watchers: [
+    # bun: {Bun, :install_and_run, [:grasstube, ~w(--sourcemap=inline --watch)]},
+    # tsc: {Bun, :install_and_run, [:tsc, ~w(--noEmit --watch)]},
     esbuild: {Esbuild, :install_and_run, [:grasstube, ~w(--sourcemap=inline --watch)]},
     sass: {
       DartSass,

@@ -27,6 +27,8 @@ export default class SubtitlesOctopus extends EventTarget {
    * @param {Object} options Settings object.
    * @param {HTMLVideoElement} options.video Video to use as target for event listeners. Optional if canvas is specified instead.
    * @param {HTMLCanvasElement} [options.canvas=HTMLCanvasElement] Canvas to use for manual handling. Not required if video is specified.
+   * @param {HTMLElement} options.canvasParent
+   * @param {HTMLElement} options.proxyCanvas
    * @param {'js'|'wasm'} [options.blendMode='wasm'] Which color blending mode to use. WASM will perform better on lower end devices, JS can perform better if the device and browser supports hardware acceleration.
    * @param {Boolean} [options.asyncRender=true] Whether or not to use async rendering, which can skip rendering frames when resources aren't available.
    * @param {Boolean} [options.offscreenRender=true] Whether or not to render things fully on the worker, greatly reduces CPU usage.

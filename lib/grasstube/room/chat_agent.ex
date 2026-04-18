@@ -70,18 +70,22 @@ defmodule Grasstube.ChatAgent do
     if String.length(String.trim(message)) > 0 do
       opts = %{notify: true, effect: "bullet"}
 
-      emotes = get(pid).emotes
+      state = get(pid)
+      emotes = state.emotes
 
       message = parse_emote(message, "", emotes)
 
-      message = %{sender: sender(user.username), html: basic_message(raw(message)), opts: opts}
+      message = %{
+        time: DateTime.utc_now(),
+        sender: sender(user.username),
+        html: basic_message(raw(message)),
+        opts: opts
+      }
 
-      state =
-        Agent.get_and_update(pid, fn state ->
-          new_history = state.history ++ [message]
-          new_state = %{state | history: new_history}
-          {new_state, new_state}
-        end)
+      Agent.update(pid, fn state ->
+        new_history = state.history ++ [message]
+        %{state | history: new_history}
+      end)
 
       Endpoint.broadcast("chat:#{state.room_id}", "message", message)
     end

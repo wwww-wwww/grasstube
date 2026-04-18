@@ -1,20 +1,28 @@
-import SubtitlesOctopus from "./subtitles-octopus2"
+import Renderer from "./renderer"
 
-import Timer from "./timer"
+import SubtitlesOctopus from "../subtitles-octopus2"
 
-import { ResizerBestFit } from "./resizer"
+import Timer from "../timer"
 
-import EffectArt from "./effects/artcnn"
-import EffectDeband from "./effects/deband"
-import EffectDehalo from "./effects/dehalo"
-import EffectLoad from "./effects/load"
-import EffectLut3d from "./effects/lut3d"
+import Resizer, { ResizerBestFit } from "../resizer"
 
-import SamplerDefault from "./samplers/default"
-import SamplerDefaultLinear from "./samplers/defaultlinear"
-import SamplerSphere from "./samplers/sphere"
+import EffectArt from "../effects/artcnn"
+import EffectDeband from "../effects/deband"
+import EffectDehalo from "../effects/dehalo"
+import EffectLoad from "../effects/load"
+import EffectLut3d from "../effects/lut3d"
 
-function create_element(tagname, root = null, classes = "") {
+import SamplerDefault from "../samplers/default"
+import SamplerDefaultLinear from "../samplers/defaultlinear"
+import SamplerSphere from "../samplers/sphere"
+import GrassPlayer from "../grassplayer2"
+import Effect from "../effects/_effect"
+
+function create_element(
+    tagname: string,
+    root: HTMLElement | null = null,
+    classes = "",
+): HTMLElement {
     const e = document.createElement(tagname)
 
     if (classes.length > 0) {
@@ -23,30 +31,30 @@ function create_element(tagname, root = null, classes = "") {
         }
     }
 
-    if (root) root.appendChild(e)
+    root?.appendChild(e)
+
     return e
 }
 
-export default class RendererWebGPU {
+export default class RendererWebGPU implements Renderer {
     player
-    device
 
-    #resizer
-    #have_frame
+    on_buffers?: (buffers: any) => void
+    on_buffer_end?: (end: number) => void
+    on_timeupdate?: (t: number) => void
 
-    #e_video
-    #e_canvas
+    device: GPUDevice | null = null
 
-    #e_subtitles
+    #resizer: Resizer | null = null
+    #have_frame: boolean = false
 
-    #e_videoinfo_catchup
-
-    on_buffer_end
-    on_buffers
-    on_timeupdate
+    #e_video: HTMLVideoElement
+    #e_canvas: HTMLCanvasElement
+    #e_subtitles: HTMLElement
+    #e_videoinfo_catchup: HTMLElement
 
     #loaded
-    constructor(player, root, root_settings) {
+    constructor(player: GrassPlayer, root: HTMLElement, root_settings: HTMLElement) {
         root.innerHTML = `
 <canvas class="video" width="1920" height="1080" style="width: 100%; height: 100%; object-fit: contain;"></canvas>
 <div class="subtitles"></div>
@@ -99,31 +107,30 @@ export default class RendererWebGPU {
 `
 
         this.player = player
-        this.#e_video = root_settings.querySelector("video")
-        this.#e_canvas = root.querySelector("canvas.video")
-        this.#e_subtitles = root.querySelector("div.subtitles")
-
-        this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")
+        this.#e_video = root_settings.querySelector("video")!
+        this.#e_canvas = root.querySelector("canvas.video")!
+        this.#e_subtitles = root.querySelector("div.subtitles")!
+        this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")!
 
         {
-            const resolution = root_settings.querySelector(".videoinfo-resolution")
+            const resolution = root_settings.querySelector(".videoinfo-resolution")!
             this.#e_video.addEventListener("loadedmetadata", () => {
-                this.on_timeupdate(this.current_time())
+                this.on_timeupdate?.(this.current_time())
                 resolution.textContent = `${this.#e_video.videoWidth}x${this.#e_video.videoHeight}`
             })
         }
 
         // video buffer
         {
-            const buffered = root_settings.querySelector(".videoinfo-buffered")
+            const buffered = root_settings.querySelector(".videoinfo-buffered")!
             this.#e_video.addEventListener("timeupdate", () => {
-                this.on_timeupdate(this.current_time())
+                this.on_timeupdate?.(this.current_time())
                 const end = this.#update_playable()
                 buffered.textContent = `${Math.round(end - this.current_time()) || 0} seconds`
             })
 
             this.#e_video.addEventListener("progress", () => {
-                this.on_buffers(this.#e_video.buffered)
+                this.on_buffers?.(this.#e_video.buffered)
 
                 const end = this.#update_playable()
                 buffered.textContent = `${Math.round(end - this.current_time()) || 0} seconds`
@@ -136,9 +143,9 @@ export default class RendererWebGPU {
             .then(res => res.json())
             .then(fonts => {
                 for (const key of Object.keys(fonts)) {
-                    fonts[key] = fonts[key].map(f => f)
+                    fonts[key] = fonts[key].map((f: any) => f)
                 }
-                this.#set_fonts(fonts)
+                this.#fonts = fonts
                 this.set_subtitles(this.#current_subtitles)
                 console.log("fonts:loaded")
             })
@@ -147,14 +154,10 @@ export default class RendererWebGPU {
             })
     }
 
-    #fonts
-    #set_fonts(fonts) {
-        this.#fonts = fonts
-    }
-
-    #octopus
-    #current_subtitles
-    set_subtitles(subtitles) {
+    #fonts: any
+    #octopus: SubtitlesOctopus | null = null
+    #current_subtitles: string | null = null
+    set_subtitles(subtitles: string | null) {
         this.#current_subtitles = subtitles
 
         if (this.#octopus) {
@@ -171,13 +174,12 @@ export default class RendererWebGPU {
             canvasParent: this.#e_subtitles,
             proxyCanvas: this.#e_canvas,
             subUrl: subtitles,
-            fallbackFont: "https://r2tube.grass.moe/fonts/arialbd.ttf",
             availableFonts: this.#fonts,
             workerUrl: "/includes/subtitles-octopus-worker.js",
         })
     }
 
-    #update_playable() {
+    #update_playable(): number {
         for (let i = 0; i < this.#e_video.buffered.length; i++) {
             const start = this.#e_video.buffered.start(i)
             const end = this.#e_video.buffered.end(i)
@@ -189,40 +191,45 @@ export default class RendererWebGPU {
                 return end
             }
         }
+
+        return 0
     }
 
-    #clear
-    #sampler
-    #effects
-    #textures = {}
-    #texture_views = {}
-    async init(root, root_settings) {
+    #clear: any
+    #sampler: any
+    #effects: Effect[] = []
+    #textures: any = {}
+    #texture_views: any = {}
+    async init(root: HTMLElement, root_settings: HTMLElement) {
         const adapter = await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" })
-        this.device = await adapter?.requestDevice({
+        const device = await adapter?.requestDevice({
             requiredFeatures: ["timestamp-query"],
             requiredLimits: { maxComputeWorkgroupStorageSize: 32768 },
         })
 
-        if (!this.device) {
+        if (!device) {
             console.log("need a browser that supports WebGPU")
             return
         }
 
+        this.device = device
+
         console.log("gpu loaded")
 
-        const context = this.#e_canvas.getContext("webgpu")
+        const context = this.#e_canvas.getContext("webgpu") as GPUCanvasContext
         context.configure({
-            device: this.device,
+            device: device,
             format: "rgba8unorm",
             colorSpace: "srgb",
+            // @ts-ignore
             usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
         })
 
         this.#clear = () => {
-            const commandEncoder = this.device.createCommandEncoder()
+            const commandEncoder = device.createCommandEncoder()
             const textureView = context.getCurrentTexture().createView()
 
-            const renderPassDescriptor = {
+            const renderPassDescriptor: GPURenderPassDescriptor = {
                 colorAttachments: [
                     {
                         view: textureView,
@@ -235,17 +242,17 @@ export default class RendererWebGPU {
 
             const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor)
             passEncoder.end()
-            this.device.queue.submit([commandEncoder.finish()])
+            device.queue.submit([commandEncoder.finish()])
         }
 
         // Create resizer
         {
             const options = [
-                new ResizerBestFit(this.device, root, this.#e_video, this.#e_canvas),
-                // new ResizerStretch(this.#device, root, this.#e_video, this.#e_canvas),
+                new ResizerBestFit(device, root, this.#e_video, this.#e_canvas),
+                // new ResizerStretch(device, root, this.#e_video, this.#e_canvas),
             ]
 
-            const select = root_settings.querySelector(".select-resizers")
+            const select: HTMLSelectElement = root_settings.querySelector(".select-resizers")!
             options.forEach(e => {
                 create_element("option", select).textContent = e.constructor.name
             })
@@ -259,8 +266,10 @@ export default class RendererWebGPU {
             const observer = new ResizeObserver(() => this.resize())
             observer.observe(root)
 
-            const div = root_settings.querySelector(".resizer")
-            const el = create_element("div", div, "options")
+            const div = root_settings.querySelector(".resizer")!
+            const el = document.createElement("div")
+            el.className = "options"
+            div.appendChild(el)
             this.#resizer.create_settings(el)
         }
 
@@ -278,17 +287,22 @@ export default class RendererWebGPU {
                 e.load()
             })
 
-            const div = root_settings.querySelector(".filters")
+            const div = root_settings.querySelector(".filters")!
             this.#effects.forEach(e => {
                 e.on_update = () => {
                     this.#have_frame = true
                 }
 
-                const el = create_element("div", div)
+                const el = document.createElement("div")
+                div.appendChild(el)
 
-                const title = create_element("div", el, "title")
+                const title = document.createElement("div")
+                title.className = "title"
+                el.appendChild(title)
+
                 if (!e.force) {
-                    const check = create_element("input", title)
+                    const check = document.createElement("input")
+                    title.appendChild(check)
                     check.type = "checkbox"
                     check.checked = e.enabled
                     check.addEventListener("input", () => {
@@ -324,12 +338,14 @@ export default class RendererWebGPU {
                 new SamplerSphere(this),
             ]
 
-            const select = root_settings.querySelector(".select-sampler")
+            const select: HTMLSelectElement = root_settings.querySelector(".select-sampler")!
             options.forEach(e => {
-                create_element("option", select).textContent = e.constructor.name
+                const option = document.createElement("option")
+                option.textContent = e.constructor.name
+                select.appendChild(option)
             })
 
-            const div = root_settings.querySelector(".sampler")
+            // const div = root_settings.querySelector(".sampler")
 
             select.addEventListener("change", () => {
                 // while (div.firstChild) {
@@ -353,15 +369,15 @@ export default class RendererWebGPU {
             }
         })
 
-        const timer = new Timer(this.device)
+        const timer = new Timer(device)
 
-        const framenumber = root_settings.querySelector(".framenumber")
-        const txt_fps = root_settings.querySelector(".fps")
-        const totaltime = root_settings.querySelector(".totaltime")
-        const jstime = root_settings.querySelector(".jstime")
-        const queuetime = root_settings.querySelector(".queuetime")
-        const gputime = root_settings.querySelector(".gputime")
-        const timing = root_settings.querySelector(".timing")
+        const framenumber = root_settings.querySelector(".framenumber")!
+        const txt_fps = root_settings.querySelector(".fps")!
+        const totaltime = root_settings.querySelector(".totaltime")!
+        const jstime = root_settings.querySelector(".jstime")!
+        const queuetime = root_settings.querySelector(".queuetime")!
+        const gputime = root_settings.querySelector(".gputime")!
+        const timing = root_settings.querySelector(".timing")!
 
         let frame_n = 0
         let last_t = 0
@@ -372,13 +388,13 @@ export default class RendererWebGPU {
         }
         this.#e_video.requestVideoFrameCallback(tz)
 
-        let render = t => {
+        let render = (t: number) => {
             requestAnimationFrame(render)
             if (this.#e_video.videoWidth == 0) return
 
             if (!this.#have_frame) {
-                const encoder = this.device.createCommandEncoder()
-                this.device.queue.submit([encoder.finish()])
+                const encoder = device.createCommandEncoder()
+                device.queue.submit([encoder.finish()])
                 return
             }
             this.#have_frame = false
@@ -386,11 +402,11 @@ export default class RendererWebGPU {
             let video_time = this.current_time()
 
             const t0 = performance.now()
-            const encoder = this.device.createCommandEncoder()
+            const encoder = device.createCommandEncoder()
 
             let texture_video
             try {
-                texture_video = this.device.importExternalTexture({ source: this.#e_video })
+                texture_video = device.importExternalTexture({ source: this.#e_video })
             } catch (e) {
                 return
             }
@@ -404,7 +420,7 @@ export default class RendererWebGPU {
 
             this.#effects.forEach(e => {
                 if (!e.enabled) return
-                ;[last_tex, last_tex_res] = timer.run(e, video_time, last_tex, last_tex_res)
+                    ;[last_tex, last_tex_res] = timer.run(e, video_time, last_tex, last_tex_res)
             })
 
             timer.run(this.#sampler, video_time, last_tex, last_tex_res, texture_canvas, [
@@ -415,7 +431,7 @@ export default class RendererWebGPU {
             timer.finish()
 
             const t2 = performance.now()
-            this.device.queue.submit([encoder.finish()])
+            device.queue.submit([encoder.finish()])
 
             if (timer.enabled) {
                 timer
@@ -429,10 +445,10 @@ export default class RendererWebGPU {
                         timing.textContent = txt
                         gputime.textContent = (sum / 1000000).toFixed(4)
                     })
-                    .catch(() => {})
+                    .catch(() => { })
             }
 
-            this.device.queue.onSubmittedWorkDone().then(() => {
+            device.queue.onSubmittedWorkDone().then(() => {
                 const t3 = performance.now()
                 totaltime.textContent = (t3 - t0).toFixed(4)
                 queuetime.textContent = (t3 - t2).toFixed(4)
@@ -440,17 +456,18 @@ export default class RendererWebGPU {
 
             const t1 = performance.now()
             jstime.textContent = (t1 - t0).toFixed(4)
-            framenumber.textContent = ++frame_n
+            framenumber.textContent = (++frame_n).toString()
             txt_fps.textContent = (1000 / (t - last_t)).toFixed(4)
             last_t = t
         }
         requestAnimationFrame(render)
     }
 
-    get_texture(dims, not = []) {
+    get_texture(dims: [number, number], not = []) {
         const id = dims.toString()
         if (id in this.#texture_views) {
             for (let i = 0; i < this.#texture_views[id].length; i++) {
+                // @ts-ignore
                 if (!not.includes(this.#texture_views[id][i])) {
                     return this.#texture_views[id][i]
                 }
@@ -459,9 +476,10 @@ export default class RendererWebGPU {
 
         console.log(`Create texture ${dims}`)
 
-        const texture = this.device.createTexture({
+        const texture = this.device!.createTexture({
             size: dims,
             format: "rgba16float",
+            // @ts-ignore
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
         })
         const view = texture.createView()
@@ -478,7 +496,7 @@ export default class RendererWebGPU {
     }
 
     resize() {
-        this.#resizer.resize()
+        this.#resizer!.resize()
         this.#have_frame = true
     }
 
@@ -493,7 +511,7 @@ export default class RendererWebGPU {
         })
     }
 
-    set_video(video, subtitles) {
+    set_video(video: string | null, subtitles: string | null) {
         this.set_playing(false)
 
         if (video != null && video.length > 0) {
@@ -509,11 +527,11 @@ export default class RendererWebGPU {
         this.set_subtitles(subtitles)
     }
 
-    set_volume(v) {
+    set_volume(v: number) {
         this.#e_video.volume = v
     }
 
-    set_captions(b) {
+    set_captions(b: boolean) {
         this.#e_subtitles.style.display = b ? "" : "none"
     }
 
@@ -526,16 +544,16 @@ export default class RendererWebGPU {
     }
 
     #speed = 1
-    set_speed(s) {
+    set_speed(s: number) {
         this.#speed = s
         this.#set_speed(s)
     }
 
-    #set_speed(s) {
+    #set_speed(s: number) {
         this.#e_video.playbackRate = s
     }
 
-    set_playing(playing) {
+    set_playing(playing: boolean) {
         if (this.playing() == playing) return
 
         this.#catchup_done = false
@@ -552,27 +570,18 @@ export default class RendererWebGPU {
         return this.#e_video.currentTime
     }
 
-    seek(t, final = false) {
-        if (this.duration() == 0) return
-
-        t = Math.max(0, t)
-
-        if (final && this.on_seek) {
-            this.on_seek(t)
-            return
-        }
-
+    seek(t: number, final = false) {
         this.#catchup_done = false
 
         this.#e_video.currentTime = t
     }
 
     #catchup_done = false
-    #catchup_target = null
-    #catchup_target_time = null
-    #catchup_timeout = null
-    #catchup_interval = null
-    set_catchup(target, time) {
+    #catchup_target: number = 0
+    #catchup_target_time: number = 0
+    #catchup_timeout: any = null
+    #catchup_interval: any = null
+    set_catchup(target: number, time: number) {
         if (this.#catchup_done) return
         if (!this.playing()) return
 

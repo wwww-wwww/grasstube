@@ -1,6 +1,7 @@
-import RendererBasic from "./rendererbasic"
-import RendererWebGPU from "./rendererwebgpu"
-import RendererYoutube from "./rendereryoutube"
+import RendererBasic from "./renderer/rendererbasic"
+import RendererWebGPU from "./renderer/rendererwebgpu"
+import RendererYoutube from "./renderer/rendereryoutube"
+import Renderer from "./renderer/renderer"
 
 import Seekbar, { seconds_to_hms } from "./seekbar"
 
@@ -43,42 +44,47 @@ const html = `
 `
 
 export default class GrassPlayer {
-    #renderer
-    #renderer_view
-    #renderer_yt
-    #renderer_yt_view
-    #seekbar
+    #current_renderer: Renderer
+    #renderer: Renderer
+    #renderer_view: HTMLElement
+    #renderer_yt: RendererYoutube
+    #renderer_yt_view: HTMLElement
+    #seekbar: Seekbar
 
-    #e_main
-    #e_messages
-    #e_chk_play
-    #e_btn_next
-    #e_txt_time
+    #e_main: HTMLElement
+    #e_messages: HTMLElement
+    #e_chk_play: HTMLInputElement
+    #e_btn_next: HTMLButtonElement
+    #e_txt_time: HTMLElement
 
-    on_toggle_playing = null
-    on_seek = null
-    on_next = null
-    on_buffer_end = null
-    constructor(root) {
-        window.gp = this
+    #events_fullscreenchange: any
+    #events_keydown: any
+
+    on_toggle_playing: ((b: boolean) => void) | null = null
+    on_seek: ((t: number) => void) | null = null
+    on_next: (() => void) | null = null
+    on_buffer_end: ((end: number) => void) | null = null
+    on_fullscreen: (() => void) | null = null
+
+    constructor(root: Element) {
         root.innerHTML = html
 
-        this.#e_main = root.querySelector(".grassplayer2")
-        this.#e_messages = root.querySelector(".messages")
+        this.#e_main = root.querySelector(".grassplayer2")!
+        this.#e_messages = root.querySelector(".messages")!
 
-        this.#seekbar = new Seekbar(root.querySelector(".seekbar"), this)
+        this.#seekbar = new Seekbar(root.querySelector(".seekbar")!, this)
 
-        const e_view = root.querySelector(".view")
+        const e_view: HTMLElement = root.querySelector(".view")!
 
-        this.#e_txt_time = root.querySelector(".txt-time")
+        this.#e_txt_time = root.querySelector(".txt-time")!
 
         // Create default renderer
         {
             const renderers = [RendererWebGPU, RendererBasic]
-            const n_renderer = parseInt(this.get_storage("renderer") || 0)
+            const n_renderer = parseInt(this.get_storage("renderer") || "0")
 
             {
-                const select = root.querySelector("select.renderer")
+                const select: HTMLSelectElement = root.querySelector("select.renderer")!
                 select.selectedIndex = n_renderer
                 select.addEventListener("change", () => {
                     this.set_storage("renderer", select.selectedIndex)
@@ -90,18 +96,18 @@ export default class GrassPlayer {
             e_view.appendChild(this.#renderer_view)
 
             const renderer_settings = document.createElement("div")
-            root.querySelector(".settings").appendChild(renderer_settings)
+            root.querySelector(".settings")!.appendChild(renderer_settings)
 
             this.#renderer = new renderers[n_renderer](this, this.#renderer_view, renderer_settings)
             this.#renderer_view.className = this.#renderer.constructor.name
             renderer_settings.className = this.#renderer.constructor.name
 
-            this.#renderer.on_buffer_end = end => this.on_buffer_end(end)
-            this.#renderer.on_buffers = buffers => {
+            this.#renderer.on_buffer_end = (end: number) => this.on_buffer_end?.(end)
+            this.#renderer.on_buffers = (buffers: any) => {
                 if (this.#current_renderer != this.#renderer) return
                 this.#seekbar.set_buffers(buffers, this.duration())
             }
-            this.#renderer.on_timeupdate = t => {
+            this.#renderer.on_timeupdate = (t: number) => {
                 if (this.#current_renderer != this.#renderer) return
                 this.#seekbar.set_time(t / this.duration())
                 this.#e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
@@ -116,26 +122,26 @@ export default class GrassPlayer {
             e_view.appendChild(this.#renderer_yt_view)
 
             const renderer_settings = document.createElement("div")
-            root.querySelector(".settings").appendChild(renderer_settings)
+            root.querySelector(".settings")!.appendChild(renderer_settings)
 
-            // this.#renderer_yt = new RendererYoutube(this, this.#renderer_yt_view, renderer_settings)
-            // this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
-            // renderer_settings.className = this.#renderer_yt.constructor.name
+            this.#renderer_yt = new RendererYoutube(this, this.#renderer_yt_view, renderer_settings)
+            this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
+            renderer_settings.className = this.#renderer_yt.constructor.name
 
-            // this.#renderer_yt.on_buffers = buffers => {
-            //     if (this.#current_renderer != this.#renderer_yt) return
-            //     this.#seekbar.set_buffers(buffers, this.duration())
-            // }
-            // this.#renderer_yt.on_timeupdate = t => {
-            //     if (this.#current_renderer != this.#renderer_yt) return
-            //     this.#seekbar.set_time(t / this.duration())
-            //     this.#e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
-            // }
+            this.#renderer_yt.on_buffers = buffers => {
+                if (this.#current_renderer != this.#renderer_yt) return
+                this.#seekbar.set_buffers(buffers, this.duration())
+            }
+            this.#renderer_yt.on_timeupdate = t => {
+                if (this.#current_renderer != this.#renderer_yt) return
+                this.#seekbar.set_time(t / this.duration())
+                this.#e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+            }
         }
 
         // play button
         {
-            this.#e_chk_play = root.querySelector(".chk-play")
+            this.#e_chk_play = root.querySelector(".chk-play")!
             this.#e_chk_play.addEventListener("change", () => {
                 const playing = this.#e_chk_play.checked
 
@@ -145,25 +151,27 @@ export default class GrassPlayer {
 
         // volume slider
         {
-            const range_volume = root.querySelector(".range-volume")
-            const range_volume_progress = root.querySelector(".range-volume-progress-track")
+            const range_volume: HTMLInputElement = root.querySelector(".range-volume")!
+            const range_volume_progress: HTMLElement = root.querySelector(
+                ".range-volume-progress-track",
+            )!
 
-            this.volume_change = v => {
-                range_volume.value = v * 100
+            this.volume_change = (v: number) => {
+                range_volume.value = (v * 100).toString()
                 range_volume_progress.style.width = `${v * 100}%`
             }
 
             range_volume.addEventListener("input", () => {
-                this.set_volume(range_volume.value / 100)
+                this.set_volume(parseFloat(range_volume.value) / 100)
             })
 
-            this.set_volume((this.get_storage("volume") || 50) / 100)
+            this.set_volume(parseFloat(this.get_storage("volume") || "50") / 100)
         }
 
         // settings button
         {
-            const chk = root.querySelector(".chk-settings")
-            const e_settings = root.querySelector(".settings")
+            const chk: HTMLInputElement = root.querySelector(".chk-settings")!
+            const e_settings: HTMLElement = root.querySelector(".settings")!
             chk.addEventListener("change", () => {
                 e_settings.style.display = chk.checked ? "" : "none"
             })
@@ -171,39 +179,37 @@ export default class GrassPlayer {
 
         // next button
         {
-            this.#e_btn_next = root.querySelector(".chk-next")
+            this.#e_btn_next = root.querySelector(".chk-next")!
             this.#e_btn_next.addEventListener("click", () => {
-                this.on_next()
+                this.on_next?.()
             })
         }
 
         // captions button
         {
-            const chk = root.querySelector(".chk-captions")
+            const chk: HTMLInputElement = root.querySelector(".chk-captions")!
             chk.addEventListener("input", () => {
                 this.#renderer.set_captions(!chk.checked)
-                if (this.#renderer_yt != null) {
-                    this.#renderer_yt.set_captions(!chk.checked)
-                }
+                this.#renderer_yt?.set_captions(!chk.checked)
             })
         }
 
         // fullscreen button
         {
-            const chk = root.querySelector(".chk-fullscreen")
+            const chk: HTMLInputElement = root.querySelector(".chk-fullscreen")!
             chk.addEventListener("input", () => {
                 this.#toggle_fullscreen()
             })
-            this.events_fullscreenchange = () => {
+            this.#events_fullscreenchange = () => {
                 chk.checked = document.fullscreenElement == this.#e_main
             }
-            document.addEventListener("fullscreenchange", this.events_fullscreenchange)
+            document.addEventListener("fullscreenchange", this.#events_fullscreenchange)
         }
 
         // overlay show/hide
         {
-            let overlay_timeout = null
-            const show_overlay = e => {
+            let overlay_timeout: any = null
+            const show_overlay = (e: PointerEvent) => {
                 this.#e_main.classList.toggle("show", true)
 
                 if (overlay_timeout != null) {
@@ -212,7 +218,8 @@ export default class GrassPlayer {
 
                 if (
                     e != null &&
-                    (e.target.closest(".settings") != null || e.target.closest(".controls") != null)
+                    ((e.target as HTMLElement).closest(".settings") != null ||
+                        (e.target as HTMLElement).closest(".controls") != null)
                 ) {
                     return
                 }
@@ -232,8 +239,8 @@ export default class GrassPlayer {
 
         // shortcuts
         {
-            this.events_keydown = e => {
-                if (document.activeElement.closest(".grassplayer2") == null) return
+            this.#events_keydown = (e: KeyboardEvent) => {
+                if (document.activeElement?.closest(".grassplayer2") == null) return
 
                 if (e.key == "f") {
                     this.#toggle_fullscreen()
@@ -255,15 +262,15 @@ export default class GrassPlayer {
                     m.classList.toggle("volume-down")
                 } else if (e.key == " ") {
                     e.preventDefault()
-                    this.#toggle_playing()
+                    this.#toggle_playing(!this.playing())
                 }
             }
-            window.addEventListener("keydown", this.events_keydown)
+            window.addEventListener("keydown", this.#events_keydown)
 
             root.addEventListener("dblclick", e => {
-                if (e.target.tagName == "INPUT") return
-                if (e.target.tagName == "BUTTON") return
-                if (e.target.closest(".settings") != null) return
+                if ((e.target as HTMLElement).tagName == "INPUT") return
+                if ((e.target as HTMLElement).tagName == "BUTTON") return
+                if ((e.target as HTMLElement).closest(".settings") != null) return
 
                 e.preventDefault()
                 this.#toggle_fullscreen()
@@ -272,28 +279,28 @@ export default class GrassPlayer {
     }
 
     destroy() {
-        window.removeEventListener("keydown", this.events_keydown)
-        document.removeEventListener("fullscreenchange", this.events_fullscreenchange)
+        window.removeEventListener("keydown", this.#events_keydown)
+        document.removeEventListener("fullscreenchange", this.#events_fullscreenchange)
     }
 
-    get_storage(name) {
+    get_storage(name: string): string | null {
         return window.localStorage.getItem(`${this.constructor.name}-${name}`)
     }
 
-    set_storage(name, value) {
-        window.localStorage.setItem(`${this.constructor.name}-${name}`, value)
+    set_storage(name: string, value: string | number) {
+        window.localStorage.setItem(`${this.constructor.name}-${name}`, value.toString())
     }
 
-    create_message(message, timeout = null) {
+    create_message(message: string | number, timeout: number = 0) {
         const el = document.createElement("div")
         el.className = "message"
-        el.textContent = message
+        el.textContent = message.toString()
         el.addEventListener("click", () => {
             this.#e_messages.removeChild(el)
         })
 
         this.#e_messages.appendChild(el)
-        if (timeout != null && timeout > 0) {
+        if (timeout > 0) {
             setTimeout(() => {
                 if (el.parentElement == this.#e_messages) {
                     this.#e_messages.removeChild(el)
@@ -305,7 +312,7 @@ export default class GrassPlayer {
 
     volume_change
     #volume = 0.5
-    set_volume(v) {
+    set_volume(v: number) {
         v = Math.min(Math.max(v, 0), 1)
         v = Math.round(v * 100) / 100
 
@@ -322,12 +329,11 @@ export default class GrassPlayer {
         return this.#current_renderer.duration()
     }
 
-    set_speed(s) {
+    set_speed(s: number) {
         this.#current_renderer.set_speed(s)
     }
 
-    #current_renderer
-    set_video(type, video, subtitles) {
+    set_video(type: string, video: string, subtitles: string) {
         this.#e_txt_time.textContent = ""
         this.set_playing(false)
 
@@ -335,16 +341,15 @@ export default class GrassPlayer {
             this.#renderer_view.style.display = "none"
             this.#renderer.set_video(null, null)
 
+            this.#renderer_yt_view.style.display = ""
+            this.#renderer_yt?.set_video(video)
+
             if (this.#renderer_yt != null) {
-                this.#renderer_yt_view.style.display = ""
-                this.#renderer_yt.set_video(video)
                 this.#current_renderer = this.#renderer_yt
             }
         } else {
-            if (this.#renderer_yt != null) {
-                this.#renderer_yt_view.style.display = "none"
-                this.#renderer_yt.set_video(null)
-            }
+            this.#renderer_yt_view.style.display = "none"
+            this.#renderer_yt?.set_video(null)
 
             this.#renderer_view.style.display = ""
             this.#renderer.set_video(video, subtitles)
@@ -360,7 +365,7 @@ export default class GrassPlayer {
         return this.#current_renderer.playing()
     }
 
-    set_playing(playing) {
+    set_playing(playing: boolean) {
         this.#e_chk_play.checked = playing
 
         if (this.playing() == playing) return
@@ -368,15 +373,11 @@ export default class GrassPlayer {
         this.#current_renderer.set_playing(playing)
     }
 
-    auto_set_playing(playing) {
+    auto_set_playing(playing: boolean) {
         this.set_playing(playing)
     }
 
-    #toggle_playing(playing = null) {
-        if (playing == null) {
-            playing = !this.playing()
-        }
-
+    #toggle_playing(playing: boolean) {
         if (this.on_toggle_playing != null) {
             this.on_toggle_playing(playing)
         } else {
@@ -388,7 +389,7 @@ export default class GrassPlayer {
         return this.#current_renderer.current_time()
     }
 
-    seek(t, final = false) {
+    seek(t: number, final = false) {
         if (this.duration() == 0) return
 
         t = Math.max(0, t)
@@ -406,14 +407,12 @@ export default class GrassPlayer {
         }
     }
 
-    auto_seek(t) {
+    auto_seek(t: number) {
         if (t == undefined) return
         if (this.#seekbar.seeking) return
 
         this.seek(t)
     }
-
-    on_fullscreen = null
 
     #toggle_fullscreen() {
         if (this.on_fullscreen) {
@@ -428,11 +427,11 @@ export default class GrassPlayer {
         }
     }
 
-    set_catchup(target, time) {
+    set_catchup(target: number, time: number) {
         this.#current_renderer.set_catchup(target, time)
     }
 
-    set_controls(b) {
+    set_controls(b: boolean) {
         this.#e_chk_play.disabled = !b
         this.#e_btn_next.disabled = !b
         this.#seekbar.set_enabled(b)

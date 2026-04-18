@@ -1,3 +1,5 @@
+import RendererWebGPU from "../renderer/rendererwebgpu"
+
 export default class Effect {
     renderer
     device
@@ -6,26 +8,26 @@ export default class Effect {
     force = false
     enabled = false
     initialized = false
-    on_update = null
-    constructor(renderer) {
+    on_update: any = null
+    constructor(renderer: RendererWebGPU) {
         this.renderer = renderer
-        this.device = renderer.device
+        this.device = renderer.device!
         this.desc = { label: this.constructor.name }
     }
 
-    get_storage(name) {
+    get_storage(name: string) {
         return window.localStorage.getItem(`effect-${this.constructor.name}-${name}`)
     }
 
-    set_storage(name, value) {
-        window.localStorage.setItem(`effect-${this.constructor.name}-${name}`, value)
+    set_storage(name: string, value: string | number) {
+        window.localStorage.setItem(`effect-${this.constructor.name}-${name}`, value.toString())
     }
 
-    get_texture(dims, not = []) {
+    get_texture(dims: [number, number], not = []) {
         return this.renderer.get_texture(dims, not)
     }
 
-    create_settings(el) {
+    create_settings(el: HTMLElement) {
         console.log(`${this.constructor.name}.create_settings not implemented`)
     }
 
@@ -47,11 +49,11 @@ export default class Effect {
         this.set_storage("enabled", "0")
     }
 
-    run(encoder, video_time, tex_in, tex_in_res) {
+    run(encoder: GPUCommandEncoder, video_time: number, tex_in: GPUTextureView, tex_in_res: [number, number]) {
         console.log(`${this.constructor.name}.run not implemented`)
     }
 
-    create_shader(code) {
+    create_shader(code: string) {
         const module = this.device.createShaderModule({ code })
         const log = async () => {
             const info = await module.getCompilationInfo();

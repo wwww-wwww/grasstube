@@ -1,8 +1,10 @@
-function pad(n, width) {
+import GrassPlayer from "./grassplayer2"
+
+function pad(n: number, width: number) {
     return n.toString().padStart(width, "0")
 }
 
-function seconds_to_hms(seconds, hide_hours = false) {
+function seconds_to_hms(seconds: number, hide_hours = false) {
     seconds = Math.round(seconds)
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor(seconds / 60) % 60
@@ -14,19 +16,19 @@ function seconds_to_hms(seconds, hide_hours = false) {
 export { seconds_to_hms }
 
 export default class Seekbar {
-    #root
-    #e_bar
-    #e_current
-    #e_handle
+    #root: HTMLElement
+    #e_bar: HTMLElement
+    #e_current: HTMLElement
+    #e_handle: HTMLElement
 
-    #e_handle_info
-    #e_preview_time
-    #e_preview
+    #e_handle_info: HTMLElement
+    #e_preview_time: HTMLElement
+    #e_preview: HTMLCanvasElement
 
-    seeking
+    seeking = false
 
-    #buffers = []
-    constructor(root, player) {
+    #buffers: HTMLElement[] = []
+    constructor(root: HTMLElement, player: GrassPlayer) {
         root.innerHTML = `
 <div class="seekbar-handle-info">
     <div class="seekbar-preview-time"></div>
@@ -39,13 +41,13 @@ export default class Seekbar {
 `
 
         this.#root = root
-        this.#e_bar = root.querySelector(".seekbar-bar")
-        this.#e_current = root.querySelector(".seekbar-bar-current")
-        this.#e_handle = root.querySelector(".seekbar-handle")
+        this.#e_bar = root.querySelector(".seekbar-bar")!
+        this.#e_current = root.querySelector(".seekbar-bar-current")!
+        this.#e_handle = root.querySelector(".seekbar-handle")!
 
-        this.#e_handle_info = root.querySelector(".seekbar-handle-info")
-        this.#e_preview_time = root.querySelector(".seekbar-preview-time")
-        this.#e_preview = root.querySelector(".seekbar-preview")
+        this.#e_handle_info = root.querySelector(".seekbar-handle-info")!
+        this.#e_preview_time = root.querySelector(".seekbar-preview-time")!
+        this.#e_preview = root.querySelector(".seekbar-preview")!
         const preview_ctx = this.#e_preview.getContext("2d")
 
         root.addEventListener("pointerdown", e => {
@@ -63,7 +65,7 @@ export default class Seekbar {
 
             player.set_playing(false)
 
-            const seek = (e, final = false) => {
+            const seek = (e: PointerEvent, final = false) => {
                 e.preventDefault()
 
                 const rect = root.getBoundingClientRect()
@@ -75,7 +77,7 @@ export default class Seekbar {
                 player.seek(t, final)
             }
 
-            const pointerup = e => {
+            const pointerup = (e: PointerEvent) => {
                 e.preventDefault()
 
                 document.removeEventListener("pointermove", seek)
@@ -129,7 +131,7 @@ export default class Seekbar {
         })
     }
 
-    set_buffers(buffers, duration) {
+    set_buffers(buffers: any, duration: number) {
         while (this.#buffers.length < buffers.length) {
             const buffer = document.createElement("div")
             buffer.style.width = "0%"
@@ -138,7 +140,7 @@ export default class Seekbar {
         }
 
         while (this.#buffers.length > buffers.length) {
-            const buffer = this.#buffers.pop()
+            const buffer = this.#buffers.pop()!
             this.#e_bar.removeChild(buffer)
         }
 
@@ -151,18 +153,18 @@ export default class Seekbar {
         }
     }
 
-    set_time(u) {
+    set_time(u: number) {
         this.#e_current.style.width = u * 100 + "%"
         this.#e_handle.style.left = u * 100 + "%"
     }
 
     reset() {
         this.set_time(0)
-        this.set_buffers([])
+        this.set_buffers([], 0)
     }
 
     #enabled = true
-    set_enabled(b) {
+    set_enabled(b: boolean) {
         this.#enabled = b
         this.#root.classList.toggle("disabled", !b)
     }

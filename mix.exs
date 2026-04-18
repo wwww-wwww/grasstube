@@ -51,6 +51,7 @@ defmodule Grasstube.MixProject do
       {:lazy_html, ">= 0.1.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
+      # {:bun, "~> 2.0", runtime: Mix.env() == :dev}
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
@@ -75,7 +76,7 @@ defmodule Grasstube.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["esbuild.install --if-missing"],
+      "assets.setup": ["bun.install --if-missing", "bun assets install"],
       "assets.build": ["compile", "esbuild grasstube", "sass grasstube"],
       "assets.deploy": [
         "esbuild grasstube --minify",

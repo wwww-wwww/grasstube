@@ -45,6 +45,19 @@ config :esbuild,
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
+config :bun,
+  version: "1.3.12",
+  assets: [args: [], cd: Path.expand("../assets", __DIR__)],
+  grasstube: [
+    args:
+      ~w(build js/app.js js/grassplayer2/effects/lut3d-worker.js --outdir=../priv/static/assets/js),
+    cd: Path.expand("../assets", __DIR__)
+  ],
+  tsc: [args: ~w(tsc), cd: Path.expand("../assets", __DIR__)]
+
+config :phoenix_live_view, :colocated_js,
+  target_directory: Path.expand("../assets/node_modules/phoenix-colocated", __DIR__)
+
 config :dart_sass,
   version: "1.99.0",
   grasstube: [

@@ -1,12 +1,17 @@
 class Resizer {
-    constructor(device, root, video, canvas) {
+    device
+    root
+    video
+    canvas
+
+    constructor(device: GPUDevice, root: HTMLElement, video: HTMLVideoElement, canvas: HTMLCanvasElement) {
         this.device = device
         this.root = root
         this.video = video
         this.canvas = canvas
     }
 
-    create_settings(el) {
+    create_settings(el: HTMLElement) {
         console.log(`${this.constructor.name}.create_settings not implemented`)
     }
 
@@ -16,13 +21,16 @@ class Resizer {
 }
 
 class ResizerBestFit extends Resizer {
-    create_settings(el) {
+    #txt_root: HTMLElement | null = null
+    #txt_dims: HTMLElement | null = null
+
+    create_settings(el: HTMLElement) {
         el.innerHTML = `
 <div><span>View</span><span class="dims-root"></span></div>
 <div><span>Canvas</span><span class="dims-canvas"></span></div>
 `
-        this.txt_root = el.querySelector(".dims-root")
-        this.txt_dims = el.querySelector(".dims-canvas")
+        this.#txt_root = el.querySelector(".dims-root")!
+        this.#txt_dims = el.querySelector(".dims-canvas")!
     }
 
     resize() {
@@ -49,8 +57,8 @@ class ResizerBestFit extends Resizer {
 
         this.canvas.width = scaled_video_width
         this.canvas.height = scaled_video_height
-        this.txt_root.textContent = `${Math.round(view_width)}x${Math.round(view_height)}`
-        this.txt_dims.textContent = `${scaled_video_width}x${scaled_video_height}`
+        this.#txt_root!.textContent = `${Math.round(view_width)}x${Math.round(view_height)}`
+        this.#txt_dims!.textContent = `${scaled_video_width}x${scaled_video_height}`
     }
 }
 
@@ -70,3 +78,4 @@ class ResizerStretch extends Resizer {
 }
 
 export { ResizerBestFit, ResizerStretch }
+export default Resizer

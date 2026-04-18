@@ -1,12 +1,13 @@
+import { ViewHook } from "phoenix_live_view"
 import GrassPlayer from "./grassplayer2/grassplayer2"
 
-const state = { player: null }
+const state: { player: GrassPlayer | null } = { player: null }
 
-function pad(n, width) {
+function pad(n: number, width: number) {
     return n.toString().padStart(width, "0")
 }
 
-function seconds_to_hms(seconds, hide_hours = false) {
+function seconds_to_hms(seconds: number, hide_hours = false) {
     seconds = Math.round(seconds)
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor(seconds / 60) % 60
@@ -15,17 +16,20 @@ function seconds_to_hms(seconds, hide_hours = false) {
     return `${pad(hours, 2)}:${pad(minutes, 2)}:${pad(seconds, 2)}`
 }
 
-const video = {
-    ping_interval: null,
-    latency_rtt: 0,
-    last_ping: 0,
+class video extends ViewHook {
+    #ping_interval: any = null
+    #last_ping = 0
+    #latency_rtt = 0
+
     ping() {
         const ping_time = performance.now()
         this.pushEvent("ping", {}, () => {
-            this.last_ping = performance.now() - ping_time
-            this.latency_rtt = this.last_ping * 0.25 + (this.latency_rtt || this.last_ping) * 0.75
+            this.#last_ping = performance.now() - ping_time
+            this.#latency_rtt =
+                this.#last_ping * 0.25 + (this.#latency_rtt || this.#last_ping) * 0.75
         })
-    },
+    }
+
     mounted() {
         const player = new GrassPlayer(this.el)
         state.player = player
@@ -42,7 +46,7 @@ const video = {
         })
 
         this.handleEvent("video_time", data => {
-            const t = data.time + Math.min(this.latency_rtt / 1000, 1)
+            const t = data.time + Math.min(this.#latency_rtt / 1000, 1)
             player.create_message(seconds_to_hms(data.time, true), 1000)
             player.auto_seek(t)
             player.set_catchup(t, performance.now())
@@ -61,7 +65,7 @@ const video = {
                 return
             }
 
-            const t = data.time + Math.min(this.latency_rtt / 1000, 1)
+            const t = data.time + Math.min(this.#latency_rtt / 1000, 1)
 
             if (t >= player.duration()) return
 
@@ -86,7 +90,7 @@ const video = {
         }
 
         player.on_toggle_playing = playing => {
-            this.pushEvent("video_playing", { playing: playing, offset: -this.latency_rtt / 1000 })
+            this.pushEvent("video_playing", { playing: playing, offset: -this.#latency_rtt / 1000 })
         }
 
         player.on_seek = t => {
@@ -94,51 +98,54 @@ const video = {
         }
 
         this.ping()
-        this.ping_interval = setInterval(() => this.ping(), 2000)
-    },
+        this.#ping_interval = setInterval(() => this.ping(), 2000)
+    }
+
     destroyed() {
-        state.player.destroy()
-        clearInterval(this.ping_interval)
-    },
+        clearInterval(this.#ping_interval)
+        state.player!.destroy()
+    }
 }
 
-const modal_fullscreen = {
+class modal_fullscreen extends ViewHook {
     mounted() {
-        const chk = document.getElementById(this.el.getAttribute("chk"))
+        const chk: HTMLInputElement = document.getElementById(
+            this.el.getAttribute("chk")!,
+        ) as HTMLInputElement
         this.el.addEventListener("click", e => {
             if (e.target == this.el) {
                 chk.checked = false
             }
         })
 
-        this.el.querySelector(".close").addEventListener("click", () => {
+        this.el.querySelector(".close")!.addEventListener("click", () => {
             chk.checked = false
         })
-    },
+    }
 }
 
 const video_exts = [".mp4", ".webm"]
-async function scan(url) {
+async function scan(url: URL) {
     return fetch(url.toString())
         .then(res => res.text())
         .then(async t => {
             const doc = document.createElement("div")
             doc.innerHTML = t
             const urls = [...doc.getElementsByTagName("a")]
-                .map(x => x.getAttribute("href"))
+                .map(x => x.getAttribute("href") || "")
                 .map(x => new URL(x, url))
                 .filter(x => x.href.startsWith(url.href))
 
             const files = urls.filter(x => !x.href.endsWith("/"))
-            let folders = urls.filter(x => x.href.endsWith("/"))
-            folders = await Promise.all(folders.map(async f => [f, await scan(f)]))
+            let folders: any = urls.filter(x => x.href.endsWith("/"))
+            folders = await Promise.all(folders.map(async (f: any) => [f, await scan(f)]))
 
             return { folders, files }
         })
 }
 
-function build_tree(m, root, tree) {
-    tree.folders.forEach(f => {
+function build_tree(m: any, root: HTMLElement, tree: any) {
+    tree.folders.forEach((f: any) => {
         const el = document.createElement("div")
         el.className = "folder"
         root.appendChild(el)
@@ -148,23 +155,24 @@ function build_tree(m, root, tree) {
             <div class="body"></div>
         `
 
-        el.querySelector(".header").addEventListener("click", () => {
+        el.querySelector(".header")!.addEventListener("click", () => {
             el.classList.toggle("uncollapsed", !el.classList.contains("uncollapsed"))
         })
-        const body = el.querySelector(".body")
-        build_tree(m, body, f[1])
+        build_tree(m, el.querySelector(".body")!, f[1])
     })
 
     tree.files
-        .filter(x => video_exts.some(e => x.pathname.split("/").pop().toLowerCase().endsWith(e)))
-        .forEach(f => {
+        .filter((x: URL) =>
+            video_exts.some(e => x.pathname.split("/").pop()!.toLowerCase().endsWith(e)),
+        )
+        .forEach((f: any) => {
             const file = document.createElement("div")
             file.className = "file"
             root.appendChild(file)
             file.innerHTML = `<button class="add"></button><span>${decodeURIComponent(f.pathname.split("/").pop())}</span>`
-            file.querySelector(".add").addEventListener("click", () => {
-                let subtitles_url = f.href.split(".").slice(0, -1).join(".") + ".ass"
-                if (tree.files.filter(x => x.href == subtitles_url).length == 0) {
+            file.querySelector(".add")!.addEventListener("click", () => {
+                let subtitles_url: string | null = f.href.split(".").slice(0, -1).join(".") + ".ass"
+                if (tree.files.filter((x: URL) => x.href == subtitles_url).length == 0) {
                     subtitles_url = null
                 }
                 m.pushEvent("playlist_add", { video_url: f.href, subtitles_url: subtitles_url })
@@ -172,30 +180,30 @@ function build_tree(m, root, tree) {
         })
 }
 
-const media_directories = {
+class media_directories extends ViewHook {
     mounted() {
-        this.el.querySelector(".top > .close").addEventListener("click", () => {
-            chk_show_playlist_form.checked = false
+        this.el.querySelector(".top > .close")!.addEventListener("click", () => {
+            ; (document.getElementById("chk_show_playlist_form") as HTMLInputElement).checked = false
         })
-        const directories = JSON.parse(this.el.getAttribute("directories"))
-        Promise.all(directories.map(async url => [url, await scan(new URL(url))])).then(folders =>
-            build_tree(this, this.el.querySelector(".list"), { files: [], folders }),
+        const directories = JSON.parse(this.el.getAttribute("directories")!)
+        Promise.all(directories.map(async (url: string) => [url, await scan(new URL(url))])).then(
+            folders => build_tree(this, this.el.querySelector(".list")!, { files: [], folders }),
         )
-    },
+    }
 }
 
-const poll_form = {
+class poll_form extends ViewHook {
     mounted() {
-        const form = this.el.querySelector("form")
+        const form = this.el.querySelector("form")!
         const update_names = () => {
             Array.from(form.getElementsByTagName("input"))
-                .filter(x => x.name != "name")
-                .forEach((x, i) => {
+                .filter((x: any) => x.name != "name")
+                .forEach((x: any, i) => {
                     x.name = i
                 })
         }
 
-        this.el.querySelector(".btn-add-option").addEventListener("click", () => {
+        this.el.querySelector(".btn-add-option")!.addEventListener("click", () => {
             const option = document.createElement("div")
             form.appendChild(option)
             option.innerHTML = `
@@ -203,25 +211,27 @@ const poll_form = {
             <button class="close"></button>
             `
             update_names()
-            option.querySelector("button").addEventListener("click", () => {
+            option.querySelector("button")!.addEventListener("click", () => {
                 form.removeChild(option)
                 update_names()
             })
-            option.querySelector("input").focus()
+            option.querySelector("input")!.focus()
         })
-    },
+    }
 }
 
-const chat = {
-    send_message(message) {
+class chat extends ViewHook {
+    send_message(message: string) {
         this.pushEvent("send_message", { message: message })
-    },
-    mounted() {
-        const input = this.el.querySelector(".message-input")
-        const emotes = this.el.querySelector(".emotes")
+    }
 
-        document.addEventListener("keypress", e => {
-            if (e.target.tagName == "INPUT") return
+    mounted() {
+        const input: HTMLInputElement = this.el.querySelector(".message-input")!
+        const emotes: HTMLElement = this.el.querySelector(".emotes")!
+        const messages: HTMLElement = this.el.querySelector(".messages")!
+
+        document.addEventListener("keypress", (e: KeyboardEvent) => {
+            if ((e.target as HTMLElement).tagName == "INPUT") return
             if (e.key == "Enter") {
                 e.preventDefault()
                 input.classList.toggle("visible", true)
@@ -229,7 +239,7 @@ const chat = {
             }
         })
 
-        input.addEventListener("keypress", e => {
+        input.addEventListener("keypress", (e: KeyboardEvent) => {
             if (e.key == "Enter") {
                 e.preventDefault()
                 this.send_message(input.value)
@@ -238,8 +248,6 @@ const chat = {
                 emotes.classList.toggle("visible", false)
             }
         })
-
-        const messages = this.el.querySelector(".messages")
 
         let title_notifying = false
         let original_title = document.title
@@ -256,7 +264,7 @@ const chat = {
             el.classList.toggle("message", true)
             el.classList.toggle("visible", true)
             messages.prepend(el)
-            el.innerHTML = `<span>${data.sender}</span>: ${data.html}`
+            el.innerHTML = `<span class="time">[${data.time}]</span><span><span>${data.sender}</span>:</span>${data.html}`
             setTimeout(() => {
                 el.classList.toggle("visible", false)
             }, 5000)
@@ -288,7 +296,7 @@ const chat = {
         })
 
         document.addEventListener("keypress", e => {
-            if (e.target.tagName == "INPUT") return
+            if ((e.target as HTMLElement).tagName == "INPUT") return
 
             if (e.key == "e") {
                 emotes.classList.toggle("visible")
@@ -306,7 +314,7 @@ const chat = {
                 }
             })
         })
-    },
+    }
 }
 
 export default { video, modal_fullscreen, media_directories, poll_form, chat }

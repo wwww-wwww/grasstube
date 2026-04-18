@@ -1,0 +1,11 @@
+{
+  "workspaces": [
+    "../deps/*"
+  ],
+  "dependencies": {
+    "phoenix": "workspace:*",
+    "phoenix_html": "workspace:*",
+    "phoenix_live_view": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

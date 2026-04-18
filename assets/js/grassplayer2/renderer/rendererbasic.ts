@@ -1,14 +1,18 @@
-import SubtitlesOctopus from "./subtitles-octopus2"
+import Renderer from "./renderer"
+import SubtitlesOctopus from "../subtitles-octopus2"
+import GrassPlayer from "../grassplayer2"
 
-export default class RendererBasic {
+export default class RendererBasic implements Renderer {
     player
 
-    on_buffer_end
+    on_buffers?: (buffers: any) => void
+    on_buffer_end?: (end: number) => void
+    on_timeupdate?: (t: number) => void
 
-    #e_video
-    #e_subtitles
-    #e_videoinfo_catchup
-    constructor(player, root, root_settings) {
+    #e_video: HTMLVideoElement
+    #e_subtitles: HTMLElement
+    #e_videoinfo_catchup: HTMLElement
+    constructor(player: GrassPlayer, root: HTMLElement, root_settings: HTMLElement) {
         root.innerHTML = `
 <video crossorigin="anonymous"></video>
 <div class="subtitles"></div>
@@ -26,30 +30,29 @@ export default class RendererBasic {
 `
 
         this.player = player
-        this.#e_video = root.querySelector("video")
-        this.#e_subtitles = root.querySelector("div.subtitles")
-
-        this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")
+        this.#e_video = root.querySelector("video")!
+        this.#e_subtitles = root.querySelector("div.subtitles")!
+        this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")!
 
         {
-            const resolution = root_settings.querySelector(".videoinfo-resolution")
+            const resolution = root_settings.querySelector(".videoinfo-resolution")!
             this.#e_video.addEventListener("loadedmetadata", () => {
-                this.on_timeupdate(this.current_time())
+                this.on_timeupdate?.(this.current_time())
                 resolution.textContent = `${this.#e_video.videoWidth}x${this.#e_video.videoHeight}`
             })
         }
 
         // video buffer
         {
-            const buffered = root_settings.querySelector(".videoinfo-buffered")
+            const buffered = root_settings.querySelector(".videoinfo-buffered")!
             this.#e_video.addEventListener("timeupdate", () => {
-                this.on_timeupdate(this.current_time())
+                this.on_timeupdate?.(this.current_time())
                 const end = this.#update_playable()
                 buffered.textContent = `${Math.round(end - this.current_time()) || 0} seconds`
             })
 
             this.#e_video.addEventListener("progress", () => {
-                this.on_buffers(this.#e_video.buffered)
+                this.on_buffers?.(this.#e_video.buffered)
 
                 const end = this.#update_playable()
                 buffered.textContent = `${Math.round(end - this.current_time()) || 0} seconds`
@@ -60,9 +63,9 @@ export default class RendererBasic {
             .then(res => res.json())
             .then(fonts => {
                 for (const key of Object.keys(fonts)) {
-                    fonts[key] = fonts[key].map(f => f)
+                    fonts[key] = fonts[key].map((f: any) => f)
                 }
-                this.#set_fonts(fonts)
+                this.#fonts = fonts
                 this.set_subtitles(this.#current_subtitles)
                 console.log("fonts:loaded")
             })
@@ -71,14 +74,10 @@ export default class RendererBasic {
             })
     }
 
-    #fonts
-    #set_fonts(fonts) {
-        this.#fonts = fonts
-    }
-
-    #octopus
-    #current_subtitles
-    set_subtitles(subtitles) {
+    #fonts: any
+    #octopus: SubtitlesOctopus | null = null
+    #current_subtitles: any
+    set_subtitles(subtitles: string | null) {
         this.#current_subtitles = subtitles
 
         if (this.#octopus) {
@@ -95,13 +94,12 @@ export default class RendererBasic {
             canvasParent: this.#e_subtitles,
             proxyCanvas: this.#e_video,
             subUrl: subtitles,
-            fallbackFont: "https://r2tube.grass.moe/fonts/arialbd.ttf",
             availableFonts: this.#fonts,
             workerUrl: "/includes/subtitles-octopus-worker.js",
         })
     }
 
-    #update_playable() {
+    #update_playable(): number {
         for (let i = 0; i < this.#e_video.buffered.length; i++) {
             const start = this.#e_video.buffered.start(i)
             const end = this.#e_video.buffered.end(i)
@@ -113,9 +111,11 @@ export default class RendererBasic {
                 return end
             }
         }
+
+        return 0
     }
 
-    set_video(video, subtitles) {
+    set_video(video: string | null, subtitles: string | null) {
         this.set_playing(false)
 
         this.#e_video.src = video || ""
@@ -123,11 +123,11 @@ export default class RendererBasic {
         this.set_subtitles(subtitles)
     }
 
-    set_volume(v) {
+    set_volume(v: number) {
         this.#e_video.volume = v
     }
 
-    set_captions(b) {
+    set_captions(b: boolean) {
         this.#e_subtitles.style.display = b ? "" : "none"
     }
 
@@ -140,16 +140,16 @@ export default class RendererBasic {
     }
 
     #speed = 1
-    set_speed(s) {
+    set_speed(s: number) {
         this.#speed = s
         this.#set_speed(s)
     }
 
-    #set_speed(s) {
+    #set_speed(s: number) {
         this.#e_video.playbackRate = s
     }
 
-    set_playing(playing) {
+    set_playing(playing: boolean) {
         if (this.playing() == playing) return
 
         this.#catchup_done = false
@@ -166,27 +166,18 @@ export default class RendererBasic {
         return this.#e_video.currentTime
     }
 
-    seek(t, final = false) {
-        if (this.duration() == 0) return
-
-        t = Math.max(0, t)
-
-        if (final && this.on_seek) {
-            this.on_seek(t)
-            return
-        }
-
+    seek(t: number, final = false) {
         this.#catchup_done = false
 
         this.#e_video.currentTime = t
     }
 
     #catchup_done = false
-    #catchup_target = null
-    #catchup_target_time = null
-    #catchup_timeout = null
-    #catchup_interval = null
-    set_catchup(target, time) {
+    #catchup_target: number = 0
+    #catchup_target_time: number = 0
+    #catchup_timeout: any = null
+    #catchup_interval: any = null
+    set_catchup(target: number, time: number) {
         if (this.#catchup_done) return
         if (!this.playing()) return
 

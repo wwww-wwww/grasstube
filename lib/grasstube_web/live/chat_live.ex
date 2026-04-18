@@ -16,8 +16,8 @@ defmodule GrasstubeWeb.ChatLive do
         </div>
       </div>
       <div class="messages">
-        <div :for={{sender, message} <- @history |> Enum.reverse()}>
-          <span>{sender}</span>: <span>{message}</span>
+        <div :for={%{time: time, sender: sender, html: html} <- Enum.reverse(@history)} class="message">
+          <span class="time">[{time}]</span><span><span>{sender}</span>:</span><span>{raw(html)}</span>
         </div>
       </div>
       <div class="bottom">
