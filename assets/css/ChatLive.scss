@@ -1,0 +1,154 @@
+main > .ChatLive {
+    > div {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+    }
+
+    .messages {
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: start;
+        flex: 1;
+        overflow-y: scroll;
+        padding: 8px;
+
+        @keyframes message {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .message {
+            color: black;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: end;
+            gap: 0.5em;
+
+            animation: message 0.2s;
+
+            img {
+                width: 128px;
+                max-height: 128px;
+                object-fit: contain;
+            }
+
+            &:not(:hover) {
+                .time {
+                    display: none;
+                }
+            }
+
+            .time {
+                font-size: 0.8em;
+            }
+        }
+
+        @keyframes flyleft {
+            from {
+                right: 0%;
+                transform: translateX(100%) translateY(-50%);
+            }
+
+            to {
+                right: 100%;
+                transform: translateX(0%) translateY(-50%);
+            }
+        }
+
+        .bullet {
+            display: none;
+        }
+    }
+
+    .bottom {
+        display: flex;
+
+        input {
+            flex: 1;
+            padding: 8px;
+            width: 100%;
+            height: 32px;
+            border: none;
+            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+            border-radius: 0;
+            color: black;
+        }
+    }
+
+    .emotes {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        padding: 8px;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+
+        &:not(.visible) {
+            display: none;
+        }
+
+        > div {
+            cursor: pointer;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            display: flex;
+            flex-wrap: wrap;
+
+            justify-content: center;
+            align-items: start;
+            align-content: start;
+            overflow: scroll;
+            max-width: 100%;
+            width: 496px;
+            height: 496px;
+            animation: slide-up 0.2s;
+        }
+
+        .emote,
+        img {
+            width: 96px;
+            height: 96px;
+            object-fit: contain;
+        }
+
+        .emote {
+            position: relative;
+
+            > span {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+            }
+
+            &:not(:hover) > span {
+                display: none;
+            }
+
+            &:hover > span {
+                position: absolute;
+                bottom: 0;
+                padding: 4px;
+                background: rgba(255, 255, 255, 0.5);
+                word-break: break-all;
+                backdrop-filter: blur(5px);
+                border-radius: 8px;
+                animation: slide-up 0.2s;
+            }
+        }
+    }
+}

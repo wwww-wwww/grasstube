@@ -9,36 +9,56 @@
     flex-direction: column;
     gap: 1em;
 
-    > a {
-        color: black;
-        text-decoration: none;
+    >div {
+        position: relative;
 
-        border-radius: 8px;
-        padding: 8px;
-        box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        >a {
+            color: black;
+            text-decoration: none;
 
-        display: flex;
-        flex-direction: column;
-        gap: 0.5em;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 
-        > :first-child {
-            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+
+            > :first-child {
+                font-weight: bold;
+            }
+
+            >div {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .users {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+
+                &::before {
+                    font-family: "Material Symbols Rounded";
+                    content: "group";
+                }
+            }
         }
 
-        > div {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+        >:last-child {
+            position: absolute;
+            right: 0;
+            top: 0;
+            box-shadow: none;
 
-        .users {
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            &:hover {
+                text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            }
 
-            &::before {
+            &::after {
                 font-family: "Material Symbols Rounded";
-                content: "group";
+                content: "chat";
             }
         }
     }

@@ -14,10 +14,13 @@ defmodule GrasstubeWeb.IndexLive do
 
     <div class="roomlist">
       <%= for {r, users} <- @rooms do %>
-        <.link patch={~p"/room/#{r.title}"}>
-          <span>{r.title}</span>
-          <div><span class="users">{users}</span><span>{to_string(r.inserted_at)}</span></div>
-        </.link>
+        <div>
+          <.link patch={~p"/room/#{r.title}"}>
+            <div><span>{r.title}</span></div>
+            <div><span class="users">{users}</span><span>{to_string(r.inserted_at)}</span></div>
+          </.link>
+          <.link patch={~p"/room/#{r.title}/chat"}></.link>
+        </div>
       <% end %>
     </div>
     """

@@ -66,7 +66,7 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  def chat(pid, user, message, fun_reply) do
+  def chat(pid, scope, message, fun_reply) do
     if String.length(String.trim(message)) > 0 do
       opts = %{notify: true, effect: "bullet"}
 
@@ -75,9 +75,15 @@ defmodule Grasstube.ChatAgent do
 
       message = parse_emote(message, "", emotes)
 
+      username =
+        case scope do
+          %{user: %{username: username}} -> username
+          %{guest: id} -> "guest #{id}"
+        end
+
       message = %{
         time: DateTime.utc_now(),
-        sender: sender(user.username),
+        sender: sender(username),
         html: basic_message(raw(message)),
         opts: opts
       }

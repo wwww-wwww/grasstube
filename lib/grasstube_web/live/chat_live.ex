@@ -2,7 +2,7 @@ defmodule GrasstubeWeb.ChatLive do
   use GrasstubeWeb, :live_view
 
   alias GrasstubeWeb.Endpoint
-  alias Grasstube.{ProcessRegistry, ChatAgent}
+  alias Grasstube.{ProcessRegistry, ChatAgent, Repo, Room}
 
   def render(assigns) do
     ~H"""
@@ -30,6 +30,17 @@ defmodule GrasstubeWeb.ChatLive do
   def mount(:not_mounted_at_router, session, socket) do
     socket = socket |> assign(current_scope: session["current_scope"])
     mount(%{"room_id" => session["room_id"]}, session, socket)
+  end
+
+  def mount(%{"title" => title}, session, socket) do
+    Repo.get_by(Room, title: title)
+    |> case do
+      nil ->
+        {:ok, socket |> push_redirect(to: ~p"/")}
+
+      room ->
+        mount(%{"room_id" => room.id}, session, socket)
+    end
   end
 
   def mount(%{"room_id" => room_id}, _session, socket) do
@@ -60,7 +71,7 @@ defmodule GrasstubeWeb.ChatLive do
   end
 
   def handle_event("send_message", %{"message" => message}, socket) do
-    ChatAgent.chat(socket.assigns.pid, socket.assigns.current_scope.user, message, fn message ->
+    ChatAgent.chat(socket.assigns.pid, socket.assigns.current_scope, message, fn message ->
       push_event(socket, "message", message)
     end)
 

@@ -55,6 +55,7 @@ defmodule GrasstubeWeb.Router do
       on_mount: [{GrasstubeWeb.UserAuth, :mount_current_scope}] do
       live "/", IndexLive
       live "/room/:title", RoomLive
+      live "/room/:title/chat", ChatLive
 
       live "/user/register", UserLive.Registration, :new
       live "/user/log-in", UserLive.Login, :new
