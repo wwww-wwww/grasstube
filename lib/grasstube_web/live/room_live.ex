@@ -1,6 +1,5 @@
 defmodule GrasstubeWeb.RoomLive do
   use GrasstubeWeb, :live_view
-  use GrasstubeWeb.ChatComponent
   use GrasstubeWeb.PollComponent
 
   import Ecto.Query, only: [from: 2]
@@ -22,13 +21,10 @@ defmodule GrasstubeWeb.RoomLive do
     ~H"""
     <div class="main">
       <div id="video" class="player" phx-hook="video" phx-update="ignore"></div>
-      <.live_component
-        module={GrasstubeWeb.ChatComponent}
-        id={to_string(@room.id)}
-        current_scope={@current_scope}
-        pid={@chat_pid}
-        state={@chat}
-      />
+      {live_render(@socket, GrasstubeWeb.ChatLive,
+        id: GrasstubeWeb.ChatLive,
+        session: %{"current_scope" => @current_scope, "room_id" => @room.id}
+      )}
       <div class="left">
         <div class="presence">
           <div :for={{_id, %{metas: metas}} <- @presence}>

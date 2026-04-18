@@ -2,7 +2,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
   use GrasstubeWeb, :live_view
   import Ecto.Query, only: [from: 2]
 
-  alias Grasstube.{Accounts, Room, Repo, Emote}
+  alias Grasstube.{Accounts, Room, Repo, Emote, ChatAgent, ProcessRegistry}
 
   @impl true
   def render(assigns) do
@@ -54,7 +54,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
     <form id="emote-form" phx-change="emote_validate" phx-submit="emote_add">
       <input name="name" placeholder="name" autocomplete="off" required />
 
-      <.live_file_input upload={@uploads.emote} />
+      <.live_file_input upload={@uploads.emote} phx-drop-target={@uploads.emote.ref} />
 
       <article :for={entry <- @uploads.emote.entries} class="upload-entry">
         <.live_img_preview entry={entry} />
@@ -97,7 +97,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
     emotes =
       from(e in Emote, where: e.user_id == ^user.id)
       |> Repo.all()
-      |> Enum.sort_by(& &1.inserted_at)
+      |> Enum.sort_by(& &1.inserted_at, :desc)
 
     socket =
       socket
@@ -106,7 +106,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
       |> assign(trigger_submit: false)
       |> assign(rooms: rooms)
       |> assign(emotes: emotes)
-      |> allow_upload(:emote, accept: ~w(.jpg .jpeg .png .webp), max_entries: 1)
+      |> allow_upload(:emote, accept: ~w(.jpg .jpeg .png .webp .gif), max_entries: 1)
 
     {:ok, socket}
   end
@@ -154,10 +154,25 @@ defmodule GrasstubeWeb.UserLive.Settings do
           Path.join(Application.app_dir(:grasstube, "priv/static/emotes"), "#{emote.id}.png")
 
         case File.cp(path, dest) do
-          :ok -> {:ok, emote}
-          err -> {:error, err}
+          :ok ->
+            {:ok, emote}
+
+          err ->
+            {:error, err}
         end
       end)
+    end)
+
+    emotes =
+      from(e in Emote, where: e.user_id == ^socket.assigns.current_scope.user.id)
+      |> Repo.all()
+      |> Enum.sort_by(& &1.inserted_at, :desc)
+
+    from(r in Room, where: r.user_id == ^socket.assigns.current_scope.user.id)
+    |> Repo.all()
+    |> Enum.each(fn room ->
+      ProcessRegistry.lookup(room.id, ChatAgent)
+      |> ChatAgent.update_emotes(emotes)
     end)
 
     {:noreply, socket}
@@ -175,7 +190,14 @@ defmodule GrasstubeWeb.UserLive.Settings do
           emotes =
             from(e in Emote, where: e.user_id == ^socket.assigns.current_scope.user.id)
             |> Repo.all()
-            |> Enum.sort_by(& &1.inserted_at)
+            |> Enum.sort_by(& &1.inserted_at, :desc)
+
+          from(r in Room, where: r.user_id == ^socket.assigns.current_scope.user.id)
+          |> Repo.all()
+          |> Enum.each(fn room ->
+            ProcessRegistry.lookup(room.id, ChatAgent)
+            |> ChatAgent.update_emotes(emotes)
+          end)
 
           {:noreply, assign(socket, emotes: emotes)}
         else

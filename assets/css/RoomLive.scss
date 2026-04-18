@@ -430,16 +430,149 @@ html:has(.RoomLive) {
 
 @import "PollComponent";
 
-.ChatComponent {
+.RoomLive .ChatLive {
     position: absolute;
     z-index: 2;
     top: 0;
     left: 0;
-    display: flex;
-    flex-direction: column;
     pointer-events: none;
     width: 100%;
-    height: calc(100% - 64px);
+    height: 100%;
+
+    > div {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        padding-bottom: 64px;
+
+        &:has(input.visible) {
+            .messages {
+                pointer-events: all;
+            }
+
+            .message {
+                color: rgba(255, 255, 255, 0.7);
+                text-shadow: 0 0 3px rgba(0, 0, 0, 1);
+
+                img {
+                    opacity: 1;
+                }
+            }
+
+            .message:not(.visible) {
+                animation: slide-right 0.2s;
+            }
+
+            .emotes {
+                padding-bottom: 96px;
+            }
+        }
+
+        &:has(input:not(.visible)) {
+            .message:not(.visible) {
+                display: none;
+            }
+        }
+    }
+
+    .bottom {
+        display: flex;
+
+        input {
+            flex: 1;
+            pointer-events: all;
+            padding: 8px;
+            width: 100%;
+            height: 32px;
+            border: none;
+            box-shadow:
+                inset 0 0 3px rgba(255, 255, 255, 0.3),
+                0 0 5px rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+
+            &.visible {
+                animation: slide-up 0.2s;
+            }
+
+            &:not(.visible) {
+                display: none;
+            }
+        }
+    }
+
+    .emotes {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        padding: 8px;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+
+        &:not(.visible) {
+            display: none;
+        }
+
+        > div {
+            cursor: pointer;
+            pointer-events: all;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            display: flex;
+            flex-wrap: wrap;
+
+            justify-content: center;
+            align-items: start;
+            align-content: start;
+            overflow: scroll;
+            max-width: 100%;
+            width: 496px;
+            height: 496px;
+            animation: slide-up 0.2s;
+        }
+
+        .emote,
+        img {
+            width: 96px;
+            height: 96px;
+            object-fit: contain;
+        }
+
+        .emote {
+            position: relative;
+
+            > span {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+            }
+
+            &:not(:hover) > span {
+                display: none;
+            }
+
+            &:hover > span {
+                position: absolute;
+                bottom: 0;
+                padding: 4px;
+                background: rgba(255, 255, 255, 0.5);
+                word-break: break-all;
+                backdrop-filter: blur(5px);
+                border-radius: 8px;
+                animation: slide-up 0.2s;
+            }
+        }
+    }
 
     .messages {
         display: flex;
@@ -467,6 +600,13 @@ html:has(.RoomLive) {
             &.visible {
                 animation: message 0.2s;
             }
+
+            img {
+                opacity: 0.5;
+                width: 128px;
+                height: 128px;
+                object-fit: contain;
+            }
         }
 
         @keyframes flyleft {
@@ -492,57 +632,17 @@ html:has(.RoomLive) {
             white-space: nowrap;
             color: white;
             opacity: 0.8;
-            text-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
-            -webkit-text-stroke: 1px black;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            -webkit-text-stroke: 1px rgba(0, 0, 0, 0.5);
 
             right: 0%;
             transform: translateX(100%);
 
-            > img {
-                max-height: 4em;
+            img {
+                width: 128px;
+                height: 128px;
+                object-fit: contain;
             }
-        }
-    }
-
-    &:has(input.visible) {
-        .messages {
-            pointer-events: all;
-        }
-
-        .message {
-            color: rgba(255, 255, 255, 0.7);
-            text-shadow: 0 0 3px rgba(0, 0, 0, 1);
-        }
-
-        .message:not(.visible) {
-            animation: slide-right 0.2s;
-        }
-    }
-
-    &:has(input:not(.visible)) {
-        .message:not(.visible) {
-            display: none;
-        }
-    }
-
-    input {
-        pointer-events: all;
-        padding: 8px;
-        width: 100%;
-        border: none;
-        box-shadow:
-            inset 0 0 3px rgba(255, 255, 255, 0.3),
-            0 0 5px rgba(255, 255, 255, 0.3);
-        border-radius: 8px;
-        background: rgba(0, 0, 0, 0.1);
-        color: rgba(255, 255, 255, 0.8);
-
-        &.visible {
-            animation: slide-up 0.2s;
-        }
-
-        &:not(.visible) {
-            display: none;
         }
     }
 }

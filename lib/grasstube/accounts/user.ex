@@ -9,6 +9,7 @@ defmodule Grasstube.User do
     field :password_hash, :string, redact: true
 
     has_many :rooms, Grasstube.Room
+    has_many :emotes, Grasstube.Emote
 
     timestamps()
   end

@@ -8,19 +8,17 @@ defmodule GrasstubeWeb.IndexLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <%= if @current_scope.user do %>
-        <.link href="/create-room">Create Room</.link>
-      <% end %>
+    <%= if @current_scope.user do %>
+      <.link href="/create-room">Create Room</.link>
+    <% end %>
 
-      <div class="roomlist">
-        <%= for {r, users} <- @rooms do %>
-          <.link patch={~p"/room/#{r.title}"}>
-            <span>{r.title}</span>
-            <div><span class="users">{users}</span><span>{to_string(r.inserted_at)}</span></div>
-          </.link>
-        <% end %>
-      </div>
+    <div class="roomlist">
+      <%= for {r, users} <- @rooms do %>
+        <.link patch={~p"/room/#{r.title}"}>
+          <span>{r.title}</span>
+          <div><span class="users">{users}</span><span>{to_string(r.inserted_at)}</span></div>
+        </.link>
+      <% end %>
     </div>
     """
   end

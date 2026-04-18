@@ -5,33 +5,31 @@ defmodule GrasstubeWeb.RoomEditLive do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <h1>{@room.title}</h1>
-      <form phx-submit="save">
-        <div>
-          <label for="password">Password</label>
-          <input name="password" id="password" type="text" value={@room.password} />
-        </div>
-        <div>
-          <label for="public_controls">Public controls</label>
-          <input
-            name="public_controls"
-            id="public_controls"
-            type="checkbox"
-            checked={@room.public_controls}
-          />
-        </div>
-        <div>
-          <label for="autopause">Autopause</label>
-          <input name="autopause" id="autopause" type="checkbox" checked={@room.autopause} />
-        </div>
-        <div>
-          <label for="media_directories">Media directories</label>
-          <textarea name="media_directories" id="media_directories" style="width: 100%">{(@room.media_directories || []) |> Enum.join("\n")}</textarea>
-        </div>
-        <input type="submit" value="Save" />
-      </form>
-    </div>
+    <h1>{@room.title}</h1>
+    <form phx-submit="save">
+      <div>
+        <label for="password">Password</label>
+        <input name="password" id="password" type="text" value={@room.password} />
+      </div>
+      <div>
+        <label for="public_controls">Public controls</label>
+        <input
+          name="public_controls"
+          id="public_controls"
+          type="checkbox"
+          checked={@room.public_controls}
+        />
+      </div>
+      <div>
+        <label for="autopause">Autopause</label>
+        <input name="autopause" id="autopause" type="checkbox" checked={@room.autopause} />
+      </div>
+      <div>
+        <label for="media_directories">Media directories</label>
+        <textarea name="media_directories" id="media_directories" style="width: 100%">{(@room.media_directories || []) |> Enum.join("\n")}</textarea>
+      </div>
+      <input type="submit" value="Save" />
+    </form>
     """
   end
 

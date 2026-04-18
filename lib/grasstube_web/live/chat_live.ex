@@ -1,41 +1,71 @@
 defmodule GrasstubeWeb.ChatLive do
   use GrasstubeWeb, :live_view
 
+  alias GrasstubeWeb.Endpoint
   alias Grasstube.{Room, Repo, ProcessRegistry, ChatAgent}
 
   def render(assigns) do
     ~H"""
-    <div class="messages">
-      <%= for m <- @messages do %>
-        {inspect(m)}
-      <% end %>
+    <div id={"chat-#{@room_id}"} phx-hook="chat" phx-update="ignore">
+      <div class="emotes">
+        <div>
+          <div :for={e <- @emotes} class="emote" name={e.name}>
+            <img src={~p"/emotes/#{to_string(e.id) <> ".png"}"} alt={":#{e.name}:"} />
+            <span>:{e.name}:</span>
+          </div>
+        </div>
+      </div>
+      <div class="messages">
+        <div :for={{sender, message} <- @history |> Enum.reverse()}>
+          <span>{sender}</span>: <span>{message}</span>
+        </div>
+      </div>
+      <div class="bottom">
+        <input class="message-input" autocomplete="off" />
+      </div>
     </div>
-    <form phx-submit="send-message">
-      <input name="message" />
-    </form>
     """
   end
 
-  def mount(:not_mounted_at_router, params, socket) do
-    mount(params, nil, socket)
+  def mount(:not_mounted_at_router, session, socket) do
+    socket = socket |> assign(current_scope: session["current_scope"])
+    mount(%{"room_id" => session["room_id"]}, session, socket)
   end
 
   def mount(%{"room_id" => room_id}, _session, socket) do
-    room = Repo.get(Room, room_id)
-
-    chat =
-      ProcessRegistry.get(room_id, ChatAgent)
-      |> IO.inspect()
+    pid = ProcessRegistry.lookup(room_id, ChatAgent)
+    chat = ChatAgent.get(pid)
 
     socket =
       socket
-      |> assign(room: room)
+      |> assign(room_id: room_id)
+      |> assign(pid: pid)
       |> assign(history: chat.history)
+      |> assign(emotes: chat.emotes)
+
+    if connected?(socket) do
+      Endpoint.subscribe("chat:#{room_id}")
+      Endpoint.subscribe("chat_user:#{socket.assigns.current_scope.id}")
+    end
 
     {:ok, socket}
   end
 
-  def handle_event("send-message", %{"message" => message}, socket) do
+  def handle_event("send_message", %{"message" => message}, socket) do
+    ChatAgent.chat(socket.assigns.pid, socket.assigns.current_scope.user, message, fn message ->
+      push_event(socket, "message", message)
+    end)
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%{topic: "chat:" <> _, event: "message", payload: message}, socket) do
+    socket = push_event(socket, "message", message)
+    {:noreply, socket}
+  end
+
+  def handle_info(%{topic: "chat_user:" <> _, event: "message", payload: message}, socket) do
+    socket = push_event(socket, "message", message)
     {:noreply, socket}
   end
 end

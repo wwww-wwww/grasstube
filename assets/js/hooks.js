@@ -213,8 +213,12 @@ const poll_form = {
 }
 
 const chat = {
+    send_message(message) {
+        this.pushEvent("send_message", { message: message })
+    },
     mounted() {
         const input = this.el.querySelector(".message-input")
+        const emotes = this.el.querySelector(".emotes")
 
         document.addEventListener("keypress", e => {
             if (e.target.tagName == "INPUT") return
@@ -228,9 +232,10 @@ const chat = {
         input.addEventListener("keypress", e => {
             if (e.key == "Enter") {
                 e.preventDefault()
-                this.pushEventTo(this.el, "send_message", { message: input.value })
+                this.send_message(input.value)
                 input.value = ""
                 input.classList.toggle("visible", false)
+                emotes.classList.toggle("visible", false)
             }
         })
 
@@ -280,6 +285,26 @@ const chat = {
                     messages.removeChild(el)
                 }, 5000)
             }
+        })
+
+        document.addEventListener("keypress", e => {
+            if (e.target.tagName == "INPUT") return
+
+            if (e.key == "e") {
+                emotes.classList.toggle("visible")
+            }
+        })
+
+        Array.from(emotes.getElementsByClassName("emote")).forEach(e => {
+            e.addEventListener("click", () => {
+                if (input.classList.contains("visible")) {
+                    input.value += `:${e.getAttribute("name")}: `
+                    input.focus()
+                } else {
+                    this.send_message(`:${e.getAttribute("name")}:`)
+                    emotes.classList.toggle("visible", false)
+                }
+            })
         })
     },
 }

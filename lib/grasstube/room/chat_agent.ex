@@ -6,12 +6,13 @@ defmodule Grasstube.ChatAgent do
 
   alias Grasstube.{ProcessRegistry, Repo, Room}
 
-  # require AutoLinker
+  require AutoLinker
 
   defstruct room_id: nil,
             history: [],
             last_ready: nil,
-            ready_members: %{}
+            ready_members: %{},
+            emotes: []
 
   defmodule ChatMessage do
     @derive Jason.Encoder
@@ -24,17 +25,56 @@ defmodule Grasstube.ChatAgent do
   @max_name_length 24
 
   def start_link(room) do
-    Agent.start_link(fn -> %__MODULE__{room_id: room.id} end,
+    Agent.start_link(
+      fn ->
+        room = Repo.get(Room, room.id) |> Repo.preload(user: :emotes)
+        emotes = room.user.emotes
+        %__MODULE__{room_id: room.id, emotes: emotes}
+      end,
       name: Grasstube.ProcessRegistry.via_tuple(__MODULE__, room.id)
     )
   end
 
   def get(pid), do: Agent.get(pid, & &1)
 
+  def update_emotes(pid, emotes) do
+    Agent.update(pid, fn state -> %{state | emotes: emotes} end)
+  end
+
+  def parse_emote(message, acc, emotes) do
+    case Regex.split(~r{(:[^:]+:)}, message, include_captures: true, parts: 2) do
+      [_] ->
+        acc <> message
+
+      [before | [emote | [tail]]] ->
+        case Enum.find(emotes, &(String.downcase(emote) == ":" <> &1.name <> ":")) do
+          nil ->
+            parse_emote(":" <> tail, acc <> before <> String.slice(emote, 0..-2), emotes)
+
+          %{id: id, name: name} ->
+            assigns = %{id: id}
+
+            emote_html =
+              ~H"""
+              <img src={~p"/emotes/#{to_string(id) <> ".png"}"} alt={name} title={name} />
+              """
+              |> Phoenix.HTML.Safe.to_iodata()
+              |> IO.iodata_to_binary()
+
+            parse_emote(tail, acc <> before <> emote_html, emotes)
+        end
+    end
+  end
+
   def chat(pid, user, message, fun_reply) do
     if String.length(String.trim(message)) > 0 do
       opts = %{notify: true, effect: "bullet"}
-      message = %{sender: sender(user.username), html: basic_message(message), opts: opts}
+
+      emotes = get(pid).emotes
+
+      message = parse_emote(message, "", emotes)
+
+      message = %{sender: sender(user.username), html: basic_message(raw(message)), opts: opts}
 
       state =
         Agent.get_and_update(pid, fn state ->
