@@ -56,6 +56,15 @@ defmodule Grasstube.VideoScheduler do
     ProcessRegistry.lookup(state.room_id, VideoAgent)
     |> VideoAgent.next_video()
 
+    start_play(self())
+
+    {:noreply, state}
+  end
+
+  def handle_info(:play, state) do
+    ProcessRegistry.lookup(state.room_id, VideoAgent)
+    |> VideoAgent.set_playing(true)
+
     {:noreply, state}
   end
 
@@ -76,6 +85,10 @@ defmodule Grasstube.VideoScheduler do
   end
 
   def handle_cast(:start_next, state) do
+    if state.next_task do
+      Process.cancel_timer(state.next_task)
+    end
+
     {:noreply, %{state | next_task: Process.send_after(self(), :next, 5000)}}
   end
 
@@ -84,6 +97,26 @@ defmodule Grasstube.VideoScheduler do
       if state.next_task do
         Process.cancel_timer(state.next_task)
         %{state | next_task: nil}
+      else
+        state
+      end
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(:start_play, state) do
+    if state.play_task do
+      Process.cancel_timer(state.play_task)
+    end
+
+    {:noreply, %{state | play_task: Process.send_after(self(), :play, 5000)}}
+  end
+
+  def handle_cast(:stop_play, state) do
+    new_state =
+      if state.play_task do
+        Process.cancel_timer(state.play_task)
+        %{state | play_task: nil}
       else
         state
       end
@@ -105,5 +138,13 @@ defmodule Grasstube.VideoScheduler do
 
   def stop_next(scheduler) do
     GenServer.cast(scheduler, :stop_next)
+  end
+
+  def start_play(scheduler) do
+    GenServer.cast(scheduler, :start_play)
+  end
+
+  def stop_play(scheduler) do
+    GenServer.cast(scheduler, :stop_play)
   end
 end

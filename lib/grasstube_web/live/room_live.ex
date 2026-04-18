@@ -15,7 +15,8 @@ defmodule GrasstubeWeb.RoomLive do
     RoomAgent,
     VideoAgent,
     Presence,
-    Poll
+    Poll,
+    VideoScheduler
   }
 
   def render(assigns) do
@@ -44,7 +45,8 @@ defmodule GrasstubeWeb.RoomLive do
       </div>
       <div class="right"></div>
 
-      <div :if={@controls}
+      <div
+        :if={@controls}
         id="playlist_form"
         phx-update="ignore"
         phx-hook="media_directories"
@@ -115,7 +117,7 @@ defmodule GrasstubeWeb.RoomLive do
           |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
         <table class={if @current_video, do: "visible"}>
           <tr :for={{v, i} <- Enum.with_index(playlist_top)} class={if i == 0, do: "current"}>
-            <td :if={@controls} >
+            <td :if={@controls}>
               <button
                 phx-click="playlist_set"
                 phx-value-id={v.id}
@@ -127,12 +129,14 @@ defmodule GrasstubeWeb.RoomLive do
             <td class="title">{v.title}</td>
             <td>{to_hhmmss(v.duration)}</td>
             <td class="inserted_at">{v.inserted_at}</td>
-            <td :if={@controls} ><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
+            <td :if={@controls}>
+              <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
+            </td>
           </tr>
         </table>
         <table class={if length(playlist_rest) > 0, do: "visible"}>
           <tr :for={v <- playlist_rest}>
-            <td :if={@controls} >
+            <td :if={@controls}>
               <button
                 phx-click="playlist_set"
                 phx-value-id={v.id}
@@ -144,7 +148,9 @@ defmodule GrasstubeWeb.RoomLive do
             <td class="title">{v.title}</td>
             <td>{to_hhmmss(v.duration)}</td>
             <td class="inserted_at">{v.inserted_at}</td>
-            <td :if={@controls} ><button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button></td>
+            <td :if={@controls}>
+              <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
+            </td>
           </tr>
         </table>
       </div>
@@ -167,6 +173,8 @@ defmodule GrasstubeWeb.RoomLive do
 
     video_pid = ProcessRegistry.lookup(room.id, VideoAgent)
     video = VideoAgent.get(video_pid)
+
+    scheduler_pid = ProcessRegistry.lookup(room.id, VideoScheduler)
 
     polls =
       from(p in Poll, where: p.room_id == ^room.id)
@@ -215,6 +223,7 @@ defmodule GrasstubeWeb.RoomLive do
       |> assign(playlist_pid: playlist_pid)
       |> assign(playlist: playlist)
       |> assign(video_pid: video_pid)
+      |> assign(scheduler_pid: scheduler_pid)
       |> assign(current_video: video.current_video)
       |> assign(polls: polls)
       |> assign(topic: topic)
@@ -345,6 +354,8 @@ defmodule GrasstubeWeb.RoomLive do
     end
 
     VideoAgent.set_playing(socket.assigns.video_pid, playing)
+
+    VideoScheduler.stop_play(socket.assigns.scheduler_pid)
 
     {:noreply, socket}
   end
