@@ -21,6 +21,7 @@ defmodule Grasstube.RoomAgent do
       scope.user == nil -> false
       state.user_id == scope.user.id -> true
       Enum.any?(state.mods, &(&1.id == scope.user.id)) -> true
+      true -> false
     end
   end
 end
