@@ -267,6 +267,13 @@ class chat extends ViewHook {
         })
 
         input.addEventListener("keydown", (e: KeyboardEvent) => {
+            if (e.key == "Escape") {
+                e.preventDefault()
+                input.value = ""
+                input.classList.toggle("visible", false)
+                emotes.classList.toggle("visible", false)
+            }
+
             if (e.key == "Enter") {
                 e.preventDefault()
                 this.send_message(input.value)
