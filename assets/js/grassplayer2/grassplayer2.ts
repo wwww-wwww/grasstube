@@ -6,9 +6,9 @@ import Renderer from "./renderer/renderer"
 import Seekbar, { seconds_to_hms } from "./seekbar"
 
 const html = `
-<div class="grassplayer2" tabindex="0">
 <div class="view"></div>
 <div class="overlay">
+    <div class="autoplay-block"><span>Click to unmute</span></div>
     <div class="main">
         <div class="messages"></div>
         <div class="settings" style="display: none;">
@@ -40,7 +40,6 @@ const html = `
         </div>
     </div>
 </div>
-</div>
 `
 
 export default class GrassPlayer {
@@ -67,17 +66,22 @@ export default class GrassPlayer {
     on_buffer_end: ((end: number) => void) | null = null
 
     constructor(root: Element) {
-        root.innerHTML = html
+        const el = document.createElement("div")
+        el.className = "grassplayer2"
+        el.tabIndex = 0
+        el.innerHTML = html
+        root.appendChild(el)
+        console.log(el)
 
-        this.#e_main = root.querySelector(".grassplayer2")!
-        this.fullscreen_element = this.#e_main
-        this.#e_messages = root.querySelector(".messages")!
+        this.#e_main = el
+        this.fullscreen_element = el
+        this.#e_messages = el.querySelector(".messages")!
 
-        this.#seekbar = new Seekbar(root.querySelector(".seekbar")!, this)
+        this.#seekbar = new Seekbar(el.querySelector(".seekbar")!, this)
 
-        const e_view: HTMLElement = root.querySelector(".view")!
+        const e_view: HTMLElement = el.querySelector(".view")!
 
-        this.#e_txt_time = root.querySelector(".txt-time")!
+        this.#e_txt_time = el.querySelector(".txt-time")!
 
         // Create default renderer
         {
@@ -85,7 +89,7 @@ export default class GrassPlayer {
             const n_renderer = parseInt(this.get_storage("renderer") || "0")
 
             {
-                const select: HTMLSelectElement = root.querySelector("select.renderer")!
+                const select: HTMLSelectElement = el.querySelector("select.renderer")!
                 select.selectedIndex = n_renderer
                 select.addEventListener("change", () => {
                     this.set_storage("renderer", select.selectedIndex)
@@ -97,7 +101,7 @@ export default class GrassPlayer {
             e_view.appendChild(this.#renderer_view)
 
             const renderer_settings = document.createElement("div")
-            root.querySelector(".settings")!.appendChild(renderer_settings)
+            el.querySelector(".settings")!.appendChild(renderer_settings)
 
             this.#renderer = new renderers[n_renderer](this, this.#renderer_view, renderer_settings)
             this.#renderer_view.className = this.#renderer.constructor.name
@@ -126,7 +130,7 @@ export default class GrassPlayer {
             e_view.appendChild(this.#renderer_yt_view)
 
             const renderer_settings = document.createElement("div")
-            root.querySelector(".settings")!.appendChild(renderer_settings)
+            el.querySelector(".settings")!.appendChild(renderer_settings)
 
             this.#renderer_yt = new RendererYoutube(this, this.#renderer_yt_view, renderer_settings)
             this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
@@ -147,9 +151,29 @@ export default class GrassPlayer {
             }
         }
 
+        // Check autoplay
+        {
+            const autoplay_blocker: HTMLElement = el.querySelector(".autoplay-block")!
+            autoplay_blocker.style.display = "none"
+
+            document.createElement("video")
+                .play()
+                .catch(_ => {
+                    autoplay_blocker.style.display = ""
+                    this.#renderer.set_muted(true)
+                    this.#renderer_yt.set_muted(true)
+
+                    autoplay_blocker.addEventListener("click", () => {
+                        autoplay_blocker.style.display = "none"
+                        this.#renderer.set_muted(false)
+                        this.#renderer_yt.set_muted(false)
+                    })
+                })
+        }
+
         // play button
         {
-            this.#e_chk_play = root.querySelector(".chk-play")!
+            this.#e_chk_play = el.querySelector(".chk-play")!
             this.#e_chk_play.addEventListener("change", () => {
                 const playing = this.#e_chk_play.checked
 
@@ -159,8 +183,8 @@ export default class GrassPlayer {
 
         // volume slider
         {
-            const range_volume: HTMLInputElement = root.querySelector(".range-volume")!
-            const range_volume_progress: HTMLElement = root.querySelector(
+            const range_volume: HTMLInputElement = el.querySelector(".range-volume")!
+            const range_volume_progress: HTMLElement = el.querySelector(
                 ".range-volume-progress-track",
             )!
 
@@ -178,8 +202,8 @@ export default class GrassPlayer {
 
         // settings button
         {
-            const chk: HTMLInputElement = root.querySelector(".chk-settings")!
-            const e_settings: HTMLElement = root.querySelector(".settings")!
+            const chk: HTMLInputElement = el.querySelector(".chk-settings")!
+            const e_settings: HTMLElement = el.querySelector(".settings")!
             chk.addEventListener("change", () => {
                 e_settings.style.display = chk.checked ? "" : "none"
             })
@@ -187,7 +211,7 @@ export default class GrassPlayer {
 
         // next button
         {
-            this.#e_btn_next = root.querySelector(".chk-next")!
+            this.#e_btn_next = el.querySelector(".chk-next")!
             this.#e_btn_next.addEventListener("click", () => {
                 this.on_next?.()
             })
@@ -195,7 +219,7 @@ export default class GrassPlayer {
 
         // captions button
         {
-            const chk: HTMLInputElement = root.querySelector(".chk-captions")!
+            const chk: HTMLInputElement = el.querySelector(".chk-captions")!
             chk.addEventListener("input", () => {
                 this.#renderer.set_captions(!chk.checked)
                 this.#renderer_yt?.set_captions(!chk.checked)
@@ -204,7 +228,7 @@ export default class GrassPlayer {
 
         // fullscreen button
         {
-            const chk: HTMLInputElement = root.querySelector(".chk-fullscreen")!
+            const chk: HTMLInputElement = el.querySelector(".chk-fullscreen")!
             chk.addEventListener("input", () => {
                 this.#toggle_fullscreen()
             })
@@ -278,7 +302,7 @@ export default class GrassPlayer {
             }
             window.addEventListener("keydown", this.#events_keydown)
 
-            root.addEventListener("dblclick", e => {
+            el.addEventListener("dblclick", e => {
                 if ((e.target as HTMLElement).tagName == "INPUT") return
                 if ((e.target as HTMLElement).tagName == "BUTTON") return
                 if ((e.target as HTMLElement).closest(".settings") != null) return

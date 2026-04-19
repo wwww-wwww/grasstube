@@ -38,8 +38,15 @@ defmodule Grasstube.VideoAgent do
          %{state | playing: false, time: 0, time_started: current_time(), current_video: video}}
       end)
 
-    ProcessRegistry.lookup(room_id, VideoScheduler)
-    |> VideoScheduler.stop_next()
+    scheduler = ProcessRegistry.lookup(room_id, VideoScheduler)
+
+    VideoScheduler.stop_next(scheduler)
+
+    if id do
+      VideoScheduler.start_sync(scheduler)
+    else
+      VideoScheduler.stop_sync(scheduler)
+    end
 
     Endpoint.broadcast("video:#{room_id}", "set", video)
 

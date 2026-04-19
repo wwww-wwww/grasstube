@@ -42,22 +42,27 @@ export default class RendererYoutube implements Renderer {
                 events: {
                     onReady: () => {
                         this.#player = player
+                        this.set_muted(this.#muted)
                         this.set_video(this.#video_id)
                     },
                     onStateChange: (e: any) => {
-                        if (!this.#playing) {
-                            this.#player.setVolume(0)
-                        }
                         if (e.data == -1) {
+                            this.set_muted(this.#muted)
                             this.set_speed(this.#speed)
-                            this.set_playing(this.#playing)
-                            this.set_volume(this.#volume)
+                            player.setVolume(0)
+                            player.playVideo()
                             if (this.#seek) {
                                 player.seekTo(this.#seek + (performance.now() - this.#seek_time))
                             }
+                            return
                         }
+
                         if (e.data == 1 && !this.#playing) {
                             player.pauseVideo()
+                        }
+
+                        if (this.#playing) {
+                            this.set_volume(this.#volume)
                         }
                     },
                     onApiChange: (e: any) => {
@@ -110,7 +115,6 @@ export default class RendererYoutube implements Renderer {
     #video_id: string | null = null
     #player: any = null
     set_video(video_id: string | null) {
-        console.log("youtube set_video")
         this.set_playing(false)
         this.#video_id = video_id
 
@@ -158,10 +162,10 @@ export default class RendererYoutube implements Renderer {
 
     #playing = false
     set_playing(playing: boolean) {
-        if (this.#playing == playing) return
-
-        this.#playing = playing
-        this.#catchup_done = false
+        if (this.#playing != playing) {
+            this.#playing = playing
+            this.#catchup_done = false
+        }
 
         if (this.#player == null) return
 
@@ -229,5 +233,18 @@ export default class RendererYoutube implements Renderer {
         this.#set_speed(this.#speed * catchup_mul)
 
         this.#e_videoinfo_catchup.textContent = `${dist.toFixed(5)} ${catchup_mul.toFixed(5)}x`
+    }
+
+    #muted = false
+    set_muted(b: boolean) {
+        this.#muted = b
+
+        if (this.#player == null) return
+
+        if (b) {
+            this.#player.mute()
+        } else {
+            this.#player.unMute()
+        }
     }
 }

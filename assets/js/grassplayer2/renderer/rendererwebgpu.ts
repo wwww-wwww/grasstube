@@ -613,4 +613,8 @@ export default class RendererWebGPU implements Renderer {
 
         this.#e_videoinfo_catchup.textContent = `${dist.toFixed(5)} ${catchup_mul.toFixed(5)}x`
     }
+
+    set_muted(b: boolean) {
+        this.#e_video.muted = b
+    }
 }

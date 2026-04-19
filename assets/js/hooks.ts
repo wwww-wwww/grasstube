@@ -39,11 +39,12 @@ class video extends ViewHook {
         state.player = player
 
         this.handleEvent("video_set", data => {
-            console.log(data)
+            console.info("video_set", data)
             player.set_video(data.type, data.video_url, data.subtitles_url)
         })
 
         this.handleEvent("video_playing", data => {
+            console.info("video_playing", data)
             if (data.playing != player.playing()) {
                 player.create_message(data.playing ? "Play" : "Pause", 1000)
                 player.auto_set_playing(data.playing)
@@ -51,6 +52,7 @@ class video extends ViewHook {
         })
 
         this.handleEvent("video_time", data => {
+            console.info("video_time", data)
             const t = data.time + Math.min(this.#latency_rtt / 1000, 1)
             player.create_message(seconds_to_hms(data.time, true), 1000)
             player.auto_seek(t)
@@ -58,6 +60,7 @@ class video extends ViewHook {
         })
 
         this.handleEvent("video_sync", data => {
+            console.info("video_sync", data)
             const playing = player.playing()
 
             if (data.playing != playing) {

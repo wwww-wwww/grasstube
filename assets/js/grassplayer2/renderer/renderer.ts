@@ -12,4 +12,5 @@ export default interface Renderer {
     current_time: () => number
     seek: (t: number, final: boolean) => void
     set_catchup: (target: number, time: number) => void
+    set_muted: (b: boolean) => void
 }

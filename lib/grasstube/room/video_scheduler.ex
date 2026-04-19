@@ -39,7 +39,7 @@ defmodule Grasstube.VideoScheduler do
 
       VideoAgent.check_autopause(pid)
 
-      if time - video.current_video.duration > 0 do
+      if time > video.current_video.duration do
         VideoAgent.set_playing(pid, false)
 
         ChatAgent.basic_message("playing next video in #{@time_to_next + @time_to_start} seconds")
