@@ -1,5 +1,6 @@
 import { ViewHook } from "phoenix_live_view"
 import GrassPlayer from "./grassplayer2/grassplayer2"
+import ReadyCheck from "./ready_check"
 
 const state: { player: GrassPlayer | null } = { player: null }
 
@@ -85,6 +86,22 @@ class video extends ViewHook {
             }
 
             player.set_catchup(t, performance.now())
+        })
+
+        let ready_check = new ReadyCheck(this, this.el)
+
+        this.handleEvent("video_ready", data => {
+            console.info("video_ready", data)
+            ready_check.update(data)
+        })
+
+        this.handleEvent("video_ready_finish", () => {
+            console.info("video_ready_finish")
+            ready_check.finish()
+        })
+
+        this.handleEvent("video_ready_fail", data => {
+            console.info("video_ready_fail", data)
         })
 
         player.on_next = () => {

@@ -23,7 +23,16 @@ defmodule GrasstubeWeb.RoomLive do
   def render(assigns) do
     ~H"""
     <div class="main">
-      <div id="video" class="player" phx-hook="video" phx-update="ignore" controls={@controls}></div>
+      <div id="user_id" value={@current_scope.id}></div>
+      <div
+        id="video"
+        class="player"
+        phx-hook="video"
+        phx-update="ignore"
+        controls={@controls}
+        user_id={@current_scope.id}
+      >
+      </div>
       {live_render(@socket, GrasstubeWeb.ChatLive,
         id: GrasstubeWeb.ChatLive,
         session: %{"current_scope" => @current_scope, "room_id" => @room.id}
@@ -288,12 +297,32 @@ defmodule GrasstubeWeb.RoomLive do
     {:noreply, assign(socket, autopause: autopause)}
   end
 
+  def handle_info(%{topic: "video:" <> _, event: "ready", payload: data}, socket) do
+    {:noreply, push_event(socket, "video_ready", data)}
+  end
+
+  def handle_info(%{topic: "video:" <> _, event: "ready_finish", payload: data}, socket) do
+    {:noreply, push_event(socket, "video_ready_finish", data)}
+  end
+
+  def handle_info(%{topic: "video:" <> _, event: "ready_fail", payload: data}, socket) do
+    {:noreply, push_event(socket, "video_ready_fail", data)}
+  end
+
   def handle_info(%{topic: "presence:" <> _, payload: presence}, socket) do
     {:noreply, assign(socket, presence: presence)}
   end
 
   def handle_info(%{topic: "polls:" <> _, payload: polls}, socket) do
     {:noreply, assign(socket, polls: polls)}
+  end
+
+  def handle_event("ready", %{}, socket) do
+    ChatAgent.chat(socket.assigns.chat_pid, socket.assigns.current_scope, "/ready", fn _message ->
+      nil
+    end)
+
+    {:noreply, socket}
   end
 
   def handle_event(

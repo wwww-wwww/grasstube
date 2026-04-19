@@ -4,7 +4,7 @@ defmodule Grasstube.ChatAgent do
 
   alias GrasstubeWeb.Endpoint
 
-  alias Grasstube.{Repo, Room}
+  alias Grasstube.{Repo, ProcessRegistry, Room, Presence, VideoAgent}
 
   require AutoLinker
 
@@ -12,7 +12,10 @@ defmodule Grasstube.ChatAgent do
             history: [],
             last_ready: nil,
             ready_members: %{},
-            emotes: []
+            emotes: [],
+            ready_check_last: 0,
+            ready_check_members: [],
+            ready_check_task: nil
 
   defmodule ChatMessage do
     @derive Jason.Encoder
@@ -62,6 +65,73 @@ defmodule Grasstube.ChatAgent do
         else
           _ -> parse_emote(":" <> tail, acc <> before <> String.slice(emote, 0..-2//-1), emotes)
         end
+    end
+  end
+
+  def chat(pid, scope, "/ready", fun_reply) do
+    time =
+      DateTime.utc_now()
+      |> DateTime.to_unix(:millisecond)
+
+    Agent.get_and_update(pid, fn state ->
+      total =
+        Presence.list("room:#{state.room_id}")
+        |> Map.to_list()
+        |> length()
+
+      if time - state.ready_check_last > 5000 do
+        members = [scope.id]
+
+        task =
+          Task.Supervisor.async_nolink(Tasks, fn ->
+            Process.sleep(10000)
+            Endpoint.broadcast("video:#{state.room_id}", "ready_fail", %{})
+          end)
+
+        Process.demonitor(task.ref)
+
+        {{state.room_id, members, total},
+         %{
+           state
+           | ready_check_last: time,
+             ready_check_members: members,
+             ready_check_task: task
+         }}
+      else
+        members = (state.ready_check_members ++ [scope.id]) |> Enum.uniq()
+
+        if total == length(members) do
+          if state.ready_check_task do
+            Task.shutdown(state.ready_check_task)
+          end
+
+          {{state.room_id, :finish},
+           %{
+             state
+             | ready_check_last: 0,
+               ready_check_members: members,
+               ready_check_task: nil
+           }}
+        else
+          {{state.room_id, members, total}, %{state | ready_check_members: members}}
+        end
+      end
+    end)
+    |> case do
+      {room_id, :finish} ->
+        Endpoint.broadcast("video:#{room_id}", "ready_finish", %{})
+
+        ProcessRegistry.lookup(room_id, VideoAgent)
+        |> VideoAgent.set_playing(true)
+
+      {room_id, members, total} ->
+        Endpoint.broadcast("video:#{room_id}", "ready", %{
+          members: members,
+          total: total
+        })
+
+      _ ->
+        nil
     end
   end
 
