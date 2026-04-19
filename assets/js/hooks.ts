@@ -39,6 +39,7 @@ class video extends ViewHook {
         state.player = player
 
         this.handleEvent("video_set", data => {
+            console.log(data)
             player.set_video(data.type, data.video_url, data.subtitles_url)
         })
 

@@ -199,42 +199,33 @@ defmodule GrasstubeWeb.UserLive.Settings do
   end
 
   def handle_event("emote_delete", %{"id" => id}, socket) do
-    case Repo.get(Emote, id) do
-      nil ->
+    with %Emote{} = emote <- Repo.get(Emote, id),
+         emote.user_id == socket.assigns.current_scope.user.id do
+      Repo.delete(emote)
+
+      Path.join(Application.app_dir(:grasstube, "priv/static/emotes"), "#{emote.id}.png")
+      |> File.rm()
+
+      emotes = update_emotes(socket)
+
+      {:noreply, assign(socket, emotes: emotes)}
+    else
+      _ ->
         {:noreply, socket}
-
-      emote ->
-        if emote.user_id == socket.assigns.current_scope.user.id do
-          Repo.delete(emote)
-
-          Path.join(Application.app_dir(:grasstube, "priv/static/emotes"), "#{emote.id}.png")
-          |> File.rm()
-
-          emotes = update_emotes(socket)
-
-          {:noreply, assign(socket, emotes: emotes)}
-        else
-          {:noreply, socket}
-        end
     end
   end
 
   def handle_event("emote_save_keybind", %{"emote-id" => id, "key" => key}, socket) do
-    case Repo.get(Emote, id) do
-      nil ->
-        {:noreply, socket}
+    with %Emote{} = emote <- Repo.get(Emote, id),
+         emote.user_id == socket.assigns.current_scope.user.id do
+      emote
+      |> Ecto.Changeset.change(%{keybind: key})
+      |> Repo.update()
 
-      emote ->
-        if emote.user_id == socket.assigns.current_scope.user.id do
-          emote
-          |> Ecto.Changeset.change(%{keybind: key})
-          |> Repo.update()
-
-          emotes = update_emotes(socket)
-          {:noreply, assign(socket, emotes: emotes)}
-        else
-          {:noreply, socket}
-        end
+      emotes = update_emotes(socket)
+      {:noreply, assign(socket, emotes: emotes)}
+    else
+      _ -> {:noreply, socket}
     end
   end
 end

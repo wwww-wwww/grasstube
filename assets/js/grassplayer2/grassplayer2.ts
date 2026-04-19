@@ -103,7 +103,10 @@ export default class GrassPlayer {
             this.#renderer_view.className = this.#renderer.constructor.name
             renderer_settings.className = this.#renderer.constructor.name
 
-            this.#renderer.on_buffer_end = (end: number) => this.on_buffer_end?.(end)
+            this.#renderer.on_buffer_end = (end: number) => {
+                if (this.#current_renderer != this.#renderer) return
+                this.on_buffer_end?.(end)
+            }
             this.#renderer.on_buffers = (buffers: any) => {
                 if (this.#current_renderer != this.#renderer) return
                 this.#seekbar.set_buffers(buffers, this.duration())
@@ -129,6 +132,10 @@ export default class GrassPlayer {
             this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
             renderer_settings.className = this.#renderer_yt.constructor.name
 
+            this.#renderer_yt.on_buffer_end = (end: number) => {
+                if (this.#current_renderer != this.#renderer_yt) return
+                this.on_buffer_end?.(end)
+            }
             this.#renderer_yt.on_buffers = buffers => {
                 if (this.#current_renderer != this.#renderer_yt) return
                 this.#seekbar.set_buffers(buffers, this.duration())
@@ -342,7 +349,7 @@ export default class GrassPlayer {
         this.set_playing(false)
         this.on_buffer_end?.(0)
 
-        if (type == "yt") {
+        if (type == "youtube") {
             this.#renderer_view.style.display = "none"
             this.#renderer.set_video(null, null)
 

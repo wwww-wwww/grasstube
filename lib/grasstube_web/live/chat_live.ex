@@ -33,13 +33,10 @@ defmodule GrasstubeWeb.ChatLive do
   end
 
   def mount(%{"title" => title}, session, socket) do
-    Repo.get_by(Room, title: title)
-    |> case do
-      nil ->
-        {:ok, socket |> push_navigate(to: ~p"/")}
-
-      room ->
-        mount(%{"room_id" => room.id}, session, socket)
+    with %Room{} = room <- Repo.get_by(Room, title: title) do
+      mount(%{"room_id" => room.id}, session, socket)
+    else
+      _ -> {:ok, socket |> push_navigate(to: ~p"/")}
     end
   end
 

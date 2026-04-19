@@ -47,21 +47,20 @@ defmodule Grasstube.ChatAgent do
         acc <> message
 
       [before | [emote | [tail]]] ->
-        case Enum.find(emotes, &(String.downcase(emote) == ":" <> &1.name <> ":")) do
-          nil ->
-            parse_emote(":" <> tail, acc <> before <> String.slice(emote, 0..-2//-1), emotes)
+        with %{id: id, name: name} <-
+               Enum.find(emotes, &(String.downcase(emote) == ":" <> &1.name <> ":")) do
+          assigns = %{id: id, name: name}
 
-          %{id: id, name: name} ->
-            assigns = %{id: id, name: name}
+          emote_html =
+            ~H"""
+            <img src={~p"/emotes/#{to_string(@id) <> ".png"}"} alt={@name} title={@name} />
+            """
+            |> Phoenix.HTML.Safe.to_iodata()
+            |> IO.iodata_to_binary()
 
-            emote_html =
-              ~H"""
-              <img src={~p"/emotes/#{to_string(@id) <> ".png"}"} alt={@name} title={@name} />
-              """
-              |> Phoenix.HTML.Safe.to_iodata()
-              |> IO.iodata_to_binary()
-
-            parse_emote(tail, acc <> before <> emote_html, emotes)
+          parse_emote(tail, acc <> before <> emote_html, emotes)
+        else
+          _ -> parse_emote(":" <> tail, acc <> before <> String.slice(emote, 0..-2//-1), emotes)
         end
     end
   end

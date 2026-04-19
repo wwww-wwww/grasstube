@@ -514,4 +514,26 @@ defmodule GrasstubeWeb.CoreComponents do
 
     "#{charlist}"
   end
+
+  def playlist_row(assigns) do
+    ~H"""
+    <tr video_id={@video.id} class={if @current, do: "current"}>
+      <td :if={@controls}>
+        <button
+          phx-click="playlist_set"
+          phx-value-id={@video.id}
+          disabled={@current or not @video.ready}
+          class="set"
+        >
+        </button>
+      </td>
+      <td class="title">{@video.title}</td>
+      <td>{to_hhmmss(@video.duration)}</td>
+      <td class="inserted_at">{@video.inserted_at}</td>
+      <td :if={@controls}>
+        <button phx-click="playlist_remove" phx-value-id={@video.id} class="close"></button>
+      </td>
+    </tr>
+    """
+  end
 end

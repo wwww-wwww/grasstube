@@ -12,6 +12,7 @@ defmodule GrasstubeWeb.RoomLive do
     Repo,
     Room,
     Poll,
+    Video,
     ChatAgent,
     PlaylistAgent,
     RoomAgent,
@@ -116,46 +117,20 @@ defmodule GrasstubeWeb.RoomLive do
           @playlist
           |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
         <table class={if @current_video, do: "visible"}>
-          <tr
+          <.playlist_row
             :for={{v, i} <- Enum.with_index(playlist_top)}
-            class={if i == 0, do: "current"}
-            video_id={v.id}
-          >
-            <td :if={@controls}>
-              <button
-                phx-click="playlist_set"
-                phx-value-id={v.id}
-                disabled={@current_video != nil and @current_video.id == v.id}
-                class="set"
-              >
-              </button>
-            </td>
-            <td class="title">{v.title}</td>
-            <td>{to_hhmmss(v.duration)}</td>
-            <td class="inserted_at">{v.inserted_at}</td>
-            <td :if={@controls}>
-              <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
-            </td>
-          </tr>
+            video={v}
+            controls={@controls}
+            current={i == 0}
+          />
         </table>
         <table class={if length(playlist_rest) > 0, do: "visible"}>
-          <tr :for={v <- playlist_rest} video_id={v.id}>
-            <td :if={@controls}>
-              <button
-                phx-click="playlist_set"
-                phx-value-id={v.id}
-                disabled={@current_video != nil and @current_video.id == v.id}
-                class="set"
-              >
-              </button>
-            </td>
-            <td class="title">{v.title}</td>
-            <td>{to_hhmmss(v.duration)}</td>
-            <td class="inserted_at">{v.inserted_at}</td>
-            <td :if={@controls}>
-              <button phx-click="playlist_remove" phx-value-id={v.id} class="close"></button>
-            </td>
-          </tr>
+          <.playlist_row
+            :for={v <- playlist_rest}
+            video={v}
+            controls={@controls}
+            current={false}
+          />
         </table>
       </div>
     </div>
@@ -279,16 +254,14 @@ defmodule GrasstubeWeb.RoomLive do
 
   def handle_info(%{topic: "video:" <> _, event: "set", payload: video}, socket) do
     video_info =
-      case video do
-        nil ->
-          %{type: "default", video_url: nil, subtitles_url: nil}
-
-        _ ->
-          %{
-            type: video.type,
-            video_url: video.video_url,
-            subtitles_url: video.subtitles_url
-          }
+      with %Video{} <- video do
+        %{
+          type: video.type,
+          video_url: video.video_url,
+          subtitles_url: video.subtitles_url
+        }
+      else
+        _ -> %{type: "default", video_url: nil, subtitles_url: nil}
       end
 
     socket =

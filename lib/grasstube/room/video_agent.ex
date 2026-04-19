@@ -30,11 +30,7 @@ defmodule Grasstube.VideoAgent do
   end
 
   def set_video(pid, id) do
-    video =
-      case id do
-        nil -> nil
-        _ -> Repo.get(Video, id)
-      end
+    video = if id, do: Repo.get(Video, id), else: nil
 
     room_id =
       Agent.get_and_update(pid, fn state ->

@@ -22,7 +22,8 @@ config :grasstube, :scopes,
 
 config :grasstube,
   ecto_repos: [Grasstube.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  ytdl: "yt-dlp"
 
 # Configure the endpoint
 config :grasstube, GrasstubeWeb.Endpoint,

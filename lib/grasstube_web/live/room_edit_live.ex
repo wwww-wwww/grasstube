@@ -101,21 +101,18 @@ defmodule GrasstubeWeb.RoomEditLive do
   end
 
   def handle_event("mod_add", %{"username" => username}, socket) do
-    case Repo.get_by(User, username: username) do
-      nil ->
-        {:noreply, socket}
+    with %User{} = user <- Repo.get_by(User, username: username) do
+      %RoomMod{user_id: user.id, room_id: socket.assigns.room.id}
+      |> Repo.insert()
 
-      user ->
-        %RoomMod{user_id: user.id, room_id: socket.assigns.room.id}
-        |> Repo.insert()
+      room = socket.assigns.room |> Repo.preload(:mods, force: true)
 
-        room = socket.assigns.room |> Repo.preload(:mods, force: true)
-        socket = assign(socket, room: room)
+      ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
+      |> RoomAgent.reload()
 
-        ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
-        |> RoomAgent.reload()
-
-        {:noreply, socket}
+      {:noreply, assign(socket, room: room)}
+    else
+      _ -> {:noreply, socket}
     end
   end
 

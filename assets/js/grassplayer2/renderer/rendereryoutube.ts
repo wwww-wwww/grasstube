@@ -46,6 +46,9 @@ export default class RendererYoutube implements Renderer {
                         this.set_video(this.#video_id)
                     },
                     onStateChange: (e: any) => {
+                        if (!this.#playing) {
+                            this.#player.setVolume(0)
+                        }
                         if (e.data == -1) {
                             this.set_speed(this.#speed)
                             this.set_playing(this.#playing)
@@ -90,6 +93,7 @@ export default class RendererYoutube implements Renderer {
 
                 const t: number = this.#player.getVideoLoadedFraction()
                 this.on_buffers?.({ start: () => 0, end: () => t * this.duration(), length: 1 })
+                this.on_buffer_end?.(t * this.duration())
                 this.on_timeupdate?.(this.current_time())
                 buffered.textContent = `${Math.round(t * this.duration() - this.current_time()) || 0} seconds`
             }
@@ -126,8 +130,7 @@ export default class RendererYoutube implements Renderer {
     }
 
     playing() {
-        if (this.#player == null) return false
-        return this.#player.getPlayerState() == 1
+        return this.#playing
     }
 
     duration() {
@@ -148,18 +151,19 @@ export default class RendererYoutube implements Renderer {
 
     #playing = false
     set_playing(playing: boolean) {
+        if (this.#playing == playing) return
+
         this.#playing = playing
-
-        if (this.playing() == playing) return
-
         this.#catchup_done = false
 
         if (this.#player == null) return
 
         if (playing) {
+            this.#player.setVolume(this.#volume * 100)
             if (this.current_time() >= this.duration()) return
             this.#player.playVideo()
         } else {
+            this.#player.setVolume(0)
             this.#player.pauseVideo()
         }
     }
