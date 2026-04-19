@@ -272,6 +272,8 @@ export default class GrassPlayer {
         // shortcuts
         {
             this.#events_keydown = (e: KeyboardEvent) => {
+                if (document.activeElement?.tagName == "INPUT" ||
+                    document.activeElement?.tagName == "BUTTON") return
                 if (document.activeElement?.closest(".grassplayer2") == null) return
 
                 if (e.key == "f") {
