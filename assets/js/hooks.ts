@@ -327,6 +327,10 @@ class chat extends ViewHook {
                     messages.removeChild(el)
                 }, 5000)
             }
+
+            if (opts.effect == "notify") {
+                state.player?.create_message(data.html, 10000)
+            }
         })
 
         document.addEventListener("keydown", e => {

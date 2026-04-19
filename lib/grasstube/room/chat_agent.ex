@@ -191,6 +191,7 @@ defmodule Grasstube.ChatAgent do
 
   def broadcast_to(message, sender, room_id, opts \\ %{}) do
     Endpoint.broadcast("chat:#{room_id}", "message", %{
+      time: DateTime.utc_now(),
       sender: sender(sender),
       html: message,
       opts: opts

@@ -42,8 +42,8 @@ defmodule Grasstube.VideoScheduler do
       if time > video.current_video.duration do
         VideoAgent.set_playing(pid, false)
 
-        ChatAgent.basic_message("playing next video in #{@time_to_next + @time_to_start} seconds")
-        |> ChatAgent.broadcast_to("system", state.room_id)
+        ChatAgent.basic_message("Playing next video in #{@time_to_next + @time_to_start} seconds")
+        |> ChatAgent.broadcast_to("system", state.room_id, %{effect: "notify"})
 
         start_next(self())
       end

@@ -329,7 +329,7 @@ export default class GrassPlayer {
     create_message(message: string | number, timeout: number = 0) {
         const el = document.createElement("div")
         el.className = "message"
-        el.textContent = message.toString()
+        el.innerHTML = message.toString()
         el.addEventListener("click", () => {
             this.#e_messages.removeChild(el)
         })
