@@ -149,8 +149,8 @@ export default class SubtitlesOctopus extends EventTarget {
     if ((!width || !height) && this._video) {
       videoSize = this._getVideoPosition()
       const newsize = this._computeCanvasSize(videoSize.width || 0 * (window.devicePixelRatio || 1), videoSize.height || 0 * (window.devicePixelRatio || 1))
-      width = newsize.width
-      height = newsize.height
+      width = newsize.width * window.devicePixelRatio
+      height = newsize.height * window.devicePixelRatio
       top = videoSize.y - (this._canvasParent.getBoundingClientRect().top - this._proxyCanvas.getBoundingClientRect().top)
       left = videoSize.x
     }
