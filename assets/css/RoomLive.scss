@@ -119,6 +119,7 @@
             white-space: nowrap;
             width: 1px;
             padding: 8px;
+            background: rgb(255, 255, 255);
 
             &:not(:first-child) {
                 padding-left: 0;
@@ -129,6 +130,14 @@
                 align-items: center;
                 gap: 0.5em;
             }
+
+            &:first-child {
+                border-radius: 8px 0 0 8px;
+            }
+
+            &:last-child {
+                border-radius: 0 8px 8px 0;
+            }
         }
 
         tr {
@@ -137,8 +146,16 @@
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
             border-radius: 8px;
 
+            &.grabbing {
+                cursor: grabbing;
+                z-index: 1;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            }
+
             &.current {
-                background: rgb(220, 220, 220);
+                td {
+                    background: rgb(220, 220, 220);
+                }
             }
         }
 

@@ -7,15 +7,15 @@ defmodule GrasstubeWeb.RoomLive do
   alias GrasstubeWeb.Endpoint
 
   alias Grasstube.{
-    Room,
-    Repo,
     ProcessRegistry,
+    Presence,
+    Repo,
+    Room,
+    Poll,
     ChatAgent,
     PlaylistAgent,
     RoomAgent,
     VideoAgent,
-    Presence,
-    Poll,
     VideoScheduler
   }
 
@@ -107,7 +107,7 @@ defmodule GrasstubeWeb.RoomLive do
           />
         <% end %>
       </div>
-      <div class="playlist">
+      <div class="playlist" id="playlist-container" phx-hook="playlist">
         <% playlist_top =
           @playlist
           |> Enum.drop_while(&(&1.id != (@current_video != nil and @current_video.id)))
@@ -116,7 +116,11 @@ defmodule GrasstubeWeb.RoomLive do
           @playlist
           |> Enum.take_while(&(&1.id != (@current_video != nil and @current_video.id))) %>
         <table class={if @current_video, do: "visible"}>
-          <tr :for={{v, i} <- Enum.with_index(playlist_top)} class={if i == 0, do: "current"}>
+          <tr
+            :for={{v, i} <- Enum.with_index(playlist_top)}
+            class={if i == 0, do: "current"}
+            video_id={v.id}
+          >
             <td :if={@controls}>
               <button
                 phx-click="playlist_set"
@@ -135,7 +139,7 @@ defmodule GrasstubeWeb.RoomLive do
           </tr>
         </table>
         <table class={if length(playlist_rest) > 0, do: "visible"}>
-          <tr :for={v <- playlist_rest}>
+          <tr :for={v <- playlist_rest} video_id={v.id}>
             <td :if={@controls}>
               <button
                 phx-click="playlist_set"
@@ -167,9 +171,7 @@ defmodule GrasstubeWeb.RoomLive do
 
     playlist_pid = ProcessRegistry.lookup(room.id, PlaylistAgent)
 
-    playlist =
-      PlaylistAgent.get(playlist_pid).videos
-      |> Enum.sort_by(& &1.inserted_at)
+    playlist = PlaylistAgent.get(playlist_pid).videos
 
     video_pid = ProcessRegistry.lookup(room.id, VideoAgent)
     video = VideoAgent.get(video_pid)
@@ -217,6 +219,7 @@ defmodule GrasstubeWeb.RoomLive do
 
     socket =
       socket
+      |> assign(room_pid: room_pid)
       |> assign(room: room)
       |> assign(chat_pid: chat_pid)
       |> assign(chat: chat)
@@ -271,10 +274,6 @@ defmodule GrasstubeWeb.RoomLive do
   end
 
   def handle_info(%{topic: "playlist:" <> _, payload: playlist}, socket) do
-    playlist =
-      playlist
-      |> Enum.sort_by(& &1.inserted_at)
-
     {:noreply, assign(socket, playlist: playlist)}
   end
 
@@ -329,63 +328,90 @@ defmodule GrasstubeWeb.RoomLive do
         %{"video_url" => video_url, "subtitles_url" => subtitles_url},
         socket
       ) do
-    PlaylistAgent.add_to_queue(socket.assigns.playlist_pid, video_url, subtitles_url, [])
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      PlaylistAgent.add_to_queue(socket.assigns.playlist_pid, video_url, subtitles_url, [])
+    end
+
     {:noreply, socket}
   end
 
   def handle_event("playlist_remove", %{"id" => id}, socket) do
-    PlaylistAgent.remove_from_queue(socket.assigns.playlist_pid, id)
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      PlaylistAgent.remove_from_queue(socket.assigns.playlist_pid, id)
+    end
+
     {:noreply, socket}
   end
 
   def handle_event("playlist_set", %{"id" => id}, socket) do
-    VideoAgent.set_video(socket.assigns.video_pid, id)
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      VideoAgent.set_video(socket.assigns.video_pid, id)
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("playlist_order", orders, socket) do
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      PlaylistAgent.reorder(socket.assigns.playlist_pid, orders)
+    end
+
     {:noreply, socket}
   end
 
   def handle_event("video_next", _params, socket) do
-    VideoAgent.next_video(socket.assigns.video_pid)
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      VideoAgent.next_video(socket.assigns.video_pid)
+    end
+
     {:noreply, socket}
   end
 
   def handle_event("video_playing", %{"playing" => playing, "offset" => offset}, socket) do
-    if playing do
-      VideoAgent.set_dtime(socket.assigns.video_pid, offset)
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      if playing do
+        VideoAgent.set_dtime(socket.assigns.video_pid, offset)
+      end
+
+      VideoAgent.set_playing(socket.assigns.video_pid, playing)
+
+      VideoScheduler.stop_play(socket.assigns.scheduler_pid)
     end
-
-    VideoAgent.set_playing(socket.assigns.video_pid, playing)
-
-    VideoScheduler.stop_play(socket.assigns.scheduler_pid)
 
     {:noreply, socket}
   end
 
   def handle_event("video_seek", %{"time" => time}, socket) do
-    VideoAgent.set_time(socket.assigns.video_pid, time)
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      VideoAgent.set_time(socket.assigns.video_pid, time)
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("poll_create", %{"name" => name} = params, socket) do
+    if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      params
+      |> Enum.reject(&(elem(&1, 0) == "name"))
+      |> Enum.filter(&(String.length(elem(&1, 1)) > 0))
+      |> Enum.map(&elem(&1, 1))
+      |> case do
+        [] ->
+          nil
+
+        options ->
+          %Poll{name: name, options: options, room_id: socket.assigns.room.id}
+          |> Repo.insert()
+
+          update_polls(socket.assigns.room.id)
+      end
+    end
+
     {:noreply, socket}
   end
 
   def handle_event("ping", _, socket) do
     {:reply, %{}, socket}
-  end
-
-  def handle_event("poll_create", %{"name" => name} = params, socket) do
-    params
-    |> Enum.reject(&(elem(&1, 0) == "name"))
-    |> Enum.filter(&(String.length(elem(&1, 1)) > 0))
-    |> Enum.map(&elem(&1, 1))
-    |> case do
-      [] ->
-        nil
-
-      options ->
-        %Poll{name: name, options: options, room_id: socket.assigns.room.id}
-        |> Repo.insert()
-
-        update_polls(socket.assigns.room.id)
-    end
-
-    {:noreply, socket}
   end
 
   def handle_event("buffered", %{"buffered" => buffered}, socket) do

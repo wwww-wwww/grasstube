@@ -18,7 +18,6 @@ defmodule Grasstube.RoomSupervisor do
       {Grasstube.VideoAgent, room},
       {Grasstube.VideoScheduler, room},
       {Grasstube.PlaylistAgent, room}
-      # {Grasstube.PollsAgent, room}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

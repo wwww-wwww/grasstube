@@ -53,9 +53,7 @@ defmodule Grasstube.VideoAgent do
   def next_video(pid) do
     state = get(pid)
 
-    videos =
-      ProcessRegistry.get(state.room_id, PlaylistAgent).videos
-      |> Enum.sort_by(& &1.inserted_at)
+    videos = ProcessRegistry.get(state.room_id, PlaylistAgent).videos
 
     next_video =
       case state do

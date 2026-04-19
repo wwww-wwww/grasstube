@@ -16,6 +16,7 @@ defmodule Grasstube.PlaylistAgent do
         videos =
           from(v in Video, where: v.room_id == ^room.id)
           |> Repo.all()
+          |> Enum.sort_by(&{&1.order, &1.inserted_at})
 
         %__MODULE__{room_id: room.id, videos: videos}
       end,
@@ -31,6 +32,7 @@ defmodule Grasstube.PlaylistAgent do
         videos =
           from(v in Video, where: v.room_id == ^state.room_id)
           |> Repo.all()
+          |> Enum.sort_by(&{&1.order, &1.inserted_at})
 
         {{state.room_id, videos}, %{state | videos: videos}}
       end)
@@ -108,12 +110,31 @@ defmodule Grasstube.PlaylistAgent do
         nil
 
       video ->
-        if VideoAgent.get(video_pid).current_video.id == video.id do
+        current_video = VideoAgent.get(video_pid).current_video
+
+        if current_video != nil and current_video.id == video.id do
           VideoAgent.set_video(video_pid, nil)
         end
 
         Repo.delete(video)
         update_videos(pid)
+    end
+  end
+
+  def reorder(pid, orders) do
+    Repo.transact(fn ->
+      Enum.each(orders, fn [index, id] ->
+        {:ok, _} =
+          Repo.get(Video, id)
+          |> Ecto.Changeset.change(%{order: index})
+          |> Repo.update()
+      end)
+
+      {:ok, nil}
+    end)
+    |> case do
+      {:ok, nil} -> update_videos(pid)
+      _ -> nil
     end
   end
 
