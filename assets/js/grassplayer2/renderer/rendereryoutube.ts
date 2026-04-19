@@ -28,8 +28,7 @@ export default class RendererYoutube implements Renderer {
         this.#e_video = root.querySelector(".youtube")!
         this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")!
 
-        // @ts-ignore
-        window.onYouTubeIframeAPIReady = () => {
+        const load = () => {
             // @ts-ignore
             if (YT.loaded != 1) {
                 console.error("Unable to load youtube iframe api")
@@ -79,9 +78,16 @@ export default class RendererYoutube implements Renderer {
             })
         }
 
-        const s = document.createElement("script")
-        s.src = "https://www.youtube.com/iframe_api"
-        document.head.appendChild(s)
+        // @ts-ignore
+        if (window.YT) {
+            load()
+        } else {
+            const s = document.createElement("script")
+            s.src = "https://www.youtube.com/iframe_api"
+            document.head.appendChild(s)
+            // @ts-ignore
+            window.onYouTubeIframeAPIReady = load
+        }
 
         this.#e_video = root.querySelector(".youtube")!
         this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")!
@@ -104,6 +110,7 @@ export default class RendererYoutube implements Renderer {
     #video_id: string | null = null
     #player: any = null
     set_video(video_id: string | null) {
+        console.log("youtube set_video")
         this.set_playing(false)
         this.#video_id = video_id
 

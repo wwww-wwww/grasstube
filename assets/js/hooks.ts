@@ -337,7 +337,8 @@ class playlist extends ViewHook {
         this.el.addEventListener("pointerdown", e => {
             if (
                 (e.target! as HTMLElement).tagName == "INPUT" ||
-                (e.target! as HTMLElement).tagName == "BUTTON"
+                (e.target! as HTMLElement).tagName == "BUTTON" ||
+                (e.target! as HTMLElement).tagName == "A"
             )
                 return
             const row = (e.target! as HTMLElement).closest("tr")

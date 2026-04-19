@@ -527,7 +527,15 @@ defmodule GrasstubeWeb.CoreComponents do
         >
         </button>
       </td>
-      <td class="title">{@video.title}</td>
+      <td class="title">
+        <%= if @video.type == "youtube" do %>
+          <.link href={"https://youtu.be/#{@video.video_url}"} target="_blank">
+            {@video.title}
+          </.link>
+        <% else %>
+          {@video.title}
+        <% end %>
+      </td>
       <td>{to_hhmmss(@video.duration)}</td>
       <td class="inserted_at">{@video.inserted_at}</td>
       <td :if={@controls}>
