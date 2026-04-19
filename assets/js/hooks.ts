@@ -289,7 +289,7 @@ class chat extends ViewHook {
         this.handleEvent("message", data => {
             const el = document.createElement("div")
             el.classList.toggle("message", true)
-            el.classList.toggle("visible", true)
+            // el.classList.toggle("visible", true)
             messages.prepend(el)
             el.innerHTML = `<span class="time">[${data.time}]</span><span><span>${data.sender}</span>:</span>${data.html}`
             setTimeout(() => {
