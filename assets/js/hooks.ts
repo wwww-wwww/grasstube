@@ -1,6 +1,7 @@
 import { ViewHook } from "phoenix_live_view"
 import GrassPlayer from "./grassplayer2/grassplayer2"
 import ReadyCheck from "./ready_check"
+import fileinfo from "./fileinfo"
 
 const state: { player: GrassPlayer | null } = { player: null }
 
@@ -428,4 +429,4 @@ class playlist extends ViewHook {
     }
 }
 
-export default { video, modal_fullscreen, media_directories, poll_form, chat, playlist }
+export default { video, modal_fullscreen, media_directories, poll_form, chat, playlist, fileinfo }

@@ -228,18 +228,20 @@ export default class RendererWebGPU implements Renderer {
         if (window.localStorage.getItem("webgpu-features-tested") == null) {
             (async () => {
                 const resp = await this.#test_features(device)
-                if (resp != "success") {
-                    if (!confirm(`${resp} Fall back to basic renderer?`)) {
-                        if (confirm("Always ignore?")) {
-                            window.localStorage.setItem("webgpu-features-tested", "1")
-                            return
-                        }
+                if (resp == "success") {
+                    window.localStorage.setItem("webgpu-features-tested", "1")
+                    return
+                }
+                if (!confirm(`${resp} Fall back to basic renderer?`)) {
+                    if (confirm("Always ignore?")) {
+                        window.localStorage.setItem("webgpu-features-tested", "1")
                         return
                     }
-
-                    this.player.set_storage("renderer", 1)
-                    window.location.reload()
+                    return
                 }
+
+                this.player.set_storage("renderer", 1)
+                window.location.reload()
             })()
         }
 

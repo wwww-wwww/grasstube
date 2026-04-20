@@ -41,14 +41,12 @@
             position: absolute;
             top: 0;
             height: calc(100% - 96px);
-            padding: 16px;
             transition:
                 0.25s transform,
                 0.25s opacity;
             animation: hide 2s;
 
             &:not(:hover) {
-                opacity: 0;
                 transition-delay: 0.5s;
             }
 
@@ -60,19 +58,70 @@
 
         > .left {
             left: 0;
+            padding: 16px;
             padding-right: 32px;
             transform: translateX(calc(-100% + 32px));
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 
             .presence {
-                text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
                 border-radius: 8px;
             }
         }
 
         > .right {
             right: 0;
-            padding-right: 32px;
+            padding: 8px;
+            padding-left: 32px;
             transform: translateX(calc(100% - 32px));
+            color: black;
+            max-width: 100%;
+            gap: 8px;
+            display: flex;
+            flex-direction: column;
+
+            > :first-child {
+                width: 0;
+                min-width: 100%;
+                padding: 8px;
+                background: rgba(255, 255, 255, 0.7);
+                border-radius: 8px;
+                backdrop-filter: blur(5px);
+            }
+
+            .title {
+                color: black;
+                font-size: 1.25em;
+            }
+
+            > :last-child {
+                display: flex;
+                flex-direction: column;
+                // gap: 0.5em;
+                overflow-y: auto;
+
+                img {
+                    width: 120px;
+                }
+
+                > div {
+                    display: flex;
+
+                    > div {
+                        position: relative;
+
+                        > :last-child {
+                            position: absolute;
+                            left: 0;
+                            bottom: 0;
+                            width: 100%;
+                            color: black;
+                            padding: 4px;
+                            background: rgba(255, 255, 255, 0.7);
+                            backdrop-filter: blur(5px);
+                        }
+                    }
+                }
+            }
         }
     }
 

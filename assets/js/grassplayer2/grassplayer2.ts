@@ -43,22 +43,22 @@ const html = `
 `
 
 export default class GrassPlayer {
-    #current_renderer: Renderer
-    #renderer: Renderer
-    #renderer_view: HTMLElement
-    #renderer_yt: RendererYoutube
-    #renderer_yt_view: HTMLElement
-    #seekbar: Seekbar
+    private current_renderer: Renderer
+    private renderer: Renderer
+    private renderer_view: HTMLElement
+    private renderer_yt: RendererYoutube | null = null
+    private renderer_yt_view: HTMLElement
+    private seekbar: Seekbar
 
     fullscreen_element: HTMLElement
-    #e_main: HTMLElement
-    #e_messages: HTMLElement
-    #e_chk_play: HTMLInputElement
-    #e_btn_next: HTMLButtonElement
-    #e_txt_time: HTMLElement
+    private e_main: HTMLElement
+    private e_messages: HTMLElement
+    private e_chk_play: HTMLInputElement
+    private e_btn_next: HTMLButtonElement
+    private e_txt_time: HTMLElement
 
-    #events_fullscreenchange: any
-    #events_keydown: any
+    private events_fullscreenchange: any
+    private events_keydown: any
 
     on_toggle_playing: ((b: boolean) => void) | null = null
     on_seek: ((t: number) => void) | null = null
@@ -71,17 +71,16 @@ export default class GrassPlayer {
         el.tabIndex = 0
         el.innerHTML = html
         root.appendChild(el)
-        console.log(el)
 
-        this.#e_main = el
+        this.e_main = el
         this.fullscreen_element = el
-        this.#e_messages = el.querySelector(".messages")!
+        this.e_messages = el.querySelector(".messages")!
 
-        this.#seekbar = new Seekbar(el.querySelector(".seekbar")!, this)
+        this.seekbar = new Seekbar(el.querySelector(".seekbar")!, this)
 
         const e_view: HTMLElement = el.querySelector(".view")!
 
-        this.#e_txt_time = el.querySelector(".txt-time")!
+        this.e_txt_time = el.querySelector(".txt-time")!
 
         // Create default renderer
         {
@@ -97,58 +96,58 @@ export default class GrassPlayer {
                 })
             }
 
-            this.#renderer_view = document.createElement("div")
-            e_view.appendChild(this.#renderer_view)
+            this.renderer_view = document.createElement("div")
+            e_view.appendChild(this.renderer_view)
 
             const renderer_settings = document.createElement("div")
             el.querySelector(".settings")!.appendChild(renderer_settings)
 
-            this.#renderer = new renderers[n_renderer](this, this.#renderer_view, renderer_settings)
-            this.#renderer_view.className = this.#renderer.constructor.name
-            renderer_settings.className = this.#renderer.constructor.name
+            this.renderer = new renderers[n_renderer](this, this.renderer_view, renderer_settings)
+            this.renderer_view.className = this.renderer.constructor.name
+            renderer_settings.className = this.renderer.constructor.name
 
-            this.#renderer.on_buffer_end = (end: number) => {
-                if (this.#current_renderer != this.#renderer) return
+            this.renderer.on_buffer_end = (end: number) => {
+                if (this.current_renderer != this.renderer) return
                 this.on_buffer_end?.(end)
             }
-            this.#renderer.on_buffers = (buffers: any) => {
-                if (this.#current_renderer != this.#renderer) return
-                this.#seekbar.set_buffers(buffers, this.duration())
+            this.renderer.on_buffers = (buffers: any) => {
+                if (this.current_renderer != this.renderer) return
+                this.seekbar.set_buffers(buffers, this.duration())
             }
-            this.#renderer.on_timeupdate = (t: number) => {
-                if (this.#current_renderer != this.#renderer) return
-                this.#seekbar.set_time(t / this.duration())
-                this.#e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+            this.renderer.on_timeupdate = (t: number) => {
+                if (this.current_renderer != this.renderer) return
+                this.seekbar.set_time(t / this.duration())
+                this.e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
             }
 
-            this.#current_renderer = this.#renderer
+            this.current_renderer = this.renderer
         }
 
         {
-            this.#renderer_yt_view = document.createElement("div")
-            this.#renderer_yt_view.style.display = "none"
-            e_view.appendChild(this.#renderer_yt_view)
+            this.renderer_yt_view = document.createElement("div")
+            this.renderer_yt_view.style.display = "none"
+            e_view.appendChild(this.renderer_yt_view)
 
             const renderer_settings = document.createElement("div")
             el.querySelector(".settings")!.appendChild(renderer_settings)
 
-            this.#renderer_yt = new RendererYoutube(this, this.#renderer_yt_view, renderer_settings)
-            this.#renderer_yt_view.className = this.#renderer_yt.constructor.name
-            renderer_settings.className = this.#renderer_yt.constructor.name
+            // this.renderer_yt = new RendererYoutube(this, this.renderer_yt_view, renderer_settings)
+            // this.renderer_yt_view.className = this.renderer_yt.constructor.name
+            // renderer_settings.className = this.renderer_yt.constructor.name
 
-            this.#renderer_yt.on_buffer_end = (end: number) => {
-                if (this.#current_renderer != this.#renderer_yt) return
-                this.on_buffer_end?.(end)
-            }
-            this.#renderer_yt.on_buffers = buffers => {
-                if (this.#current_renderer != this.#renderer_yt) return
-                this.#seekbar.set_buffers(buffers, this.duration())
-            }
-            this.#renderer_yt.on_timeupdate = t => {
-                if (this.#current_renderer != this.#renderer_yt) return
-                this.#seekbar.set_time(t / this.duration())
-                this.#e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
-            }
+            // this.renderer_yt.on_buffer_end = (end: number) => {
+            //     if (this.current_renderer != this.renderer_yt) return
+            //     this.on_buffer_end?.(end)
+            // }
+            // this.renderer_yt.on_buffers = buffers => {
+            //     if (this.current_renderer != this.renderer_yt) return
+            //     this.seekbar.set_buffers(buffers, this.duration())
+            // }
+            // this.renderer_yt.on_timeupdate = t => {
+            //     if (this.current_renderer != this.renderer_yt) return
+            //     this.seekbar.set_time(t / this.duration())
+            //     this.e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+            // }
         }
 
         // Check autoplay
@@ -156,28 +155,29 @@ export default class GrassPlayer {
             const autoplay_blocker: HTMLElement = el.querySelector(".autoplay-block")!
             autoplay_blocker.style.display = "none"
 
-            document.createElement("video")
+            document
+                .createElement("video")
                 .play()
                 .catch(_ => {
                     autoplay_blocker.style.display = ""
-                    this.#renderer.set_muted(true)
-                    this.#renderer_yt?.set_muted(true)
+                    this.renderer.set_muted(true)
+                    this.renderer_yt?.set_muted(true)
 
                     autoplay_blocker.addEventListener("click", () => {
                         autoplay_blocker.style.display = "none"
-                        this.#renderer.set_muted(false)
-                        this.#renderer_yt?.set_muted(false)
+                        this.renderer.set_muted(false)
+                        this.renderer_yt?.set_muted(false)
                     })
                 })
         }
 
         // play button
         {
-            this.#e_chk_play = el.querySelector(".chk-play")!
-            this.#e_chk_play.addEventListener("change", () => {
-                const playing = this.#e_chk_play.checked
+            this.e_chk_play = el.querySelector(".chk-play")!
+            this.e_chk_play.addEventListener("change", () => {
+                const playing = this.e_chk_play.checked
 
-                this.#toggle_playing(playing)
+                this.toggle_playing(playing)
             })
         }
 
@@ -211,8 +211,8 @@ export default class GrassPlayer {
 
         // next button
         {
-            this.#e_btn_next = el.querySelector(".chk-next")!
-            this.#e_btn_next.addEventListener("click", () => {
+            this.e_btn_next = el.querySelector(".chk-next")!
+            this.e_btn_next.addEventListener("click", () => {
                 this.on_next?.()
             })
         }
@@ -221,8 +221,8 @@ export default class GrassPlayer {
         {
             const chk: HTMLInputElement = el.querySelector(".chk-captions")!
             chk.addEventListener("input", () => {
-                this.#renderer.set_captions(!chk.checked)
-                this.#renderer_yt?.set_captions(!chk.checked)
+                this.renderer.set_captions(!chk.checked)
+                this.renderer_yt?.set_captions(!chk.checked)
             })
         }
 
@@ -230,19 +230,19 @@ export default class GrassPlayer {
         {
             const chk: HTMLInputElement = el.querySelector(".chk-fullscreen")!
             chk.addEventListener("input", () => {
-                this.#toggle_fullscreen()
+                this.toggle_fullscreen()
             })
-            this.#events_fullscreenchange = () => {
+            this.events_fullscreenchange = () => {
                 chk.checked = document.fullscreenElement == this.fullscreen_element
             }
-            document.addEventListener("fullscreenchange", this.#events_fullscreenchange)
+            document.addEventListener("fullscreenchange", this.events_fullscreenchange)
         }
 
         // overlay show/hide
         {
             let overlay_timeout: any = null
             const show_overlay = (e: PointerEvent) => {
-                this.#e_main.classList.toggle("show", true)
+                this.e_main.classList.toggle("show", true)
 
                 if (overlay_timeout != null) {
                     clearTimeout(overlay_timeout)
@@ -257,52 +257,55 @@ export default class GrassPlayer {
                 }
 
                 overlay_timeout = setTimeout(() => {
-                    this.#e_main.classList.toggle("show", false)
+                    this.e_main.classList.toggle("show", false)
                 }, 2000)
             }
 
-            this.#e_main.addEventListener("pointerdown", show_overlay)
-            this.#e_main.addEventListener("pointermove", show_overlay)
+            this.e_main.addEventListener("pointerdown", show_overlay)
+            this.e_main.addEventListener("pointermove", show_overlay)
 
-            this.#e_main.addEventListener("mouseleave", () => {
-                this.#e_main.classList.toggle("show", false)
+            this.e_main.addEventListener("mouseleave", () => {
+                this.e_main.classList.toggle("show", false)
             })
         }
 
         // shortcuts
         {
-            this.#events_keydown = (e: KeyboardEvent) => {
-                if (document.activeElement?.tagName == "INPUT" ||
-                    document.activeElement?.tagName == "BUTTON") return
+            this.events_keydown = (e: KeyboardEvent) => {
+                if (
+                    document.activeElement?.tagName == "INPUT" ||
+                    document.activeElement?.tagName == "BUTTON"
+                )
+                    return
                 if (document.activeElement?.closest(".grassplayer2") == null) return
 
                 if (e.key == "f") {
-                    this.#toggle_fullscreen()
+                    this.toggle_fullscreen()
                 } else if (e.key == "ArrowLeft") {
-                    if (!this.#controls) return
+                    if (!this.controls) return
                     e.preventDefault()
                     this.seek(this.current_time() - 5, true)
                 } else if (e.key == "ArrowRight") {
-                    if (!this.#controls) return
+                    if (!this.controls) return
                     e.preventDefault()
                     this.seek(this.current_time() + 5, true)
                 } else if (e.key == "ArrowUp") {
                     e.preventDefault()
-                    this.set_volume(this.#volume + 0.1)
-                    const m = this.create_message(Math.round(this.#volume * 100), 1000)
+                    this.set_volume(this.volume + 0.1)
+                    const m = this.create_message(Math.round(this.volume * 100), 1000)
                     m.classList.toggle("volume-up")
                 } else if (e.key == "ArrowDown") {
                     e.preventDefault()
-                    this.set_volume(this.#volume - 0.1)
-                    const m = this.create_message(Math.round(this.#volume * 100), 1000)
+                    this.set_volume(this.volume - 0.1)
+                    const m = this.create_message(Math.round(this.volume * 100), 1000)
                     m.classList.toggle("volume-down")
                 } else if (e.key == " ") {
-                    if (!this.#controls) return
+                    if (!this.controls) return
                     e.preventDefault()
-                    this.#toggle_playing(!this.playing())
+                    this.toggle_playing(!this.playing())
                 }
             }
-            window.addEventListener("keydown", this.#events_keydown)
+            window.addEventListener("keydown", this.events_keydown)
 
             el.addEventListener("dblclick", e => {
                 if ((e.target as HTMLElement).tagName == "INPUT") return
@@ -310,14 +313,14 @@ export default class GrassPlayer {
                 if ((e.target as HTMLElement).closest(".settings") != null) return
 
                 e.preventDefault()
-                this.#toggle_fullscreen()
+                this.toggle_fullscreen()
             })
         }
     }
 
     destroy() {
-        window.removeEventListener("keydown", this.#events_keydown)
-        document.removeEventListener("fullscreenchange", this.#events_fullscreenchange)
+        window.removeEventListener("keydown", this.events_keydown)
+        document.removeEventListener("fullscreenchange", this.events_fullscreenchange)
     }
 
     get_storage(name: string): string | null {
@@ -333,14 +336,14 @@ export default class GrassPlayer {
         el.className = "message"
         el.innerHTML = message.toString()
         el.addEventListener("click", () => {
-            this.#e_messages.removeChild(el)
+            this.e_messages.removeChild(el)
         })
 
-        this.#e_messages.appendChild(el)
+        this.e_messages.appendChild(el)
         if (timeout > 0) {
             setTimeout(() => {
-                if (el.parentElement == this.#e_messages) {
-                    this.#e_messages.removeChild(el)
+                if (el.parentElement == this.e_messages) {
+                    this.e_messages.removeChild(el)
                 }
             }, timeout)
         }
@@ -348,14 +351,14 @@ export default class GrassPlayer {
     }
 
     volume_change
-    #volume = 0.5
+    private volume = 0.5
     set_volume(v: number) {
         v = Math.min(Math.max(v, 0), 1)
         v = Math.round(v * 100) / 100
 
-        this.#volume = v
+        this.volume = v
 
-        this.#current_renderer.set_volume((Math.pow(10, v) - 1) / 9)
+        this.current_renderer.set_volume((Math.pow(10, v) - 1) / 9)
 
         this.volume_change(v)
 
@@ -363,59 +366,59 @@ export default class GrassPlayer {
     }
 
     duration() {
-        return this.#current_renderer.duration()
+        return this.current_renderer.duration()
     }
 
     set_speed(s: number) {
-        this.#current_renderer.set_speed(s)
+        this.current_renderer.set_speed(s)
     }
 
     set_video(type: string, video: string, subtitles: string) {
-        this.#e_txt_time.textContent = ""
+        this.e_txt_time.textContent = ""
         this.set_playing(false)
         this.on_buffer_end?.(0)
 
         if (type == "youtube") {
-            this.#renderer_view.style.display = "none"
-            this.#renderer.set_video(null, null)
+            this.renderer_view.style.display = "none"
+            this.renderer.set_video(null, null)
 
-            this.#renderer_yt_view.style.display = ""
-            this.#renderer_yt?.set_video(video)
+            this.renderer_yt_view.style.display = ""
+            this.renderer_yt?.set_video(video)
 
-            if (this.#renderer_yt != null) {
-                this.#current_renderer = this.#renderer_yt
+            if (this.renderer_yt != null) {
+                this.current_renderer = this.renderer_yt
             }
         } else {
-            this.#renderer_yt_view.style.display = "none"
-            this.#renderer_yt?.set_video(null)
+            this.renderer_yt_view.style.display = "none"
+            this.renderer_yt?.set_video(null)
 
-            this.#renderer_view.style.display = ""
-            this.#renderer.set_video(video, subtitles)
-            this.#current_renderer = this.#renderer
+            this.renderer_view.style.display = ""
+            this.renderer.set_video(video, subtitles)
+            this.current_renderer = this.renderer
         }
 
-        this.set_volume(this.#volume)
+        this.set_volume(this.volume)
 
-        this.#seekbar.reset()
+        this.seekbar.reset()
     }
 
     playing() {
-        return this.#current_renderer.playing()
+        return this.current_renderer.playing()
     }
 
     set_playing(playing: boolean) {
-        this.#e_chk_play.checked = playing
+        this.e_chk_play.checked = playing
 
         if (this.playing() == playing) return
 
-        this.#current_renderer.set_playing(playing)
+        this.current_renderer.set_playing(playing)
     }
 
     auto_set_playing(playing: boolean) {
         this.set_playing(playing)
     }
 
-    #toggle_playing(playing: boolean) {
+    toggle_playing(playing: boolean) {
         if (this.on_toggle_playing != null) {
             this.on_toggle_playing(playing)
         } else {
@@ -424,7 +427,7 @@ export default class GrassPlayer {
     }
 
     current_time() {
-        return this.#current_renderer.current_time()
+        return this.current_renderer.current_time()
     }
 
     seek(t: number, final = false) {
@@ -439,7 +442,7 @@ export default class GrassPlayer {
 
         if (t >= this.duration()) return
 
-        this.#current_renderer.seek(t, final)
+        this.current_renderer.seek(t, final)
         if (final) {
             this.create_message(seconds_to_hms(this.current_time(), true), 1000)
         }
@@ -447,12 +450,12 @@ export default class GrassPlayer {
 
     auto_seek(t: number) {
         if (t == undefined) return
-        if (this.#seekbar.seeking) return
+        if (this.seekbar.seeking) return
 
         this.seek(t)
     }
 
-    #toggle_fullscreen() {
+    private toggle_fullscreen() {
         if (document.fullscreenElement == this.fullscreen_element) {
             document.exitFullscreen()
         } else {
@@ -461,14 +464,14 @@ export default class GrassPlayer {
     }
 
     set_catchup(target: number, time: number) {
-        this.#current_renderer.set_catchup(target, time)
+        this.current_renderer.set_catchup(target, time)
     }
 
-    #controls = true
+    private controls = true
     set_controls(b: boolean) {
-        this.#controls = b
-        this.#e_chk_play.disabled = !b
-        this.#e_btn_next.disabled = !b
-        this.#seekbar.set_enabled(b)
+        this.controls = b
+        this.e_chk_play.disabled = !b
+        this.e_btn_next.disabled = !b
+        this.seekbar.set_enabled(b)
     }
 }

@@ -53,7 +53,10 @@ defmodule GrasstubeWeb.RoomLive do
           </div>
         </div>
       </div>
-      <div class="right"></div>
+      <div class="right" id="panel-right" phx-update="ignore" phx-hook="fileinfo">
+        <div><a class="title" target="_blank"></a></div>
+        <div class="info"></div>
+      </div>
 
       <div
         :if={@controls}
