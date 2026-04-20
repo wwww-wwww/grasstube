@@ -16,6 +16,8 @@ export default class fileinfo extends ViewHook {
                 e_title.textContent = data.data.Media.title.romaji
                 e_title.href = data.data.Media.siteUrl
 
+                while (e_info.firstChild) e_info.removeChild(e_info.firstChild)
+
                 for (const edge of data.data.Media.characters.edges) {
                     const el = document.createElement("div")
                     e_info.appendChild(el)
