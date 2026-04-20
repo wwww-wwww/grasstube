@@ -131,23 +131,23 @@ export default class GrassPlayer {
             const renderer_settings = document.createElement("div")
             el.querySelector(".settings")!.appendChild(renderer_settings)
 
-            // this.renderer_yt = new RendererYoutube(this, this.renderer_yt_view, renderer_settings)
-            // this.renderer_yt_view.className = this.renderer_yt.constructor.name
-            // renderer_settings.className = this.renderer_yt.constructor.name
+            this.renderer_yt = new RendererYoutube(this, this.renderer_yt_view, renderer_settings)
+            this.renderer_yt_view.className = this.renderer_yt.constructor.name
+            renderer_settings.className = this.renderer_yt.constructor.name
 
-            // this.renderer_yt.on_buffer_end = (end: number) => {
-            //     if (this.current_renderer != this.renderer_yt) return
-            //     this.on_buffer_end?.(end)
-            // }
-            // this.renderer_yt.on_buffers = buffers => {
-            //     if (this.current_renderer != this.renderer_yt) return
-            //     this.seekbar.set_buffers(buffers, this.duration())
-            // }
-            // this.renderer_yt.on_timeupdate = t => {
-            //     if (this.current_renderer != this.renderer_yt) return
-            //     this.seekbar.set_time(t / this.duration())
-            //     this.e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
-            // }
+            this.renderer_yt.on_buffer_end = (end: number) => {
+                if (this.current_renderer != this.renderer_yt) return
+                this.on_buffer_end?.(end)
+            }
+            this.renderer_yt.on_buffers = buffers => {
+                if (this.current_renderer != this.renderer_yt) return
+                this.seekbar.set_buffers(buffers, this.duration())
+            }
+            this.renderer_yt.on_timeupdate = t => {
+                if (this.current_renderer != this.renderer_yt) return
+                this.seekbar.set_time(t / this.duration())
+                this.e_txt_time.textContent = `${seconds_to_hms(t, true)} / ${seconds_to_hms(this.duration(), true)}`
+            }
         }
 
         // Check autoplay
