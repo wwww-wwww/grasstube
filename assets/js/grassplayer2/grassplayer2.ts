@@ -161,12 +161,12 @@ export default class GrassPlayer {
                 .catch(_ => {
                     autoplay_blocker.style.display = ""
                     this.#renderer.set_muted(true)
-                    this.#renderer_yt.set_muted(true)
+                    this.#renderer_yt?.set_muted(true)
 
                     autoplay_blocker.addEventListener("click", () => {
                         autoplay_blocker.style.display = "none"
                         this.#renderer.set_muted(false)
-                        this.#renderer_yt.set_muted(false)
+                        this.#renderer_yt?.set_muted(false)
                     })
                 })
         }

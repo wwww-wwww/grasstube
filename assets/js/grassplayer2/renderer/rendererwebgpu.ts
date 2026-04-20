@@ -225,6 +225,24 @@ export default class RendererWebGPU implements Renderer {
             usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
         })
 
+        if (window.localStorage.getItem("webgpu-features-tested") == null) {
+            (async () => {
+                const resp = await this.#test_features(device)
+                if (resp != "success") {
+                    if (!confirm(`${resp} Fall back to basic renderer?`)) {
+                        if (confirm("Always ignore?")) {
+                            window.localStorage.setItem("webgpu-features-tested", "1")
+                            return
+                        }
+                        return
+                    }
+
+                    this.player.set_storage("renderer", 1)
+                    window.location.reload()
+                }
+            })()
+        }
+
         this.#clear = () => {
             const commandEncoder = device.createCommandEncoder()
             const textureView = context.getCurrentTexture().createView()
@@ -461,6 +479,88 @@ export default class RendererWebGPU implements Renderer {
             last_t = t
         }
         requestAnimationFrame(render)
+    }
+
+    async #test_features(device: GPUDevice) {
+        console.log("Testing rvfc")
+
+        const timings: number[] = await new Promise(async (resolve) => {
+            const video = document.createElement("video")
+            video.crossOrigin = "anonymous"
+
+            video.onended = () => {
+                let time: number | null = null
+                let timings: number[] = []
+                const rvfc = () => {
+                    video.requestVideoFrameCallback(rvfc)
+                    const t = performance.now()
+                    if (time == null) {
+                        time = t
+                    } else {
+                        console.log(t - time)
+                        timings.push(t - time)
+                        time = t
+                    }
+                }
+
+                video.requestVideoFrameCallback(rvfc)
+
+                video.onended = () => {
+                    timings.sort()
+                    resolve(timings)
+                }
+
+                video.play()
+            }
+
+            video.muted = true
+            video.src = "/includes/50fps.mp4"
+            video.play()
+        })
+
+        const dropped_frames = 25 - timings.length
+        const median = timings.at(timings.length / 2)!
+
+        console.log("Dropped frames", dropped_frames)
+        console.log("Median", median)
+
+        if (dropped_frames > 10) {
+            return "Too many dropped frames."
+        }
+
+        console.log("Testing webgpu timing")
+
+        const lowest: number = await new Promise(async (resolve) => {
+            let lowest = Number.MAX_VALUE
+
+            // warmup
+            {
+                const commandEncoder = device.createCommandEncoder()
+                device.queue.submit([commandEncoder.finish()])
+                await device.queue.onSubmittedWorkDone()
+            }
+
+            for (let i = 0; i < 5; i++) {
+                const commandEncoder = device.createCommandEncoder()
+                const a = performance.now()
+                device.queue.submit([commandEncoder.finish()])
+                await device.queue.onSubmittedWorkDone().then(() => {
+                    const b = performance.now()
+                    console.log(b - a)
+                    lowest = Math.min(lowest, b - a)
+                })
+            }
+
+            resolve(lowest)
+        })
+
+        console.log("Lowest", lowest)
+
+        if (lowest > 80) {
+            return "WebGPU timer bug detected."
+        }
+
+        return "success"
     }
 
     get_texture(dims: [number, number], not = []) {

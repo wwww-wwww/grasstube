@@ -474,6 +474,7 @@ html:has(.RoomLive) {
         &:has(input.visible) {
             .messages {
                 pointer-events: all;
+                scrollbar-width: thin;
             }
 
             .message {
@@ -507,6 +508,7 @@ html:has(.RoomLive) {
         align-items: start;
         flex: 1;
         overflow-y: scroll;
+        scrollbar-width: none;
         padding: 8px;
 
         @keyframes message {
