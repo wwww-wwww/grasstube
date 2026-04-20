@@ -61,7 +61,6 @@ defmodule Grasstube.PlaylistAgent do
 
   defp queue_lookup(%Video{video_url: video_url} = video) do
     uri = URI.parse(video_url)
-    IO.inspect(video)
 
     cond do
       uri.host == nil -> update_video(video, %{title: "Invalid video"})
@@ -200,6 +199,18 @@ defmodule Grasstube.PlaylistAgent do
       %{"list" => list} ->
         with info_task <- Task.Supervisor.async_nolink(Tasks, fn -> get_yt_playlist(list) end),
              {:ok, [first | rest]} <- wait_task(info_task, @yt_timeout) do
+          Enum.each(rest, fn %{id: id, title: title, duration: duration} ->
+            %Video{
+              room_id: video.room_id,
+              type: "youtube",
+              video_url: id,
+              title: title,
+              duration: duration + 0.0,
+              ready: true
+            }
+            |> Repo.insert()
+          end)
+
           update_video(video, %{
             type: "youtube",
             video_url: first.id,
@@ -207,11 +218,6 @@ defmodule Grasstube.PlaylistAgent do
             duration: first.duration + 0.0,
             ready: true
           })
-
-          Enum.each(rest, fn %{id: id, title: title, duration: duration} ->
-            # TODO: insert video
-            IO.inspect(id)
-          end)
         else
           err -> update_video(video, %{title: "Error: #{inspect(err)}"})
         end

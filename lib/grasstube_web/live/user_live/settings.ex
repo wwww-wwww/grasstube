@@ -200,7 +200,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
 
   def handle_event("emote_delete", %{"id" => id}, socket) do
     with %Emote{} = emote <- Repo.get(Emote, id),
-         emote.user_id == socket.assigns.current_scope.user.id do
+         true <- emote.user_id == socket.assigns.current_scope.user.id do
       Repo.delete(emote)
 
       Path.join(Application.app_dir(:grasstube, "priv/static/emotes"), "#{emote.id}.png")
@@ -217,7 +217,7 @@ defmodule GrasstubeWeb.UserLive.Settings do
 
   def handle_event("emote_save_keybind", %{"emote-id" => id, "key" => key}, socket) do
     with %Emote{} = emote <- Repo.get(Emote, id),
-         emote.user_id == socket.assigns.current_scope.user.id do
+         true <- emote.user_id == socket.assigns.current_scope.user.id do
       emote
       |> Ecto.Changeset.change(%{keybind: key})
       |> Repo.update()
