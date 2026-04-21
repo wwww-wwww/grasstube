@@ -4,7 +4,7 @@ defmodule Grasstube.ChatAgent do
 
   alias GrasstubeWeb.Endpoint
 
-  alias Grasstube.{Repo, ProcessRegistry, Room, Presence, VideoAgent}
+  alias Grasstube.{Repo, ProcessRegistry, Room, Video, Message, Presence, VideoAgent}
 
   require AutoLinker
 
@@ -150,10 +150,21 @@ defmodule Grasstube.ChatAgent do
           %{guest: id} -> "guest #{id}"
         end
 
+      with %Video{id: video_id} <- ProcessRegistry.get(state.room_id, VideoAgent).current_video do
+        user_id =
+          case scope do
+            %{user: %{id: id}} -> id
+            _ -> nil
+          end
+
+        %Message{text: message, sender: username, user_id: user_id, video_id: video_id}
+        |> Repo.insert()
+      end
+
       message = %{
         time: DateTime.utc_now(),
-        sender: sender(username),
-        html: basic_message(raw(message)),
+        sender: username,
+        html: message,
         opts: opts
       }
 
@@ -169,30 +180,10 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  def sender(sender) do
-    assigns = %{sender: sender}
-
-    ~H"""
-    {@sender}
-    """
-    |> Phoenix.HTML.Safe.to_iodata()
-    |> IO.iodata_to_binary()
-  end
-
-  def basic_message(message) do
-    assigns = %{message: message}
-
-    ~H"""
-    <span>{@message}</span>
-    """
-    |> Phoenix.HTML.Safe.to_iodata()
-    |> IO.iodata_to_binary()
-  end
-
   def broadcast_to(message, sender, room_id, opts \\ %{}) do
     Endpoint.broadcast("chat:#{room_id}", "message", %{
       time: DateTime.utc_now(),
-      sender: sender(sender),
+      sender: sender,
       html: message,
       opts: opts
     })
