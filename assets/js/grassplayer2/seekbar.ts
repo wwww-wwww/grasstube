@@ -50,52 +50,48 @@ export default class Seekbar {
         this.e_preview = root.querySelector(".seekbar-preview")!
         const preview_ctx = this.e_preview.getContext("2d")!
 
+        const seek = (e: PointerEvent, final = false) => {
+            if (!this.seeking) return
+            e.preventDefault()
+
+            const rect = root.getBoundingClientRect()
+            const t =
+                Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) * player.duration()
+
+            this.set_time(t / player.duration())
+            player.seek(t, final)
+        }
+
+        let playing = false
         root.addEventListener("pointerdown", e => {
             if (!this.enabled) return
             if (e.buttons != 1) return
-
             e.preventDefault()
-
-            // if (Object.keys(this.current_video.videos).length == 0) return
+            root.setPointerCapture(e.pointerId)
 
             this.seeking = true
             root.classList.toggle("seeking", true)
 
-            const playing = player.playing()
+            playing = player.playing()
 
             player.set_playing(false)
 
-            const seek = (e: PointerEvent, final = false) => {
-                e.preventDefault()
-
-                const rect = root.getBoundingClientRect()
-                const t =
-                    Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) *
-                    player.duration()
-
-                this.set_time(t / player.duration())
-                player.seek(t, final)
-            }
-
-            const pointerup = (e: PointerEvent) => {
-                e.preventDefault()
-
-                window.removeEventListener("pointermove", seek)
-                window.removeEventListener("pointerup", pointerup)
-
-                seek(e, true)
-
-                player.set_playing(playing)
-
-                this.seeking = false
-                root.classList.toggle("seeking", false)
-            }
-
-            window.addEventListener("pointermove", seek)
-            window.addEventListener("pointerup", pointerup)
-
             seek(e)
         })
+
+        root.addEventListener("pointerup", (e: PointerEvent) => {
+            if (!root.hasPointerCapture(e.pointerId)) return
+            root.releasePointerCapture(e.pointerId)
+
+            seek(e, true)
+
+            player.set_playing(playing)
+
+            this.seeking = false
+            root.classList.toggle("seeking", false)
+        })
+
+        root.addEventListener("pointermove", seek)
 
         let preview: HTMLImageElement | null = null
 
@@ -116,12 +112,12 @@ export default class Seekbar {
 
             if (!this.previews.length) return
 
-            const _preview = this.previews[Math.floor(t / this.previews_interval)]
+            const new_preview = this.previews[Math.floor(t / this.previews_interval)]
 
-            if (!_preview) return
-            if (_preview == preview) return
+            if (!new_preview) return
+            if (new_preview == preview) return
 
-            preview = _preview
+            preview = new_preview
 
             this.e_preview.width = preview.width
             this.e_preview.height = preview.height

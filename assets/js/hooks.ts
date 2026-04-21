@@ -372,66 +372,73 @@ class playlist extends ViewHook {
         const playlist_top = this.el.children[0]
         const playlist_bottom = this.el.children[1]
 
+        let off_y = 0
+        let row: HTMLElement | null = null
+
         this.el.addEventListener("pointerdown", e => {
             if (
                 (e.target! as HTMLElement).tagName == "INPUT" ||
                 (e.target! as HTMLElement).tagName == "BUTTON" ||
                 (e.target! as HTMLElement).tagName == "A"
-            )
+            ) {
                 return
-            const row = (e.target! as HTMLElement).closest("tr")
+            }
+
+            row = (e.target! as HTMLElement).closest("tr")
             if (!row) return
             e.preventDefault()
+            this.el.setPointerCapture(e.pointerId)
 
             row.classList.toggle("grabbing", true)
 
-            let off_y = e.clientY - row.getBoundingClientRect().y
+            off_y = e.clientY - row.getBoundingClientRect().y
+        })
 
-            const drag = (e: PointerEvent) => {
-                const page_y = e.clientY - off_y
-                row.style.transform = ""
+        this.el.addEventListener("pointermove", (e: PointerEvent) => {
+            if (!this.el.hasPointerCapture(e.pointerId)) return
+            if (!row) return
 
-                const row_table = row.closest("table")
+            const page_y = e.clientY - off_y
+            row.style.transform = ""
 
-                const prev =
-                    row.previousElementSibling ||
-                    (row_table != playlist_top && [...playlist_top.querySelectorAll("tr")].at(-1))
-                const next =
-                    row.nextElementSibling ||
-                    (row_table != playlist_bottom && playlist_bottom.querySelector("tr"))
+            const row_table = row.closest("table")
 
-                if (prev && prev != row) {
-                    if (page_y < prev.getBoundingClientRect().y) {
-                        prev.insertAdjacentElement("beforebegin", row)
-                    }
+            const prev =
+                row.previousElementSibling ||
+                (row_table != playlist_top && [...playlist_top.querySelectorAll("tr")].at(-1))
+            const next =
+                row.nextElementSibling ||
+                (row_table != playlist_bottom && playlist_bottom.querySelector("tr"))
+
+            if (prev && prev != row) {
+                if (page_y < prev.getBoundingClientRect().y) {
+                    prev.insertAdjacentElement("beforebegin", row)
                 }
-
-                if (next && next != row) {
-                    if (page_y > next.getBoundingClientRect().y) {
-                        next.insertAdjacentElement("afterend", row)
-                    }
-                }
-
-                row.style.transform = `translateY(${page_y - row.getBoundingClientRect().y}px)`
             }
 
-            const dragup = (e: PointerEvent) => {
-                row.style.transform = ""
-                row.classList.toggle("grabbing", false)
-                const elements = [...playlist_bottom.querySelectorAll("tr")].concat([
-                    ...playlist_top.querySelectorAll("tr"),
-                ])
-
-                const order = elements.map((v, i) => [i, v.getAttribute("video_id")])
-
-                this.pushEvent("playlist_order", order)
-
-                window.removeEventListener("pointermove", drag)
-                window.removeEventListener("pointerup", dragup)
+            if (next && next != row) {
+                if (page_y > next.getBoundingClientRect().y) {
+                    next.insertAdjacentElement("afterend", row)
+                }
             }
 
-            window.addEventListener("pointermove", drag)
-            window.addEventListener("pointerup", dragup)
+            row.style.transform = `translateY(${page_y - row.getBoundingClientRect().y}px)`
+        })
+
+        this.el.addEventListener("pointerup", (e: PointerEvent) => {
+            if (!this.el.hasPointerCapture(e.pointerId)) return
+            this.el.releasePointerCapture(e.pointerId)
+            if (!row) return
+
+            row.style.transform = ""
+            row.classList.toggle("grabbing", false)
+            const elements = [...playlist_bottom.querySelectorAll("tr")].concat([
+                ...playlist_top.querySelectorAll("tr"),
+            ])
+
+            const order = elements.map((v, i) => [i, v.getAttribute("video_id")])
+
+            this.pushEvent("playlist_order", order)
         })
     }
 }
