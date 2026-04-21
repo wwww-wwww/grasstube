@@ -209,13 +209,19 @@ function build_tree(m: any, root: HTMLElement, tree: any) {
 
 class media_directories extends ViewHook {
     mounted() {
+        const chk = document.getElementById("chk_show_playlist_form")! as HTMLInputElement
         this.el.querySelector(".top > .close")!.addEventListener("click", () => {
-            ; (document.getElementById("chk_show_playlist_form") as HTMLInputElement).checked = false
+            chk.checked = false
         })
         const directories = JSON.parse(this.el.getAttribute("directories")!)
         Promise.all(directories.map(async (url: string) => [url, await scan(new URL(url))])).then(
             folders => build_tree(this, this.el.querySelector(".list")!, { files: [], folders }),
         )
+        this.el.addEventListener("click", e => {
+            if (e.target == this.el) {
+                chk.checked = false
+            }
+        })
     }
 }
 
@@ -412,8 +418,9 @@ class playlist extends ViewHook {
             const dragup = (e: PointerEvent) => {
                 row.style.transform = ""
                 row.classList.toggle("grabbing", false)
-                const elements = [...playlist_bottom.querySelectorAll("tr")].concat(
-                    [...playlist_top.querySelectorAll("tr")])
+                const elements = [...playlist_bottom.querySelectorAll("tr")].concat([
+                    ...playlist_top.querySelectorAll("tr"),
+                ])
 
                 const order = elements.map((v, i) => [i, v.getAttribute("video_id")])
 

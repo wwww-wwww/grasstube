@@ -57,26 +57,6 @@ defmodule GrasstubeWeb.RoomLive do
         <div><a class="title" target="_blank"></a></div>
         <div class="info"></div>
       </div>
-
-      <div
-        :if={@controls}
-        id="playlist_form"
-        phx-update="ignore"
-        phx-hook="media_directories"
-        directories={(@room.media_directories || []) |> Jason.encode!()}
-      >
-        <div>
-          <div class="top">
-            <button class="close"></button>
-            <form class="playlist-form" phx-submit="playlist_add">
-              <input name="video_url" value="" placeholder="Video url" autocomplete="off" />
-              <input name="subtitles_url" value="" placeholder="Subtitles url" autocomplete="off" />
-              <input type="submit" value="Add" />
-            </form>
-          </div>
-          <div class="list"></div>
-        </div>
-      </div>
     </div>
 
     <div class="interactions" id="interactions" phx-update="ignore">
@@ -102,6 +82,26 @@ defmodule GrasstubeWeb.RoomLive do
           </form>
           <button class="btn-add-option">Add option</button>
           <input type="submit" value="Create" form="polls_form" />
+        </div>
+      </div>
+
+      <div
+        :if={@controls}
+        id="playlist_form"
+        phx-update="ignore"
+        phx-hook="media_directories"
+        directories={(@room.media_directories || []) |> Jason.encode!()}
+      >
+        <div>
+          <div class="top">
+            <button class="close"></button>
+            <form class="playlist-form" phx-submit="playlist_add">
+              <input name="video_url" value="" placeholder="Video url" autocomplete="off" />
+              <input name="subtitles_url" value="" placeholder="Subtitles url" autocomplete="off" />
+              <input type="submit" value="Add" />
+            </form>
+          </div>
+          <div class="list"></div>
         </div>
       </div>
     </div>

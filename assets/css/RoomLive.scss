@@ -7,6 +7,9 @@
     width: 100vw;
     padding: 0;
     background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
     > .main {
         position: relative;
@@ -141,7 +144,8 @@
         }
     }
 
-    .bottom {
+    > .bottom {
+        width: 100%;
         display: flex;
         flex-direction: row;
         align-items: stretch;
@@ -275,12 +279,6 @@ html:has(.RoomLive) {
     scrollbar-width: none;
 }
 
-*:has(* #chk_show_playlist_form:checked) {
-    #playlist_form {
-        display: flex;
-    }
-}
-
 @keyframes slide-up {
     from {
         opacity: 0;
@@ -317,18 +315,33 @@ html:has(.RoomLive) {
     }
 }
 
+*:has(* #chk_show_playlist_form:not(:checked)) {
+    #playlist_form {
+        display: none;
+
+        > div {
+            display: none;
+        }
+    }
+}
+
 #playlist_form {
     z-index: 2;
-    display: none;
-    position: absolute;
-    bottom: 0;
+    display: flex;
+    cursor: zoom-out;
+    position: fixed;
+    top: 0;
     left: 0;
-    padding: 8px;
-    max-height: 100%;
+    padding: 32px;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
-    animation: slide-up 0.2s;
+    align-items: center;
+    justify-content: center;
 
     > div {
+        cursor: default;
+        animation: slide-up 0.2s;
         padding: 8px;
         display: flex;
         flex-direction: column;
