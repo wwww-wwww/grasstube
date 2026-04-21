@@ -104,7 +104,7 @@ export default class RendererYoutube implements Renderer {
 
                 const t: number = this.#player.getVideoLoadedFraction()
                 this.on_buffers?.({ start: () => 0, end: () => t * this.duration(), length: 1 })
-                this.on_buffer_end?.(t * this.duration())
+                this.on_buffer_end?.(t * this.duration() + 1)
                 this.on_timeupdate?.(this.current_time())
                 buffered.textContent = `${Math.round(t * this.duration() - this.current_time()) || 0} seconds`
             }
