@@ -6,6 +6,8 @@ export default class fileinfo extends ViewHook {
         const e_info = this.el.querySelector(".info")!
 
         this.handleEvent("video_set", data => {
+            if (data.video_url == null) return
+
             console.log("fileinfo:video_set", data)
             const filename = decodeURIComponent(new URL(data.video_url).pathname.split("/").pop()!)
             const title = this.get_title(filename)
