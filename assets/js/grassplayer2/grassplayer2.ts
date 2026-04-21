@@ -378,6 +378,8 @@ export default class GrassPlayer {
         this.set_playing(false)
         this.on_buffer_end?.(0)
 
+        this.seekbar.reset()
+
         if (type == "youtube") {
             this.renderer_view.style.display = "none"
             this.renderer.set_video(null, null)
@@ -395,11 +397,11 @@ export default class GrassPlayer {
             this.renderer_view.style.display = ""
             this.renderer.set_video(video, subtitles)
             this.current_renderer = this.renderer
+
+            this.seekbar.load_previews(video)
         }
 
         this.set_volume(this.volume)
-
-        this.seekbar.reset()
     }
 
     playing() {

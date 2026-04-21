@@ -16,18 +16,18 @@ function seconds_to_hms(seconds: number, hide_hours = false) {
 export { seconds_to_hms }
 
 export default class Seekbar {
-    #root: HTMLElement
-    #e_bar: HTMLElement
-    #e_current: HTMLElement
-    #e_handle: HTMLElement
+    private root: HTMLElement
+    private e_bar: HTMLElement
+    private e_current: HTMLElement
+    private e_handle: HTMLElement
 
-    #e_handle_info: HTMLElement
-    #e_preview_time: HTMLElement
-    #e_preview: HTMLCanvasElement
+    private e_handle_info: HTMLElement
+    private e_preview_time: HTMLElement
+    private e_preview: HTMLCanvasElement
 
     seeking = false
 
-    #buffers: HTMLElement[] = []
+    private buffers: HTMLElement[] = []
     constructor(root: HTMLElement, player: GrassPlayer) {
         root.innerHTML = `
 <div class="seekbar-handle-info">
@@ -40,18 +40,18 @@ export default class Seekbar {
 <div class="seekbar-handle"></div>
 `
 
-        this.#root = root
-        this.#e_bar = root.querySelector(".seekbar-bar")!
-        this.#e_current = root.querySelector(".seekbar-bar-current")!
-        this.#e_handle = root.querySelector(".seekbar-handle")!
+        this.root = root
+        this.e_bar = root.querySelector(".seekbar-bar")!
+        this.e_current = root.querySelector(".seekbar-bar-current")!
+        this.e_handle = root.querySelector(".seekbar-handle")!
 
-        this.#e_handle_info = root.querySelector(".seekbar-handle-info")!
-        this.#e_preview_time = root.querySelector(".seekbar-preview-time")!
-        this.#e_preview = root.querySelector(".seekbar-preview")!
-        const preview_ctx = this.#e_preview.getContext("2d")
+        this.e_handle_info = root.querySelector(".seekbar-handle-info")!
+        this.e_preview_time = root.querySelector(".seekbar-preview-time")!
+        this.e_preview = root.querySelector(".seekbar-preview")!
+        const preview_ctx = this.e_preview.getContext("2d")!
 
         root.addEventListener("pointerdown", e => {
-            if (!this.#enabled) return
+            if (!this.enabled) return
             if (e.buttons != 1) return
 
             e.preventDefault()
@@ -97,75 +97,113 @@ export default class Seekbar {
             seek(e)
         })
 
+        let preview: HTMLImageElement | null = null
+
         root.addEventListener("pointermove", e => {
             if (player.duration() == 0) {
-                this.#e_handle_info.style.display = "none"
+                this.e_handle_info.style.display = "none"
                 return
             }
 
-            this.#e_handle_info.style.display = ""
+            this.e_handle_info.style.display = ""
 
             const rect = root.getBoundingClientRect()
             const t =
                 Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1) * player.duration()
             const u = t / player.duration()
-            this.#e_handle_info.style.left = `${u * 100}%`
-            this.#e_preview_time.textContent = seconds_to_hms(t, true)
+            this.e_handle_info.style.left = `${u * 100}%`
+            this.e_preview_time.textContent = seconds_to_hms(t, true)
 
-            /*
-            if (this.previews.length == 0) return
+            if (!this.previews.length) return
 
-            const preview_rect = seekbar.preview.getBoundingClientRect()
-            const preview_width = preview_rect.width / rect.width / 2
-            const preview_pct = Math.min(Math.max(pct, preview_width), 1 - preview_width)
-            seekbar.preview.style.left = `${preview_pct * 100}%`
+            const _preview = this.previews[Math.floor(t / this.previews_interval)]
 
-            const max_width = parseInt(window.getComputedStyle(seekbar.preview).maxWidth)
-            const max_height = parseInt(window.getComputedStyle(seekbar.preview).maxHeight)
+            if (!_preview) return
+            if (_preview == preview) return
 
-            const url = this.previews[Math.floor(t / this.previews_interval)]
-            if (url == undefined) return
+            preview = _preview
 
-            preview_ctx.drawImage(url, 0, 0, seekbar.preview.width, seekbar.preview.height)
-            */
+            this.e_preview.width = preview.width
+            this.e_preview.height = preview.height
+
+            preview_ctx.drawImage(preview, 0, 0, preview.width, preview.height)
         })
     }
 
     set_buffers(buffers: any, duration: number) {
-        while (this.#buffers.length < buffers.length) {
+        while (this.buffers.length < buffers.length) {
             const buffer = document.createElement("div")
             buffer.style.width = "0%"
-            this.#e_bar.appendChild(buffer)
-            this.#buffers.push(buffer)
+            this.e_bar.appendChild(buffer)
+            this.buffers.push(buffer)
         }
 
-        while (this.#buffers.length > buffers.length) {
-            const buffer = this.#buffers.pop()!
-            this.#e_bar.removeChild(buffer)
+        while (this.buffers.length > buffers.length) {
+            const buffer = this.buffers.pop()!
+            this.e_bar.removeChild(buffer)
         }
 
         for (let i = 0; i < buffers.length; i++) {
             const start = buffers.start(i) / duration
             let end = buffers.end(i) / duration
             if (end > 0.999) end = 1
-            this.#buffers[i].style.left = start * 100 + "%"
-            this.#buffers[i].style.width = (end - start) * 100 + "%"
+            this.buffers[i].style.left = start * 100 + "%"
+            this.buffers[i].style.width = (end - start) * 100 + "%"
         }
     }
 
     set_time(u: number) {
-        this.#e_current.style.width = u * 100 + "%"
-        this.#e_handle.style.left = u * 100 + "%"
+        this.e_current.style.width = u * 100 + "%"
+        this.e_handle.style.left = u * 100 + "%"
     }
 
     reset() {
+        this.e_preview.classList.toggle("visible", false)
         this.set_time(0)
         this.set_buffers([], 0)
     }
 
-    #enabled = true
+    private enabled = true
     set_enabled(b: boolean) {
-        this.#enabled = b
-        this.#root.classList.toggle("disabled", !b)
+        this.enabled = b
+        this.root.classList.toggle("disabled", !b)
+    }
+
+    private previews: HTMLImageElement[] = []
+    private previews_interval = 0
+    load_previews(video_url: string) {
+        const filename = video_url.slice(0, video_url.lastIndexOf(".")) + ".thumb"
+        fetch(filename, { method: "GET", mode: "cors" })
+            .then(resp => resp.arrayBuffer())
+            .then(buffer => {
+                const n_frames = new Uint32Array(buffer.slice(0, 4))[0]
+                const last_frame = new Float32Array(buffer.slice(4, 8))[0]
+
+                const mime_type = Array.from(new Uint8Array(buffer.slice(8, 40)))
+                    .map(x => String.fromCharCode(x))
+                    .join("")
+
+                const interval = last_frame / (n_frames - 1)
+                this.previews = []
+                this.previews_interval = interval
+
+                let head = 40
+                for (let i = 0; i < n_frames; i++) {
+                    const size = new Uint32Array(buffer.slice(head, head + 4))[0]
+                    head += 4
+
+                    const base64 = Array.from(new Uint8Array(buffer.slice(head, head + size)))
+                        .map(x => String.fromCharCode(x))
+                        .join("")
+
+                    const img = new Image()
+                    img.src = `data:${mime_type};base64,${btoa(base64)}`
+                    this.previews.push(img)
+
+                    head += size
+                }
+
+                this.e_preview.classList.toggle("visible", true)
+            })
     }
 }
