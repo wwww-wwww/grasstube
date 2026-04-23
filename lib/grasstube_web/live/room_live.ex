@@ -22,6 +22,9 @@ defmodule GrasstubeWeb.RoomLive do
 
   def render(assigns) do
     ~H"""
+    <head :if={@room.title == "jade room"}>
+      <link rel="icon" type="image/webp" href={~p"/includes/yuri!!!.webp"}>
+    </head>
     <div class="main">
       <div id="user_id" value={@current_scope.id}></div>
       <div
@@ -206,6 +209,7 @@ defmodule GrasstubeWeb.RoomLive do
 
     socket =
       socket
+      |> assign(page_title: room.title)
       |> assign(room_pid: room_pid)
       |> assign(room: room)
       |> assign(chat_pid: chat_pid)
