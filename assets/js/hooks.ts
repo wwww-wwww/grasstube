@@ -202,10 +202,18 @@ function build_tree(m: any, root: HTMLElement, tree: any) {
             <div class="body"></div>
         `
 
-        el.querySelector(".header")!.addEventListener("click", () => {
+        el.querySelector(".header")!.addEventListener("click", e => {
+            if ((e.target! as HTMLElement).tagName == "BUTTON") return
             el.classList.toggle("uncollapsed", !el.classList.contains("uncollapsed"))
         })
-        build_tree(m, el.querySelector(".body")!, f[1])
+
+        const body: HTMLElement = el.querySelector(".body")!
+        el.querySelector(".refresh")!.addEventListener("click", () => {
+            body.innerHTML = ""
+            scan(new URL(f[0])).then(r => build_tree(m, body, r))
+        })
+
+        build_tree(m, body, f[1])
     })
 
     tree.files
@@ -399,6 +407,8 @@ class playlist extends ViewHook {
         let row: HTMLElement | null = null
 
         this.el.addEventListener("pointerdown", e => {
+            if (e.button != 0) return
+
             if (
                 (e.target! as HTMLElement).tagName == "INPUT" ||
                 (e.target! as HTMLElement).tagName == "BUTTON" ||

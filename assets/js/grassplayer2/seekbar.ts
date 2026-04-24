@@ -65,7 +65,7 @@ export default class Seekbar {
         let playing = false
         root.addEventListener("pointerdown", e => {
             if (!this.enabled) return
-            if (e.buttons != 1) return
+            if (e.button != 0) return
             e.preventDefault()
             root.setPointerCapture(e.pointerId)
 
