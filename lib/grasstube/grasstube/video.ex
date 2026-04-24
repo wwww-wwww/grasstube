@@ -13,6 +13,8 @@ defmodule Grasstube.Video do
 
     belongs_to :room, Grasstube.Room
 
+    has_many :messages, Grasstube.Message
+
     timestamps()
   end
 end

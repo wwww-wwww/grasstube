@@ -30,7 +30,7 @@ defmodule Grasstube.VideoAgent do
   end
 
   def set_video(pid, id) do
-    video = if id, do: Repo.get(Video, id), else: nil
+    video = if id, do: Repo.get(Video, id) |> Repo.preload(:messages), else: nil
 
     room_id =
       Agent.get_and_update(pid, fn state ->
@@ -96,11 +96,7 @@ defmodule Grasstube.VideoAgent do
 
     scheduler = ProcessRegistry.lookup(room_id, VideoScheduler)
 
-    if playing do
-      VideoScheduler.start_sync(scheduler)
-    else
-      VideoScheduler.stop_sync(scheduler)
-    end
+    VideoScheduler.start_sync(scheduler)
 
     Endpoint.broadcast("video:#{room_id}", "playing", playing)
 

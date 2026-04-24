@@ -13,6 +13,7 @@ defmodule GrasstubeWeb.RoomLive do
     Room,
     Poll,
     Video,
+    Message,
     ChatAgent,
     PlaylistAgent,
     RoomAgent,
@@ -23,7 +24,7 @@ defmodule GrasstubeWeb.RoomLive do
   def render(assigns) do
     ~H"""
     <head :if={@room.title == "jade room"}>
-      <link rel="icon" type="image/webp" href={~p"/includes/yuri!!!.webp"}>
+      <link rel="icon" type="image/webp" href={~p"/includes/yuri!!!.webp"} />
     </head>
     <div class="main">
       <div id="user_id" value={@current_scope.id}></div>
@@ -182,7 +183,9 @@ defmodule GrasstubeWeb.RoomLive do
       Endpoint.subscribe("polls:#{room.id}")
 
       if video.current_video do
-        send(self(), %{topic: "video:", event: "set", payload: video.current_video})
+        current_video = video.current_video |> Repo.preload(:messages)
+
+        send(self(), %{topic: "video:", event: "set", payload: current_video})
 
         send(self(), %{
           topic: "video:",
@@ -269,21 +272,32 @@ defmodule GrasstubeWeb.RoomLive do
   end
 
   def handle_info(%{topic: "video:" <> _, event: "set", payload: video}, socket) do
-    video_info =
+    {video_info, messages} =
       with %Video{} <- video do
-        %{
-          type: video.type,
-          video_url: video.video_url,
-          subtitles_url: video.subtitles_url
-        }
+        messages =
+          Enum.map(video.messages, fn message ->
+            %{
+              sender: message.sender,
+              html: message.text,
+              time: message.time,
+              opts: %{notify: true, effect: "bullet"}
+            }
+          end)
+
+        {%{
+           type: video.type,
+           video_url: video.video_url,
+           subtitles_url: video.subtitles_url
+         }, messages}
       else
-        _ -> %{type: "default", video_url: nil, subtitles_url: nil}
+        _ -> {%{type: "default", video_url: nil, subtitles_url: nil}, []}
       end
 
     socket =
       socket
       |> assign(current_video: video)
       |> push_event("video_set", video_info)
+      |> push_event("video_messages", %{messages: messages})
 
     {:noreply, socket}
   end
@@ -314,6 +328,10 @@ defmodule GrasstubeWeb.RoomLive do
 
   def handle_info(%{topic: "video:" <> _, event: "ready_fail", payload: data}, socket) do
     {:noreply, push_event(socket, "video_ready_fail", data)}
+  end
+
+  def handle_info(%{topic: "video:" <> _, event: "messages", payload: data}, socket) do
+    {:noreply, push_event(socket, "video_messages", data)}
   end
 
   def handle_info(%{topic: "presence:" <> _, payload: presence}, socket) do

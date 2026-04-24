@@ -47,9 +47,11 @@ defmodule Grasstube.VideoScheduler do
 
         start_next(self())
       end
-    end
 
-    {:noreply, %{state | sync_task: Process.send_after(self(), :sync, 2000)}}
+      {:noreply, %{state | sync_task: Process.send_after(self(), :sync, 2000)}}
+    else
+      {:noreply, state}
+    end
   end
 
   def handle_info(:next, state) do

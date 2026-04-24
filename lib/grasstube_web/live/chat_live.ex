@@ -4,6 +4,8 @@ defmodule GrasstubeWeb.ChatLive do
   alias GrasstubeWeb.Endpoint
   alias Grasstube.{ProcessRegistry, ChatAgent, Repo, Room}
 
+  @chat_period 100
+
   def render(assigns) do
     ~H"""
     <div id={"chat-#{@room_id}"} phx-hook="chat" phx-update="ignore" keybinds={@keybinds}>
@@ -58,6 +60,7 @@ defmodule GrasstubeWeb.ChatLive do
       |> assign(history: chat.history)
       |> assign(emotes: chat.emotes)
       |> assign(keybinds: keybinds)
+      |> assign(last_message: 0)
 
     if connected?(socket) do
       Endpoint.subscribe("chat:#{room_id}")
@@ -68,9 +71,20 @@ defmodule GrasstubeWeb.ChatLive do
   end
 
   def handle_event("send_message", %{"message" => message}, socket) do
-    ChatAgent.chat(socket.assigns.pid, socket.assigns.current_scope, message, fn message ->
-      push_event(socket, "message", message)
-    end)
+    current_time =
+      DateTime.utc_now()
+      |> DateTime.to_unix(:millisecond)
+
+    socket =
+      if current_time - socket.assigns.last_message > @chat_period do
+        ChatAgent.chat(socket.assigns.pid, socket.assigns.current_scope, message, fn message ->
+          push_event(socket, "message", message)
+        end)
+
+        socket |> assign(last_message: current_time)
+      else
+        socket
+      end
 
     {:noreply, socket}
   end
@@ -82,6 +96,11 @@ defmodule GrasstubeWeb.ChatLive do
 
   def handle_info(%{topic: "chat_user:" <> _, event: "message", payload: message}, socket) do
     socket = push_event(socket, "message", message)
+    {:noreply, socket}
+  end
+
+  def handle_info(%{topic: "chat:" <> _, event: "video_messages", payload: message}, socket) do
+    socket = push_event(socket, "video_messages", message)
     {:noreply, socket}
   end
 end

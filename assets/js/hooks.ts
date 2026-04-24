@@ -3,7 +3,10 @@ import GrassPlayer from "./grassplayer2/grassplayer2"
 import ReadyCheck from "./ready_check"
 import fileinfo from "./fileinfo"
 
-const state: { player: GrassPlayer | null } = { player: null }
+const state = new (class state {
+    player: GrassPlayer | null = null
+    chat: ((data: any) => void) | null = null
+})()
 
 function pad(n: number, width: number) {
     return n.toString().padStart(width, "0")
@@ -19,16 +22,16 @@ function seconds_to_hms(seconds: number, hide_hours = false) {
 }
 
 class video extends ViewHook {
-    #ping_interval: any = null
-    #last_ping = 0
-    #latency_rtt = 0
+    private ping_interval: any = null
+    private messages_interval: any = null
+    private last_ping = 0
+    private latency_rtt = 0
 
     ping() {
         const ping_time = performance.now()
         this.pushEvent("ping", {}, () => {
-            this.#last_ping = performance.now() - ping_time
-            this.#latency_rtt =
-                this.#last_ping * 0.25 + (this.#latency_rtt || this.#last_ping) * 0.75
+            this.last_ping = performance.now() - ping_time
+            this.latency_rtt = this.last_ping * 0.25 + (this.latency_rtt || this.last_ping) * 0.75
         })
     }
 
@@ -55,7 +58,7 @@ class video extends ViewHook {
 
         this.handleEvent("video_time", data => {
             console.info("video_time", data)
-            const t = data.time + Math.min(this.#latency_rtt / 1000, 1)
+            const t = data.time + Math.min(this.latency_rtt / 1000, 1)
             player.create_message(seconds_to_hms(data.time, true), 1000)
             player.auto_seek(t)
             player.set_catchup(t, performance.now())
@@ -75,7 +78,7 @@ class video extends ViewHook {
                 return
             }
 
-            const t = data.time + Math.min(this.#latency_rtt / 1000, 1)
+            const t = data.time + Math.min(this.latency_rtt / 1000, 1)
 
             if (t >= player.duration()) return
 
@@ -105,6 +108,22 @@ class video extends ViewHook {
             console.info("video_ready_fail", data)
         })
 
+        let messages: any[] = []
+
+        this.handleEvent("video_messages", data => {
+            console.info("video_messages", data)
+            messages = data.messages
+        })
+
+        this.messages_interval = setInterval(() => {
+            while (messages[0] && player.current_time() - messages[0].time > 0.2) {
+                messages.shift()
+            }
+            while (messages[0] && player.current_time() >= messages[0].time) {
+                state.chat?.(messages.shift())
+            }
+        }, 100)
+
         player.on_next = () => {
             this.pushEvent("video_next", {})
         }
@@ -117,7 +136,7 @@ class video extends ViewHook {
         }
 
         player.on_toggle_playing = playing => {
-            this.pushEvent("video_playing", { playing: playing, offset: -this.#latency_rtt / 1000 })
+            this.pushEvent("video_playing", { playing: playing, offset: -this.latency_rtt / 1000 })
         }
 
         player.on_seek = t => {
@@ -125,11 +144,12 @@ class video extends ViewHook {
         }
 
         this.ping()
-        this.#ping_interval = setInterval(() => this.ping(), 2000)
+        this.ping_interval = setInterval(() => this.ping(), 2000)
     }
 
     destroyed() {
-        clearInterval(this.#ping_interval)
+        clearInterval(this.ping_interval)
+        clearInterval(this.messages_interval)
         state.player!.destroy()
     }
 }
@@ -300,10 +320,9 @@ class chat extends ViewHook {
             title_notifying = false
         })
 
-        this.handleEvent("message", data => {
+        const on_chat = (data: any) => {
             const el = document.createElement("div")
             el.classList.toggle("message", true)
-            // el.classList.toggle("visible", true)
             messages.prepend(el)
             el.innerHTML = `<span class="time">[${data.time}]</span><span><span>${data.sender}</span>:</span>${data.html}`
             setTimeout(() => {
@@ -338,7 +357,11 @@ class chat extends ViewHook {
             if (opts.effect == "notify") {
                 state.player?.create_message(data.html, 10000)
             }
-        })
+        }
+
+        this.handleEvent("message", on_chat)
+
+        state.chat = on_chat
 
         document.addEventListener("keydown", e => {
             if ((e.target as HTMLElement).tagName == "INPUT") return

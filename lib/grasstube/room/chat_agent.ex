@@ -151,14 +151,14 @@ defmodule Grasstube.ChatAgent do
         end
 
       with %{current_video: %Video{id: video_id}} = state <-
-             ProcessRegistry.get(state.room_id, VideoAgent) do
+             ProcessRegistry.get(state.room_id, VideoAgent),
+           time <- VideoAgent.get_time(state),
+           true <- time > 0 do
         user_id =
           case scope do
             %{user: %{id: id}} -> id
             _ -> nil
           end
-
-        time = VideoAgent.get_time(state)
 
         %Message{
           text: message,
