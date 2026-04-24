@@ -39,16 +39,17 @@ defmodule Grasstube.VideoScheduler do
 
       VideoAgent.check_autopause(pid)
 
-      if time >= video.current_video.duration do
+      if video.playing and time >= video.current_video.duration do
         VideoAgent.set_playing(pid, false)
 
         "Playing next video in #{@time_to_next + @time_to_start} seconds"
         |> ChatAgent.broadcast_to("system", state.room_id, %{effect: "notify"})
 
         start_next(self())
+        {:noreply, state}
+      else
+        {:noreply, %{state | sync_task: Process.send_after(self(), :sync, 2000)}}
       end
-
-      {:noreply, %{state | sync_task: Process.send_after(self(), :sync, 2000)}}
     else
       {:noreply, state}
     end
