@@ -150,14 +150,23 @@ defmodule Grasstube.ChatAgent do
           %{guest: id} -> "guest #{id}"
         end
 
-      with %Video{id: video_id} <- ProcessRegistry.get(state.room_id, VideoAgent).current_video do
+      with %{current_video: %Video{id: video_id}} = state <-
+             ProcessRegistry.get(state.room_id, VideoAgent) do
         user_id =
           case scope do
             %{user: %{id: id}} -> id
             _ -> nil
           end
 
-        %Message{text: message, sender: username, user_id: user_id, video_id: video_id}
+        time = VideoAgent.get_time(state)
+
+        %Message{
+          text: message,
+          sender: username,
+          time: time,
+          user_id: user_id,
+          video_id: video_id
+        }
         |> Repo.insert()
       end
 

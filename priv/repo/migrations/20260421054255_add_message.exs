@@ -5,6 +5,7 @@ defmodule Grasstube.Repo.Migrations.AddMessage do
     create table(:message) do
       add :text, :string
       add :sender, :string
+      add :time, :float
 
       add :user_id, references(:user, on_delete: :nilify_all)
       add :video_id, references(:video, on_delete: :delete_all)
