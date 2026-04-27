@@ -33,6 +33,7 @@ defmodule GrasstubeWeb.RoomCreateLive do
     |> case do
       {:ok, room} ->
         Grasstube.ProcessRegistry.start_room(room)
+        GrasstubeWeb.IndexLive.update()
         {:noreply, socket |> push_navigate(to: ~p"/room/#{room.title}")}
 
       {:error, changeset} ->

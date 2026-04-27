@@ -22,6 +22,7 @@ defmodule Grasstube.Room do
     struct
     |> cast(attrs, [:title, :password])
     |> validate_required([:title])
+    |> validate_format(:title, ~r/^[a-zA-Z0-9_\-]+$/, message: "a-zA-Z0-9_\-")
     |> unique_constraint(:title)
   end
 end

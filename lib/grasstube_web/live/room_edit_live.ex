@@ -44,6 +44,10 @@ defmodule GrasstubeWeb.RoomEditLive do
       </div>
       <input type="submit" value="Add" />
     </form>
+    <h2>Delete</h2>
+    <form phx-submit="delete">
+      <input type="submit" value="Delete" />
+    </form>
     """
   end
 
@@ -53,11 +57,7 @@ defmodule GrasstubeWeb.RoomEditLive do
     if socket.assigns.current_scope.user.id != room.user_id do
       {:ok, socket |> put_flash(:error, "You can't edit this room!") |> push_navigate(to: ~p"/")}
     else
-      socket =
-        socket
-        |> assign(room: room)
-
-      {:ok, socket}
+      {:ok, assign(socket, room: room)}
     end
   end
 
@@ -87,17 +87,15 @@ defmodule GrasstubeWeb.RoomEditLive do
         |> Repo.update()
       end)
 
-    room = room |> Repo.preload(:mods, force: true)
+    room = Repo.preload(room, :mods, force: true)
 
-    ProcessRegistry.lookup(socket.assigns.room.id, VideoAgent)
+    ProcessRegistry.lookup(room.id, VideoAgent)
     |> VideoAgent.set_autopause(autopause)
 
-    socket = socket |> assign(room: room)
-
-    ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
+    ProcessRegistry.lookup(room.id, RoomAgent)
     |> RoomAgent.reload()
 
-    {:noreply, socket}
+    {:noreply, assign(socket, room: room)}
   end
 
   def handle_event("mod_add", %{"username" => username}, socket) do
@@ -107,7 +105,7 @@ defmodule GrasstubeWeb.RoomEditLive do
 
       room = socket.assigns.room |> Repo.preload(:mods, force: true)
 
-      ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
+      ProcessRegistry.lookup(room.id, RoomAgent)
       |> RoomAgent.reload()
 
       {:noreply, assign(socket, room: room)}
@@ -118,12 +116,22 @@ defmodule GrasstubeWeb.RoomEditLive do
 
   def handle_event("mod_remove", %{"id" => id}, socket) do
     Repo.get_by(RoomMod, user_id: id, room_id: socket.assigns.room.id) |> Repo.delete()
-    room = socket.assigns.room |> Repo.preload(:mods, force: true)
-    socket = assign(socket, room: room)
+    room = Repo.preload(socket.assigns.room, :mods, force: true)
 
-    ProcessRegistry.lookup(socket.assigns.room.id, RoomAgent)
+    ProcessRegistry.lookup(room.id, RoomAgent)
     |> RoomAgent.reload()
 
-    {:noreply, socket}
+    {:noreply, assign(socket, room: room)}
+  end
+
+  def handle_event("delete", _params, socket) do
+    Repo.delete(socket.assigns.room)
+
+    ProcessRegistry.lookup(socket.assigns.room.id, Grasstube.RoomSupervisor)
+    |> DynamicSupervisor.stop()
+
+    GrasstubeWeb.IndexLive.update()
+
+    {:noreply, push_navigate(socket, to: ~p"/")}
   end
 end
