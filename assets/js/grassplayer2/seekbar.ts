@@ -48,7 +48,7 @@ export default class Seekbar {
         this.e_handle_info = root.querySelector(".seekbar-handle-info")!
         this.e_preview_time = root.querySelector(".seekbar-preview-time")!
         this.e_preview = root.querySelector(".seekbar-preview")!
-        const preview_ctx = this.e_preview.getContext("2d")!
+        this.preview_ctx = this.e_preview.getContext("2d")!
 
         const seek = (e: PointerEvent, final = false) => {
             if (!this.seeking) return
@@ -117,12 +117,13 @@ export default class Seekbar {
             if (!new_preview) return
             if (new_preview == preview) return
 
+            this.e_preview.style.display = ""
             preview = new_preview
 
             this.e_preview.width = preview.width
             this.e_preview.height = preview.height
 
-            preview_ctx.drawImage(preview, 0, 0, preview.width, preview.height)
+            this.preview_ctx.drawImage(preview, 0, 0, preview.width, preview.height)
         })
     }
 
@@ -157,6 +158,8 @@ export default class Seekbar {
         this.e_preview.classList.toggle("visible", false)
         this.set_time(0)
         this.set_buffers([], 0)
+        this.previews = []
+        this.e_preview.style.display = "none"
     }
 
     private enabled = true
@@ -165,12 +168,18 @@ export default class Seekbar {
         this.root.classList.toggle("disabled", !b)
     }
 
+    private preview_ctx!: CanvasRenderingContext2D
     private previews: HTMLImageElement[] = []
     private previews_interval = 0
     load_previews(video_url: string) {
         const filename = video_url.slice(0, video_url.lastIndexOf(".")) + ".thumb"
         fetch(filename, { method: "GET", mode: "cors" })
-            .then(resp => resp.arrayBuffer())
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error("not ok")
+                }
+                return r.arrayBuffer()
+            })
             .then(buffer => {
                 const n_frames = new Uint32Array(buffer.slice(0, 4))[0]
                 const last_frame = new Float32Array(buffer.slice(4, 8))[0]
@@ -201,5 +210,6 @@ export default class Seekbar {
 
                 this.e_preview.classList.toggle("visible", true)
             })
+            .catch(() => console.log("seekbar: No thumbnails"))
     }
 }

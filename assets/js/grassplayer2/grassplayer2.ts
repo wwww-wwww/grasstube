@@ -398,7 +398,9 @@ export default class GrassPlayer {
             this.renderer.set_video(video, subtitles)
             this.current_renderer = this.renderer
 
-            this.seekbar.load_previews(video)
+            if (video) {
+                this.seekbar.load_previews(video)
+            }
         }
 
         this.set_volume(this.volume)

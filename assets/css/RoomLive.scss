@@ -99,8 +99,7 @@
 
             > :last-child {
                 display: flex;
-                flex-direction: column;
-                // gap: 0.5em;
+                flex-direction: column-reverse;
                 overflow-y: auto;
 
                 img {

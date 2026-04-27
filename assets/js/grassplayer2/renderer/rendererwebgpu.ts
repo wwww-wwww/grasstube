@@ -195,7 +195,7 @@ export default class RendererWebGPU implements Renderer {
         return 0
     }
 
-    #clear: any
+    #clear?: () => void
     #sampler: any
     #effects: Effect[] = []
     #textures: any = {}
@@ -226,7 +226,7 @@ export default class RendererWebGPU implements Renderer {
         })
 
         if (window.localStorage.getItem("webgpu-features-tested") == null) {
-            (async () => {
+            ;(async () => {
                 const resp = await this.#test_features(device)
                 if (resp == "success") {
                     window.localStorage.setItem("webgpu-features-tested", "1")
@@ -440,7 +440,7 @@ export default class RendererWebGPU implements Renderer {
 
             this.#effects.forEach(e => {
                 if (!e.enabled) return
-                    ;[last_tex, last_tex_res] = timer.run(e, video_time, last_tex, last_tex_res)
+                ;[last_tex, last_tex_res] = timer.run(e, video_time, last_tex, last_tex_res)
             })
 
             timer.run(this.#sampler, video_time, last_tex, last_tex_res, texture_canvas, [
@@ -465,7 +465,7 @@ export default class RendererWebGPU implements Renderer {
                         timing.textContent = txt
                         gputime.textContent = (sum / 1000000).toFixed(4)
                     })
-                    .catch(() => { })
+                    .catch(() => {})
             }
 
             device.queue.onSubmittedWorkDone().then(() => {
@@ -486,7 +486,7 @@ export default class RendererWebGPU implements Renderer {
     async #test_features(device: GPUDevice) {
         console.log("Testing rvfc")
 
-        const timings: number[] = await new Promise(async (resolve) => {
+        const timings: number[] = await new Promise(async resolve => {
             const video = document.createElement("video")
             video.crossOrigin = "anonymous"
 
@@ -532,7 +532,7 @@ export default class RendererWebGPU implements Renderer {
 
         console.log("Testing webgpu timing")
 
-        const lowest: number = await new Promise(async (resolve) => {
+        const lowest: number = await new Promise(async resolve => {
             let lowest = Number.MAX_VALUE
 
             // warmup
@@ -614,17 +614,9 @@ export default class RendererWebGPU implements Renderer {
     }
 
     set_video(video: string | null, subtitles: string | null) {
+        this.#e_video.src = video || ""
         this.set_playing(false)
-
-        if (video != null && video.length > 0) {
-            this.#e_video.src = video
-            this.reload()
-        } else {
-            this.#e_video.src = ""
-            if (this.#clear != null) {
-                this.#clear()
-            }
-        }
+        this.#clear?.()
 
         this.set_subtitles(subtitles)
     }

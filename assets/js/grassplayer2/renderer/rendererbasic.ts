@@ -116,9 +116,8 @@ export default class RendererBasic implements Renderer {
     }
 
     set_video(video: string | null, subtitles: string | null) {
-        this.set_playing(false)
-
         this.#e_video.src = video || ""
+        this.set_playing(false)
 
         this.set_subtitles(subtitles)
     }
