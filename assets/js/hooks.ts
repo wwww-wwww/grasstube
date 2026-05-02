@@ -209,8 +209,10 @@ function build_tree(m: any, root: HTMLElement, tree: any) {
 
         const body: HTMLElement = el.querySelector(".body")!
         el.querySelector(".refresh")!.addEventListener("click", () => {
-            body.innerHTML = ""
-            scan(new URL(f[0])).then(r => build_tree(m, body, r))
+            scan(new URL(f[0])).then(r => {
+                body.innerHTML = ""
+                build_tree(m, body, r)
+            })
         })
 
         build_tree(m, body, f[1])
