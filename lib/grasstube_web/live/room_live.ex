@@ -372,6 +372,7 @@ defmodule GrasstubeWeb.RoomLive do
 
   def handle_event("playlist_set", %{"id" => id}, socket) do
     if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      VideoScheduler.stop_play(socket.assigns.scheduler_pid)
       VideoAgent.set_video(socket.assigns.video_pid, id)
     end
 
@@ -388,6 +389,7 @@ defmodule GrasstubeWeb.RoomLive do
 
   def handle_event("video_next", _params, socket) do
     if RoomAgent.controls?(socket.assigns.room_pid, socket.assigns.current_scope) do
+      VideoScheduler.stop_play(socket.assigns.scheduler_pid)
       VideoAgent.next_video(socket.assigns.video_pid)
     end
 
