@@ -150,6 +150,11 @@ export default class GrassPlayer {
             }
         }
 
+        if (this.get_storage("webgpu-disable-temporary") == "1") {
+            this.set_storage("webgpu-disable-temporary", 0)
+            this.set_storage("renderer", 0)
+        }
+
         // Check autoplay
         {
             const autoplay_blocker: HTMLElement = el.querySelector(".autoplay-block")!

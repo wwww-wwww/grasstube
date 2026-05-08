@@ -18,6 +18,8 @@ import SamplerSphere from "../samplers/sphere"
 import GrassPlayer from "../grassplayer2"
 import Effect from "../effects/_effect"
 
+import rvfc_firefox from "./rvfc_firefox"
+
 function create_element(
     tagname: string,
     root: HTMLElement | null = null,
@@ -52,6 +54,7 @@ export default class RendererWebGPU implements Renderer {
     #e_canvas: HTMLCanvasElement
     #e_subtitles: HTMLElement
     #e_videoinfo_catchup: HTMLElement
+    #e_videoinfo_method: HTMLSelectElement
 
     #loaded
     constructor(player: GrassPlayer, root: HTMLElement, root_settings: HTMLElement) {
@@ -85,10 +88,9 @@ export default class RendererWebGPU implements Renderer {
         <div><span>Catchup</span><span class="videoinfo-catchup"></span></div>
         <div>
             <span>Method</span>
-            <select class="videoinfo-method" disabled>
-                <option>Hybrid</option>
+            <select class="videoinfo-method">
                 <option>requestVideoFrameCallback</option>
-                <option>requestAnimationFrame</option>
+                <option>rVFC firefox polyfill</option>
             </select>
         </div>
     </div>
@@ -111,12 +113,23 @@ export default class RendererWebGPU implements Renderer {
         this.#e_canvas = root.querySelector("canvas.video")!
         this.#e_subtitles = root.querySelector("div.subtitles")!
         this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")!
+        this.#e_videoinfo_method = root_settings.querySelector(".videoinfo-method")!
 
         {
             const resolution = root_settings.querySelector(".videoinfo-resolution")!
             this.#e_video.addEventListener("loadedmetadata", () => {
                 this.on_timeupdate?.(this.current_time())
                 resolution.textContent = `${this.#e_video.videoWidth}x${this.#e_video.videoHeight}`
+            })
+        }
+
+        {
+            this.#e_videoinfo_method.addEventListener("change", () => {
+                this.player.set_storage(
+                    "webgpu-testing-rvfc",
+                    this.#e_videoinfo_method.selectedIndex,
+                )
+                window.navigation.reload()
             })
         }
 
@@ -208,7 +221,10 @@ export default class RendererWebGPU implements Renderer {
         })
 
         if (!device) {
-            console.log("need a browser that supports WebGPU")
+            alert("Failed to get WebGPU device")
+            this.player.set_storage("webgpu-disable-temporary", 1)
+            this.player.set_storage("renderer", 1)
+            window.location.reload()
             return
         }
 
@@ -225,24 +241,33 @@ export default class RendererWebGPU implements Renderer {
             usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
         })
 
-        if (window.localStorage.getItem("webgpu-features-tested") == null) {
-            ;(async () => {
-                const resp = await this.#test_features(device)
-                if (resp == "success") {
-                    window.localStorage.setItem("webgpu-features-tested", "1")
-                    return
-                }
-                if (!confirm(`${resp} Fall back to basic renderer?`)) {
-                    if (confirm("Always ignore?")) {
-                        window.localStorage.setItem("webgpu-features-tested", "1")
-                        return
-                    }
-                    return
-                }
+        // if (this.player.get_storage("webgpu-features-tested") == null) {
+        //     const resp = await this.#test_timing(device)
+        //     if (resp == "success") {
+        //         this.player.set_storage("webgpu-features-tested", "1")
+        //         return
+        //     }
+        //     if (!confirm(`${resp} Fall back to basic renderer?`)) {
+        //         if (confirm("Always ignore?")) {
+        //             this.player.set_storage("webgpu-features-tested", "1")
+        //             return
+        //         }
+        //         return
+        //     }
 
-                this.player.set_storage("renderer", 1)
-                window.location.reload()
-            })()
+        //     this.player.set_storage("renderer", 1)
+        //     window.location.reload()
+        // }
+
+        if (this.player.get_storage("webgpu-testing-rvfc") == null) {
+            const res = await this.#test_rvfc()
+            if (res == "success") {
+                this.player.set_storage("webgpu-testing-rvfc", 0)
+            } else {
+                if (confirm(`${res} Use firefox polyfill?`)) {
+                    this.player.set_storage("webgpu-testing-rvfc", 1)
+                }
+            }
         }
 
         this.#clear = () => {
@@ -402,16 +427,25 @@ export default class RendererWebGPU implements Renderer {
         let frame_n = 0
         let last_t = 0
 
-        let tz = () => {
-            this.#have_frame = true
+        if (this.player.get_storage("webgpu-testing-rvfc") == "1") {
+            this.#e_videoinfo_method.selectedIndex = 1
+            rvfc_firefox(this.#e_video, () => {
+                this.#have_frame = true
+            })
+        } else {
+            this.#e_videoinfo_method.selectedIndex = 0
+            const tz = () => {
+                this.#have_frame = true
+                this.#e_video.requestVideoFrameCallback(tz)
+            }
             this.#e_video.requestVideoFrameCallback(tz)
         }
-        this.#e_video.requestVideoFrameCallback(tz)
 
         let render = (t: number) => {
             requestAnimationFrame(render)
             if (this.#e_video.videoWidth == 0) return
 
+            // We are using requestAnimationFrame in a busy loop to keep the gpu from going to sleep
             if (!this.#have_frame) {
                 const encoder = device.createCommandEncoder()
                 device.queue.submit([encoder.finish()])
@@ -483,7 +517,7 @@ export default class RendererWebGPU implements Renderer {
         requestAnimationFrame(render)
     }
 
-    async #test_features(device: GPUDevice) {
+    async #test_rvfc() {
         console.log("Testing rvfc")
 
         const timings: number[] = await new Promise(async resolve => {
@@ -530,6 +564,10 @@ export default class RendererWebGPU implements Renderer {
             return "Too many dropped frames."
         }
 
+        return "success"
+    }
+
+    async #test_timing(device: GPUDevice) {
         console.log("Testing webgpu timing")
 
         const lowest: number = await new Promise(async resolve => {
