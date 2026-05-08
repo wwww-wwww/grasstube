@@ -223,15 +223,17 @@ function build_tree(m: any, root: HTMLElement, tree: any) {
             video_exts.some(e => x.pathname.split("/").pop()!.toLowerCase().endsWith(e)),
         )
         .forEach((f: any) => {
+            let subtitles_url: string | null = f.href.split(".").slice(0, -1).join(".") + ".ass"
+            if (tree.files.filter((x: URL) => x.href == subtitles_url).length == 0) {
+                subtitles_url = null
+            }
+
             const file = document.createElement("div")
             file.className = "file"
+            file.classList.toggle("have_subtitle", !!subtitles_url)
             root.appendChild(file)
             file.innerHTML = `<button class="add"></button><span>${decodeURIComponent(f.pathname.split("/").pop())}</span>`
             file.querySelector(".add")!.addEventListener("click", () => {
-                let subtitles_url: string | null = f.href.split(".").slice(0, -1).join(".") + ".ass"
-                if (tree.files.filter((x: URL) => x.href == subtitles_url).length == 0) {
-                    subtitles_url = null
-                }
                 m.pushEvent("playlist_add", { video_url: f.href, subtitles_url: subtitles_url })
             })
         })

@@ -386,6 +386,12 @@ html:has(.RoomLive) {
         }
     }
 
+    .have_subtitle {
+        &::after {
+            content: "+ subtitles";
+        }
+    }
+
     .list {
         overflow: scroll;
         word-break: break-all;
