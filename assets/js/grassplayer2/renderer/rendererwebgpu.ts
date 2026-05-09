@@ -47,7 +47,7 @@ export default class RendererWebGPU implements Renderer {
 
     device: GPUDevice | null = null
 
-    #resizer: Resizer | null = null
+    resizer: Resizer | null = null
     #have_frame: boolean = false
 
     #e_video: HTMLVideoElement
@@ -306,7 +306,7 @@ export default class RendererWebGPU implements Renderer {
                 console.log(select.selectedIndex)
             })
 
-            this.#resizer = options[0]
+            this.resizer = options[0]
 
             const observer = new ResizeObserver(() => this.resize())
             observer.observe(root)
@@ -315,7 +315,7 @@ export default class RendererWebGPU implements Renderer {
             const el = document.createElement("div")
             el.className = "options"
             div.appendChild(el)
-            this.#resizer.create_settings(el)
+            this.resizer.create_settings(el)
         }
 
         // Create effects
@@ -636,7 +636,7 @@ export default class RendererWebGPU implements Renderer {
     }
 
     resize() {
-        this.#resizer!.resize()
+        this.resizer!.resize()
         this.#have_frame = true
     }
 

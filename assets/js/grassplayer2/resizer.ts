@@ -4,7 +4,15 @@ class Resizer {
     video
     canvas
 
-    constructor(device: GPUDevice, root: HTMLElement, video: HTMLVideoElement, canvas: HTMLCanvasElement) {
+    width = 0
+    height = 0
+
+    constructor(
+        device: GPUDevice,
+        root: HTMLElement,
+        video: HTMLVideoElement,
+        canvas: HTMLCanvasElement,
+    ) {
         this.device = device
         this.root = root
         this.video = video
@@ -59,6 +67,8 @@ class ResizerBestFit extends Resizer {
         this.canvas.height = scaled_video_height
         this.#txt_root!.textContent = `${Math.round(view_width)}x${Math.round(view_height)}`
         this.#txt_dims!.textContent = `${scaled_video_width}x${scaled_video_height}`
+        this.width = scaled_video_width
+        this.height = scaled_video_height
     }
 }
 
@@ -74,6 +84,9 @@ class ResizerStretch extends Resizer {
 
         this.canvas.width = width
         this.canvas.height = height
+
+        this.width = width
+        this.height = height
     }
 }
 

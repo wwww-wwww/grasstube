@@ -24,12 +24,13 @@ export default class EffectArt extends Effect {
     init() {
         super.init()
 
-        this.#pipelines = [pass1, pass2, pass3, pass4, pass5, pass6, pass7, pass8, pass9]
-            .map(c => this.device.createComputePipeline({
+        this.#pipelines = [pass1, pass2, pass3, pass4, pass5, pass6, pass7, pass8, pass9].map(c =>
+            this.device.createComputePipeline({
                 layout: "auto",
                 entryPoint: "main",
                 compute: { module: this.create_shader(c) },
-            }))
+            }),
+        )
 
         this.#sampler = this.device.createSampler({ minFilter: "linear", magFilter: "linear" })
     }
@@ -41,7 +42,9 @@ export default class EffectArt extends Effect {
         this.#descriptions[i] = { label: `${this.constructor.name} ${label}` }
         this.#bindgroups[i] = this.device.createBindGroup({
             layout: this.#pipelines[i].getBindGroupLayout(0),
-            entries: resources.map((v, i) => { return { binding: i, resource: v } })
+            entries: resources.map((v, i) => {
+                return { binding: i, resource: v }
+            }),
         })
         this.#resolutions[i] = resolution
     }
@@ -58,6 +61,13 @@ export default class EffectArt extends Effect {
 
     #tex_in
     run(encoder, video_time, tex_in, tex_in_res) {
+        if (
+            tex_in_res[0] >= this.renderer.resizer.width &&
+            tex_in_res[1] >= this.renderer.resizer.height
+        ) {
+            return [tex_in, tex_in_res]
+        }
+
         const tex_yuv = this.get_texture(tex_in_res, [tex_in])
         const tex2_x1 = this.get_texture(tex_in_res, [tex_in, tex_yuv])
 
