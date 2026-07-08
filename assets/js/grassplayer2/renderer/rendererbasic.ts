@@ -1,6 +1,8 @@
-import Renderer from "./renderer"
-import SubtitlesOctopus from "../subtitles-octopus2"
 import GrassPlayer from "../grassplayer2"
+import Renderer from "./renderer"
+
+import JASSUB from "../jassub"
+import SubtitlesOctopus from "../subtitles-octopus2"
 
 export default class RendererBasic implements Renderer {
     player
@@ -27,6 +29,9 @@ export default class RendererBasic implements Renderer {
         <div><span>Catchup</span><span class="videoinfo-catchup"></span></div>
     </div>
 </div>
+<div>
+    <div><span>Subtitles</span><select class="select-subtitles"></select></div>
+</div>
 `
 
         this.player = player
@@ -40,6 +45,24 @@ export default class RendererBasic implements Renderer {
                 this.on_timeupdate?.(this.current_time())
                 resolution.textContent = `${this.#e_video.videoWidth}x${this.#e_video.videoHeight}`
             })
+        }
+
+        // Create subtitles option
+        {
+            const options = ["JASSUB", "SubtitlesOctopus"]
+            const select: HTMLSelectElement = root_settings.querySelector(".select-subtitles")!
+            options.forEach(e => {
+                const option = document.createElement("option")
+                option.textContent = e
+                select.appendChild(option)
+            })
+            select.addEventListener("change", () => {
+                this.player.set_storage("subtitle-renderer", options[select.selectedIndex])
+                this.set_subtitles(this.#current_subtitles)
+            })
+            select.selectedIndex = options.indexOf(
+                this.player.get_storage("subtitle-renderer") || "JASSUB",
+            )
         }
 
         // video buffer
@@ -74,29 +97,55 @@ export default class RendererBasic implements Renderer {
             })
     }
 
-    #fonts: any
-    #octopus: SubtitlesOctopus | null = null
+    #fonts: Record<string, string[]> = {}
+    #sub_renderer: SubtitlesOctopus | JASSUB | null = null
     #current_subtitles: any
-    set_subtitles(subtitles: string | null) {
+    async set_subtitles(subtitles: string | null) {
         this.#current_subtitles = subtitles
 
-        if (this.#octopus) {
-            this.#octopus.destroy()
-            this.#octopus = null
-            while (this.#e_subtitles.firstChild)
-                this.#e_subtitles.removeChild(this.#e_subtitles.firstChild)
+        this.#sub_renderer?.destroy()
+        this.#sub_renderer = null
+
+        while (this.#e_subtitles.firstChild) {
+            this.#e_subtitles.removeChild(this.#e_subtitles.firstChild)
         }
 
         if (subtitles == null || subtitles.length == 0) return
 
-        this.#octopus = new SubtitlesOctopus({
-            video: this.#e_video,
-            canvasParent: this.#e_subtitles,
-            proxyCanvas: this.#e_video,
-            subUrl: subtitles,
-            availableFonts: this.#fonts,
-            workerUrl: "/includes/subtitles-octopus-worker.js",
-        })
+        if (this.player.get_storage("subtitle-renderer") == "SubtitlesOctopus") {
+            this.#sub_renderer = new SubtitlesOctopus({
+                video: this.#e_video,
+                canvasParent: this.#e_subtitles,
+                proxyCanvas: this.#e_video,
+                subUrl: subtitles,
+                availableFonts: this.#fonts,
+                workerUrl: "/includes/subtitles-octopus-worker.js",
+            })
+        } else {
+            let fonts: Record<string, string> = {}
+            for (const k in this.#fonts) {
+                for (const v of this.#fonts[k]) {
+                    fonts[k] = v
+                }
+            }
+            fonts["liberation sans"] = "/includes/default.woff2"
+
+            this.#sub_renderer = new JASSUB({
+                video: this.#e_video,
+                canvasParent: this.#e_subtitles,
+                subUrl: subtitles,
+                workerUrl: "/includes/jassub/worker.js",
+                wasmUrl: "/includes/jassub/jassub-worker.wasm",
+                modernWasmUrl: "/includes/jassub/jassub-worker-modern.wasm",
+                fonts: [
+                    "https://r2tube.grass.moe/fonts/vesta-bold.otf",
+                    "https://r2tube.grass.moe/fonts/Roboto-Medium.ttf",
+                ],
+                availableFonts: fonts,
+            })
+
+            await this.#sub_renderer.ready
+        }
     }
 
     #update_playable(): number {

@@ -1,0 +1,60 @@
+{
+  "name": "jassub",
+  "version": "2.5.6",
+  "description": "The Fastest JavaScript SSA/ASS Subtitle Renderer For Browsers",
+  "main": "dist/jassub.js",
+  "type": "module",
+  "files": [
+    "dist/wasm/*",
+    "dist/worker/*",
+    "dist/jassub.*",
+    "dist/debug.*",
+    "dist/default.woff2",
+    "!dist/wasm/jassub-worker-modern.js",
+    "README.md",
+    "LICENSE",
+    "index.d.ts",
+    "src/**/*.ts",
+    "!src/default.woff2"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThaUnknown/jassub.git"
+  },
+  "keywords": [
+    "libass",
+    "subtitle",
+    "wasm",
+    "emscripten",
+    "ASS",
+    "WebAssembly",
+    "subtitles",
+    "webgpu",
+    "webgl2",
+    "typescript"
+  ],
+  "author": "ThaUnknown",
+  "license": "LGPL-2.1-or-later AND (FTL OR GPL-2.0-or-later) AND MIT AND MIT-Modern-Variant AND ISC AND NTP AND Zlib AND BSL-1.0",
+  "bugs": {
+    "url": "https://github.com/ThaUnknown/jassub/issues"
+  },
+  "homepage": "https://github.com/ThaUnknown/jassub",
+  "dependencies": {
+    "abslink": "^1.2.2",
+    "lfa-ponyfill": "^1.1.0",
+    "rvfc-polyfill": "^1.0.8",
+    "throughput": "^1.0.2"
+  },
+  "devDependencies": {
+    "@webgpu/types": "^0.1.69",
+    "eslint-config-standard-universal": "^1.0.9",
+    "typescript": "^5.2.2",
+    "vite": "^7.3.1"
+  },
+  "scripts": {
+    "build": "tsc --noCheck",
+    "dev": "vite --host",
+    "docker:build": "docker build -t thaunknown/jassub-build .",
+    "docker:run": "docker run -it --rm -v ${PWD}:/code --name thaunknown_jassub-build thaunknown/jassub-build:latest"
+  }
+}

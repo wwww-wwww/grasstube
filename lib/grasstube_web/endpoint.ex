@@ -25,7 +25,11 @@ defmodule GrasstubeWeb.Endpoint do
     from: :grasstube,
     gzip: not code_reloading?,
     only: GrasstubeWeb.static_paths(),
-    raise_on_missing_only: code_reloading?
+    raise_on_missing_only: code_reloading?,
+    headers: %{
+      "Cross-Origin-Opener-Policy" => "same-origin",
+      "Cross-Origin-Embedder-Policy" => "require-corp"
+    }
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
