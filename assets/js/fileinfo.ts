@@ -51,19 +51,20 @@ export default class fileinfo extends ViewHook {
     }
 
     private get_title(filename: string) {
-        let clean = filename.replace(/\.[^/.]+$/, "")
+        let title = filename.replace(/\.[^/.]+$/, "")
 
-        if (/S\d+E\d+/i.test(clean)) {
-            return clean
+        if (/S\d+E\d+/i.test(title)) {
+            return title
                 .split(/S\d+E\d+/i)[0]
                 .replace(/\./g, " ")
                 .trim()
         }
 
-        clean = clean.replace(/^\[.*?\]\s*/, "")
-        clean = clean.split(/\s-\s|\s\[/)[0]
+        title = title.replace(/^\[.*?\]\s*/, "")
+        title = title.split(/\s-\s|\s\[/)[0]
+        title = title.replace(/ S([0-9])/, " Season $1")
 
-        return clean.trim()
+        return title.trim()
     }
 
     private async anilist_search(title: string) {
@@ -102,7 +103,7 @@ query ($title: String) {
 
         const variables = { title: title }
 
-        return fetch("https://graphql.anilist.co", {
+        return fetch("https://graphql.anilist.co/", {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "application/json" },
             body: JSON.stringify({ query: query, variables: variables }),
