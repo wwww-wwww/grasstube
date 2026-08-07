@@ -43,9 +43,12 @@ class video extends ViewHook {
 
         state.player = player
 
+        let messages: any[] = []
+
         this.handleEvent("video_set", data => {
             console.info("video_set", data)
             player.set_video(data.type, data.video_url, data.subtitles_url)
+            messages = data.messages
         })
 
         this.handleEvent("video_playing", data => {
@@ -108,23 +111,15 @@ class video extends ViewHook {
             console.info("video_ready_fail", data)
         })
 
-        let messages: any[] = []
+        player.on_control_playing = playing => {
+            this.pushEvent("video_playing", { playing: playing, offset: -this.latency_rtt / 1000 })
+        }
 
-        this.handleEvent("video_messages", data => {
-            console.info("video_messages", data)
-            messages = data.messages
-        })
+        player.on_control_seek = t => {
+            this.pushEvent("video_seek", { time: t })
+        }
 
-        this.messages_interval = setInterval(() => {
-            while (messages[0] && player.current_time() - messages[0].time > 0.2) {
-                messages.shift()
-            }
-            while (messages[0] && player.current_time() >= messages[0].time) {
-                state.chat?.(messages.shift())
-            }
-        }, 100)
-
-        player.on_next = () => {
+        player.on_control_next = () => {
             this.pushEvent("video_next", {})
         }
 
@@ -135,16 +130,36 @@ class video extends ViewHook {
             this.pushEvent("buffered", { buffered: buffered })
         }
 
-        player.on_toggle_playing = playing => {
-            this.pushEvent("video_playing", { playing: playing, offset: -this.latency_rtt / 1000 })
+        this.ping()
+        this.ping_interval = setInterval(() => this.ping(), 2000)
+
+        let timers: number[] = []
+        const schedule_messages = () => {
+            messages.forEach(message => {
+                const diff = message.time - player.current_time()
+                if (diff > 0 && diff < 1) {
+                    timers.push(setTimeout(() => state.chat?.(message), diff * 1000))
+                }
+            })
+        }
+
+        const reset_messages = (playing: boolean) => {
+            clearInterval(this.messages_interval)
+            timers.forEach(t => clearTimeout(t))
+            timers = []
+            if (playing) {
+                schedule_messages()
+                this.messages_interval = setInterval(() => schedule_messages(), 1000)
+            }
+        }
+
+        player.on_playing = playing => {
+            reset_messages(playing)
         }
 
         player.on_seek = t => {
-            this.pushEvent("video_seek", { time: t })
+            reset_messages(player.playing())
         }
-
-        this.ping()
-        this.ping_interval = setInterval(() => this.ping(), 2000)
     }
 
     destroyed() {

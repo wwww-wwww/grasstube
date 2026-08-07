@@ -60,9 +60,12 @@ export default class GrassPlayer {
     private events_fullscreenchange: any
     private events_keydown: any
 
-    on_toggle_playing: ((b: boolean) => void) | null = null
+    on_control_playing: ((b: boolean) => void) | null = null
+    on_control_seek: ((t: number) => void) | null = null
+    on_control_next: (() => void) | null = null
+
+    on_playing: ((b: boolean) => void) | null = null
     on_seek: ((t: number) => void) | null = null
-    on_next: (() => void) | null = null
     on_buffer_end: ((end: number) => void) | null = null
 
     constructor(root: Element) {
@@ -218,7 +221,7 @@ export default class GrassPlayer {
         {
             this.e_btn_next = el.querySelector(".chk-next")!
             this.e_btn_next.addEventListener("click", () => {
-                this.on_next?.()
+                this.on_control_next?.()
             })
         }
 
@@ -420,6 +423,7 @@ export default class GrassPlayer {
 
         if (this.playing() == playing) return
 
+        this.on_playing?.(playing)
         this.current_renderer.set_playing(playing)
     }
 
@@ -428,8 +432,8 @@ export default class GrassPlayer {
     }
 
     toggle_playing(playing: boolean) {
-        if (this.on_toggle_playing != null) {
-            this.on_toggle_playing(playing)
+        if (this.on_control_playing != null) {
+            this.on_control_playing(playing)
         } else {
             this.set_playing(playing)
         }
@@ -444,12 +448,14 @@ export default class GrassPlayer {
 
         t = Math.max(0, t)
 
-        if (final && this.on_seek) {
-            this.on_seek(t)
+        if (final && this.on_control_seek) {
+            this.on_control_seek(t)
             return
         }
 
         if (t >= this.duration()) return
+
+        this.on_seek?.(t)
 
         this.current_renderer.seek(t, final)
         if (final) {

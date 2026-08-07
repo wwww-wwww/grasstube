@@ -228,6 +228,8 @@ defmodule GrasstubeWeb.RoomLive do
       |> assign(autopause: video.autopause)
       |> assign(controls: RoomAgent.controls?(room_pid, socket.assigns.current_scope))
 
+    # |> redirect(to: ~p"/")
+
     {:ok, socket}
   end
 
@@ -272,7 +274,7 @@ defmodule GrasstubeWeb.RoomLive do
   end
 
   def handle_info(%{topic: "video:" <> _, event: "set", payload: video}, socket) do
-    {video_info, messages} =
+    video_info =
       with %Video{} <- video do
         messages =
           Enum.map(video.messages, fn message ->
@@ -284,20 +286,20 @@ defmodule GrasstubeWeb.RoomLive do
             }
           end)
 
-        {%{
-           type: video.type,
-           video_url: video.video_url,
-           subtitles_url: video.subtitles_url
-         }, messages}
+        %{
+          type: video.type,
+          video_url: video.video_url,
+          subtitles_url: video.subtitles_url,
+          messages: messages
+        }
       else
-        _ -> {%{type: "default", video_url: nil, subtitles_url: nil}, []}
+        _ -> %{type: "default", video_url: nil, subtitles_url: nil, messages: []}
       end
 
     socket =
       socket
       |> assign(current_video: video)
       |> push_event("video_set", video_info)
-      |> push_event("video_messages", %{messages: messages})
 
     {:noreply, socket}
   end
