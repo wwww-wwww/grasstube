@@ -5,7 +5,7 @@ export default class Timer {
     #querySet
     #resolveBuffer
     #resultBuffer
-    enabled = true
+    enabled = false
     constructor(device) {
         this.#querySet = device.createQuerySet({
             type: "timestamp",
@@ -17,7 +17,7 @@ export default class Timer {
         })
         this.#resultBuffer = device.createBuffer({
             size: this.#resolveBuffer.size,
-            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
         })
     }
 

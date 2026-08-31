@@ -551,11 +551,11 @@ export default class RendererWebGPU implements Renderer {
                     .catch(() => { })
             }
 
-            device.queue.onSubmittedWorkDone().then(() => {
-                const t3 = performance.now()
-                totaltime.textContent = (t3 - t0).toFixed(4)
-                queuetime.textContent = (t3 - t2).toFixed(4)
-            })
+            // device.queue.onSubmittedWorkDone().then(() => {
+            //     const t3 = performance.now()
+            //     totaltime.textContent = (t3 - t0).toFixed(4)
+            //     queuetime.textContent = (t3 - t2).toFixed(4)
+            // })
 
             const t1 = performance.now()
             jstime.textContent = (t1 - t0).toFixed(4)
