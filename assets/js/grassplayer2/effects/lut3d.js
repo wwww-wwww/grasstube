@@ -1,4 +1,5 @@
 import Effect from "./_effect"
+import { FULLSCREEN_VERTEX, FullscreenTarget, create_fullscreen_pipeline } from "./_fullscreen"
 
 export default class EffectLut3d extends Effect {
     #txt_3dlut_name
@@ -14,29 +15,24 @@ export default class EffectLut3d extends Effect {
 
     #pipeline
     #lut3dtexture = null
+    #lut3dview = null
     #sampler
     init() {
         super.init()
 
-        this.#pipeline = this.device.createComputePipeline({
-            layout: "auto",
-            compute: {
-                module: this.create_shader(/* wgsl */ `
+        this.#pipeline = create_fullscreen_pipeline(
+            this.device,
+            this.create_shader(/* wgsl */ `
 @group(0) @binding(0) var inputTexture: texture_2d<f32>;
-@group(0) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
-@group(0) @binding(2) var lutTexture: texture_3d<f32>;
-@group(0) @binding(3) var samp: sampler;
-
-@compute @workgroup_size(16, 16)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    let size = textureDimensions(inputTexture);
-
-    if (id.x >= size.x || id.y >= size.y) { return; }
-
+@group(0) @binding(1) var lutTexture: texture_3d<f32>;
+@group(0) @binding(2) var samp: sampler;
+${FULLSCREEN_VERTEX}
+@fragment
+fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
     let lutSize = f32(textureDimensions(lutTexture).x);
 
     // sample
-    let sample = textureLoad(inputTexture, id.xy, 0);
+    let sample = textureLoad(inputTexture, vec2<i32>(in.pos.xy), 0);
 
     // convert to limited rgb
     var limited = clamp(sample.rgb, vec3<f32>(0.0), vec3<f32>(1.0));
@@ -44,12 +40,13 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
     // lut
     let lutCoords = mix(vec3(0.5 / lutSize), vec3(1.0 - 0.5 / lutSize), limited);
-    var sample_lut = textureSampleLevel(lutTexture, samp, lutCoords, 0.0).rgb;
+    let sample_lut = textureSampleLevel(lutTexture, samp, lutCoords, 0.0).rgb;
 
-    textureStore(outputTexture, id.xy, vec4<f32>(sample_lut, sample.a));
+    return vec4<f32>(sample_lut, sample.a);
 }`),
-            },
-        })
+            "rgba16float",
+            this.constructor.name,
+        )
 
         if (this.#lut3dtexture == null) {
             const m = 8
@@ -66,7 +63,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 }
             }
 
-            this.#lut3dtexture = this.#generate_3d_texture(lut, m)
+            this.#generate_3d_texture(lut, m)
         }
 
         navigator.storage
@@ -76,9 +73,9 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             .then(file => file.arrayBuffer())
             .then(buf => this.#load_madvr(buf))
             .then(lut => {
-                this.#lut3dtexture = this.#generate_3d_texture(lut, 256)
+                this.#generate_3d_texture(lut, 256)
                 this.renderer.player.create_message("Loaded 3dlut", 1000)
-                this.#tex2 = null
+                this.#lut_bound = null
                 this.#txt_3dlut_name.textContent = this.get_storage("filename")
 
                 this.on_update()
@@ -93,40 +90,31 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         })
     }
 
-    #tex_in_res
-    #compute_x
-    #compute_y
     #tex_in
-    #tex2
+    #lut_bound
     #bindgroup
+    #target = new FullscreenTarget(this.constructor.name)
     run(encoder, video_time, tex_in, tex_in_res) {
-        if (this.#tex_in_res != tex_in_res) {
-            this.#compute_x = Math.ceil(tex_in_res[0] / 16)
-            this.#compute_y = Math.ceil(tex_in_res[1] / 16)
-            this.#tex_in_res = tex_in_res
-        }
-
         const tex2 = this.get_texture(tex_in_res, [tex_in])
 
-        if (this.#tex_in != tex_in || this.#tex2 != tex2) {
+        if (this.#tex_in != tex_in || this.#lut_bound != this.#lut3dview) {
             this.#tex_in = tex_in
-            this.#tex2 = tex2
+            this.#lut_bound = this.#lut3dview
 
             this.#bindgroup = this.device.createBindGroup({
                 layout: this.#pipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: tex_in },
-                    { binding: 1, resource: tex2 },
-                    { binding: 2, resource: this.#lut3dtexture },
-                    { binding: 3, resource: this.#sampler },
+                    { binding: 1, resource: this.#lut3dview },
+                    { binding: 2, resource: this.#sampler },
                 ],
             })
         }
 
-        const pass = encoder.beginComputePass(this.desc)
+        const pass = this.#target.begin(encoder, tex2)
         pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
-        pass.dispatchWorkgroups(this.#compute_x, this.#compute_y)
+        pass.draw(3)
         pass.end()
 
         return [tex2, tex_in_res]
@@ -134,6 +122,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
     #generate_3d_texture(data, width) {
         const texture = this.device.createTexture({
+            label: `lut3d ${width}`,
             size: [width, width, width],
             dimension: "3d",
             format: "rgba16float",
@@ -146,6 +135,16 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             { bytesPerRow: width * 4 * 2, rowsPerImage: width },
             [width, width, width],
         )
+
+        // A 256^3 rgba16float LUT is 128 MB; replacing one without releasing the old one would
+        // leak that much VRAM every time a file is loaded.
+        const previous = this.#lut3dtexture
+        if (previous != null) {
+            this.device.queue.onSubmittedWorkDone().then(() => previous.destroy())
+        }
+
+        this.#lut3dtexture = texture
+        this.#lut3dview = texture.createView()
 
         return texture
     }
@@ -170,7 +169,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
             file.arrayBuffer().then(buf => {
                 this.#load_madvr(buf).then(lut => {
-                    this.#lut3dtexture = this.#generate_3d_texture(lut, 256)
+                    this.#generate_3d_texture(lut, 256)
                     console.info("Loaded 3dlut")
                     this.renderer.player.create_message("Loaded 3dlut", 1000)
 
@@ -188,7 +187,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                             this.renderer.player.create_message("Saved 3dlut", 1000)
                         })
 
-                    this.#tex2 = null
+                    this.#lut_bound = null
                     this.#txt_3dlut_name.textContent = file.name
 
                     this.on_update()

@@ -86,11 +86,6 @@ fn ycbcr_to_rgb_rec709(ycbcr: vec3<f32>) -> vec3<f32> {
     return ycbcr_to_rgb_mat * ycbcr_centered;
 }
 
-fn sample_yuv(uv: vec2<f32>) -> vec4<f32> {
-    let rgb = textureSampleBaseClampToEdge(inputTexture, samp, uv);
-    return vec4(rgb_to_ycbcr_rec709(rgb.rgb), rgb.a);
-}
-
 fn mod289(x: f32)  -> f32 { return x - floor(x / 289.0) * 289.0; }
 fn permute(x: f32) -> f32 { return mod289((34.0*x + 1.0) * x); }
 fn rand(x: f32)    -> f32 { return fract(x / 41.0); }
@@ -103,15 +98,17 @@ fn average(uv: vec2<f32>, size: vec2<f32>, range: f32, h0: f32) -> AverageOut {
 
     let o = vec2<f32>(cos(dir), sin(dir)) * dist / size;
 
-    // Sample at quarter-turn intervals around the source pixel
+    // Sample at quarter-turn intervals around the source pixel.
+    // rgb_to_ycbcr is affine, so averaging in RGB and converting once is identical to converting
+    // each of the four taps and averaging - and costs one matrix multiply instead of four.
     let avg =
-        sample_yuv(uv + vec2(o.x, o.y)).rgb +
-        sample_yuv(uv + vec2(-o.x, o.y)).rgb +
-        sample_yuv(uv + vec2(-o.x, -o.y)).rgb +
-        sample_yuv(uv + vec2(o.x, -o.y)).rgb;
+        textureSampleBaseClampToEdge(inputTexture, samp, uv + vec2( o.x,  o.y)).rgb +
+        textureSampleBaseClampToEdge(inputTexture, samp, uv + vec2(-o.x,  o.y)).rgb +
+        textureSampleBaseClampToEdge(inputTexture, samp, uv + vec2(-o.x, -o.y)).rgb +
+        textureSampleBaseClampToEdge(inputTexture, samp, uv + vec2( o.x, -o.y)).rgb;
 
     // Return the (normalized) average
-    return AverageOut(avg / 4.0, h);
+    return AverageOut(rgb_to_ycbcr_rec709(avg / 4.0), h);
 }
 
 @compute @workgroup_size(16, 16)
@@ -160,7 +157,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
         this.#bindgroup_uniforms = this.device.createBindGroup({
             layout: this.#pipeline.getBindGroupLayout(1),
-            entries: [{ binding: 0, resource: this.#uniformBuffer }],
+            entries: [{ binding: 0, resource: { buffer: this.#uniformBuffer } }],
         })
     }
 

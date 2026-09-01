@@ -90,7 +90,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             fragment: {
                 module: shader,
                 entryPoint: "fs_main",
-                targets: [{ format: "rgba8unorm" }], // Output format matches our canvas
+                targets: [{ format: this.renderer.canvas_format }],
             },
             primitive: {
                 topology: "triangle-list", // We are drawing a triangle
@@ -107,6 +107,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         })
         this.#uniformData = new Float32Array(4)
+
+        this.#bindgroup_uniforms = this.device.createBindGroup({
+            layout: this.#pipeline.getBindGroupLayout(1),
+            entries: [{ binding: 0, resource: { buffer: this.#uniformBuffer } }],
+        })
     }
 
     create_settings(el) {}
@@ -118,6 +123,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     #tex2_res
     #tex1
     #bindgroup
+    #bindgroup_uniforms
+    #attachment = { view: null, clearValue: [0, 0, 0, 1], loadOp: "clear", storeOp: "store" }
+    #pass_desc = { label: "SamplerSphere", colorAttachments: [this.#attachment] }
     run(encoder, video_time, tex1, tex1_res, tex2, tex2_res) {
         if (this.#tex2_res != tex2_res) {
             this.#tex2_res = tex2_res
@@ -139,23 +147,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         this.#uniformData[1] = video_time
         this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
 
-        const pass = encoder.beginRenderPass({
-            ...this.desc,
-            colorAttachments: [
-                { view: tex2, clearValue: [0, 0, 0, 1], loadOp: "clear", storeOp: "store" },
-            ],
-        })
+        this.#attachment.view = tex2
+
+        const pass = encoder.beginRenderPass(this.#pass_desc)
 
         pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
-        pass.setBindGroup(
-            1,
-            this.device.createBindGroup({
-                layout: this.#pipeline.getBindGroupLayout(1),
-                entries: [{ binding: 0, resource: { buffer: this.#uniformBuffer } }],
-            }),
-        )
-        pass.draw(3, 1, 0, 0)
+        pass.setBindGroup(1, this.#bindgroup_uniforms)
+        pass.draw(3)
         pass.end()
     }
 }

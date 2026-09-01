@@ -11,6 +11,9 @@ import pass8 from "./artcnn_wgsl/08_conv2d_6.wgsl"
 import pass9 from "./artcnn_wgsl/09_pass_9.wgsl"
 
 export default class EffectArt extends Effect {
+    // The conv passes stage array<array<array<vec4<f32>, 18>, 18>, 4> in workgroup storage.
+    static workgroup_storage_needed = 18 * 18 * 4 * 16
+
     #txt_dims
     create_settings(el) {
         el.innerHTML = `
@@ -19,20 +22,42 @@ export default class EffectArt extends Effect {
         this.#txt_dims = el.querySelector(".dims")
     }
 
-    #pipelines
+    #pipelines = []
     #sampler
+    #ready = false
     init() {
         super.init()
 
-        this.#pipelines = [pass1, pass2, pass3, pass4, pass5, pass6, pass7, pass8, pass9].map(c =>
-            this.device.createComputePipeline({
-                layout: "auto",
-                entryPoint: "main",
-                compute: { module: this.create_shader(c) },
-            }),
-        )
-
         this.#sampler = this.device.createSampler({ minFilter: "linear", magFilter: "linear" })
+
+        // Each conv pass is tens of thousands of unrolled FMAs. Compiling all nine synchronously
+        // blocks the main thread for a noticeable stretch the first time the filter is switched
+        // on, so build them off-thread and pass the frame through untouched until they land.
+        const sources = [pass1, pass2, pass3, pass4, pass5, pass6, pass7, pass8, pass9]
+
+        this.#ready = false
+        this.#pipelines = new Array(sources.length)
+
+        Promise.all(
+            sources.map((c, i) =>
+                this.device
+                    .createComputePipelineAsync({
+                        label: `${this.constructor.name} ${i}`,
+                        layout: "auto",
+                        compute: { module: this.create_shader(c), entryPoint: "main" },
+                    })
+                    .then(p => (this.#pipelines[i] = p)),
+            ),
+        )
+            .then(() => {
+                this.#ready = true
+                this.#tex_in = null
+                this.on_update?.()
+            })
+            .catch(err => {
+                console.error(`${this.constructor.name}: pipeline creation failed`, err)
+                this.enabled = false
+            })
     }
 
     #bindgroups = []
@@ -61,6 +86,10 @@ export default class EffectArt extends Effect {
 
     #tex_in
     run(encoder, video_time, tex_in, tex_in_res) {
+        if (!this.#ready) {
+            return [tex_in, tex_in_res]
+        }
+
         if (
             tex_in_res[0] >= this.renderer.resizer.width &&
             tex_in_res[1] >= this.renderer.resizer.height
@@ -80,7 +109,7 @@ export default class EffectArt extends Effect {
             this.#tex_in = tex_in
             console.log("Recreating bind group")
 
-            this.#txt_dims.textContent = `${tex2_res[0]}x${tex2_res[1]}`
+            if (this.#txt_dims) this.#txt_dims.textContent = `${tex2_res[0]}x${tex2_res[1]}`
 
             this.#create_bindgroup(0, "yuv", tex_in_res, [tex_in, tex_yuv])
             this.#create_bindgroup(1, "conv2d", tex_in_res, [tex_yuv, tex2_x2_0])
@@ -93,7 +122,7 @@ export default class EffectArt extends Effect {
             this.#create_bindgroup(8, "rgb", tex2_res, [tex_yuv, tex2_x1, tex2_x2_1, this.#sampler])
         }
 
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < this.#pipelines.length; i++) {
             this.#pass(encoder, i)
         }
 

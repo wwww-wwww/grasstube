@@ -44,8 +44,9 @@ class ResizerBestFit extends Resizer {
     resize() {
         if (!this.video.videoWidth || !this.video.videoHeight) return
 
-        const view_width = this.root.getBoundingClientRect().width * window.devicePixelRatio
-        const view_height = this.root.getBoundingClientRect().height * window.devicePixelRatio
+        const rect = this.root.getBoundingClientRect()
+        const view_width = rect.width * window.devicePixelRatio
+        const view_height = rect.height * window.devicePixelRatio
         const video_width = this.video.videoWidth
         const video_height = this.video.videoHeight
 
@@ -63,8 +64,12 @@ class ResizerBestFit extends Resizer {
             scaled_video_height = Math.round((video_height / video_width) * scaled_video_width)
         }
 
-        this.canvas.width = scaled_video_width
-        this.canvas.height = scaled_video_height
+        // Writing to canvas.width/height reallocates the swap chain even when the value is
+        // unchanged, and a ResizeObserver fires for every intermediate size while a window is
+        // being dragged.
+        if (this.canvas.width != scaled_video_width) this.canvas.width = scaled_video_width
+        if (this.canvas.height != scaled_video_height) this.canvas.height = scaled_video_height
+
         this.#txt_root!.textContent = `${Math.round(view_width)}x${Math.round(view_height)}`
         this.#txt_dims!.textContent = `${scaled_video_width}x${scaled_video_height}`
         this.width = scaled_video_width
@@ -82,8 +87,8 @@ class ResizerStretch extends Resizer {
         let width = Math.max(1, Math.min(view_width, this.device.limits.maxTextureDimension2D))
         let height = Math.max(1, Math.min(view_height, this.device.limits.maxTextureDimension2D))
 
-        this.canvas.width = width
-        this.canvas.height = height
+        if (this.canvas.width != width) this.canvas.width = width
+        if (this.canvas.height != height) this.canvas.height = height
 
         this.width = width
         this.height = height
