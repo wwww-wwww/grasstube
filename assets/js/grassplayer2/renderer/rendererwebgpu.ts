@@ -163,14 +163,6 @@ export default class RendererWebGPU implements Renderer {
             })
         }
 
-        // Coalesced scrub seeks: apply whatever the newest target was once the decoder is free.
-        this.#e_video.addEventListener("seeked", () => {
-            if (this.#seek_pending == null) return
-            const t = this.#seek_pending
-            this.#seek_pending = null
-            this.#scrub_to(t)
-        })
-
         // video buffer
         {
             const buffered = root_settings.querySelector(".videoinfo-buffered")!
@@ -795,13 +787,13 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
             }
 
             check.addEventListener("input", () => {
-                this.player.set_storage("webgpu-double-buffering", check.checked ? 1 : 0)
+                this.player.set_storage("webgpu-double-buffer", check.checked ? 1 : 0)
                 apply()
             })
 
             // Default on: the steadier pacing is worth one frame of latency for video playback.
-            const stored = this.player.get_storage("webgpu-double-buffering")
-            check.checked = stored == null ? true : stored == "1"
+            const stored = this.player.get_storage("webgpu-double-buffer")
+            check.checked = stored == null ? false : stored == "1"
             apply()
         }
 
@@ -1225,7 +1217,6 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
 
     set_video(video: string | null, subtitles: string | null) {
         this.#e_video.src = video || ""
-        this.#seek_pending = null
         this.#reset_frame_stats()
         this.#reset_present_clock()
         this.set_playing(false)
@@ -1279,40 +1270,10 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
         return this.#e_video.currentTime
     }
 
-    #seek_pending: number | null = null
-
-    /**
-     * `final` is false for every pointermove of a seekbar drag and true when it is released.
-     * Issuing an exact seek per move flushes the decoder each time; instead only one scrub seek is
-     * ever in flight, with the newest target replacing any it superseded, and the release always
-     * lands exactly where the user let go.
-     */
     seek(t: number, final = false) {
         this.#catchup_done = false
 
-        if (final) {
-            this.#seek_pending = null
-            this.#e_video.currentTime = t
-            return
-        }
-
-        if (this.#e_video.seeking) {
-            this.#seek_pending = t
-            return
-        }
-
-        this.#scrub_to(t)
-    }
-
-    #scrub_to(t: number) {
-        // fastSeek lands on the nearest keyframe rather than decoding up to an exact frame, which
-        // is what a drag wants. Chromium does not implement it, so fall back to an exact seek.
-        const video = this.#e_video as any
-        if (typeof video.fastSeek === "function") {
-            video.fastSeek(t)
-        } else {
-            this.#e_video.currentTime = t
-        }
+        this.#e_video.currentTime = t
     }
 
     #catchup_done = false
@@ -1340,9 +1301,9 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
         const dist = this.#catchup_target + elapsed - this.current_time()
 
         const dir = dist > 0 ? 1 : -1
-        let catchup_mul = 1 + dir * (dist > 0.5 ? 0.1 : 0.05)
+        let catchup_mul = 1 + dir * 0.1
 
-        if (Math.abs(dist) < 0.02) {
+        if (Math.abs(dist) < 0.1) {
             this.#catchup_done = true
             catchup_mul = 1
             clearInterval(this.#catchup_interval)
