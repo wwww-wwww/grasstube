@@ -13,9 +13,8 @@ defmodule Grasstube.ChatAgent do
             last_ready: nil,
             ready_members: %{},
             emotes: [],
-            ready_check_last: 0,
             ready_check_members: [],
-            ready_check_task: nil
+            ready_check_id: nil
 
   defmodule ChatMessage do
     @derive Jason.Encoder
@@ -68,53 +67,54 @@ defmodule Grasstube.ChatAgent do
     end
   end
 
-  def chat(pid, scope, "/ready", fun_reply) do
-    time =
-      DateTime.utc_now()
-      |> DateTime.to_unix(:millisecond)
+  @ready_check_timeout 10_000
 
+  def chat(pid, scope, "/ready", _fun_reply) do
     Agent.get_and_update(pid, fn state ->
-      total =
+      present =
         Presence.list("room:#{state.room_id}")
-        |> Map.to_list()
-        |> length()
+        |> Map.keys()
 
-      if time - state.ready_check_last > 5000 do
-        members = [scope.id]
+      {check_id, members} =
+        case state.ready_check_id do
+          nil -> {make_ref(), [scope.id]}
+          id -> {id, Enum.uniq(state.ready_check_members ++ [scope.id])}
+        end
 
-        task =
-          Task.Supervisor.async_nolink(Tasks, fn ->
-            Process.sleep(10000)
-            Endpoint.broadcast("video:#{state.room_id}", "ready_fail", %{})
+      members = Enum.filter(members, &(&1 in present))
+      total = length(present)
+
+      cond do
+        total < 2 ->
+          {nil, state}
+
+        length(members) >= total ->
+          {{state.room_id, :finish}, %{state | ready_check_members: [], ready_check_id: nil}}
+
+        state.ready_check_id == nil ->
+          agent = self()
+          room_id = state.room_id
+
+          Task.Supervisor.start_child(Tasks, fn ->
+            Process.sleep(@ready_check_timeout)
+
+            failed =
+              Agent.get_and_update(agent, fn
+                %{ready_check_id: ^check_id} = s ->
+                  {true, %{s | ready_check_members: [], ready_check_id: nil}}
+
+                s ->
+                  {false, s}
+              end)
+
+            if failed, do: Endpoint.broadcast("video:#{room_id}", "ready_fail", %{})
           end)
 
-        Process.demonitor(task.ref)
+          {{state.room_id, members, total},
+           %{state | ready_check_members: members, ready_check_id: check_id}}
 
-        {{state.room_id, members, total},
-         %{
-           state
-           | ready_check_last: time,
-             ready_check_members: members,
-             ready_check_task: task
-         }}
-      else
-        members = (state.ready_check_members ++ [scope.id]) |> Enum.uniq()
-
-        if total == length(members) do
-          if state.ready_check_task do
-            Task.shutdown(state.ready_check_task)
-          end
-
-          {{state.room_id, :finish},
-           %{
-             state
-             | ready_check_last: 0,
-               ready_check_members: members,
-               ready_check_task: nil
-           }}
-        else
+        true ->
           {{state.room_id, members, total}, %{state | ready_check_members: members}}
-        end
       end
     end)
     |> case do

@@ -23,6 +23,7 @@ function seconds_to_hms(seconds: number, hide_hours = false) {
 
 class video extends ViewHook {
     private ping_interval: any = null
+    private ready_check: ReadyCheck | null = null
     private messages_interval: any = null
     private last_ping = 0
     private latency_rtt = 0
@@ -95,7 +96,8 @@ class video extends ViewHook {
             player.set_catchup(t, performance.now())
         })
 
-        let ready_check = new ReadyCheck(this, this.el)
+        const ready_check = new ReadyCheck(this, this.el)
+        this.ready_check = ready_check
 
         this.handleEvent("video_ready", data => {
             console.info("video_ready", data)
@@ -109,6 +111,7 @@ class video extends ViewHook {
 
         this.handleEvent("video_ready_fail", data => {
             console.info("video_ready_fail", data)
+            ready_check.finish()
         })
 
         player.on_control_playing = playing => {
@@ -163,6 +166,7 @@ class video extends ViewHook {
     }
 
     destroyed() {
+        this.ready_check?.destroy()
         clearInterval(this.ping_interval)
         clearInterval(this.messages_interval)
         state.player!.destroy()
