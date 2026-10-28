@@ -90,6 +90,11 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
         })
     }
 
+    // Null while the effect is off.
+    get lut_view() {
+        return this.enabled && this.initialized ? this.#lut3dview : null
+    }
+
     #tex_in
     #lut_bound
     #bindgroup

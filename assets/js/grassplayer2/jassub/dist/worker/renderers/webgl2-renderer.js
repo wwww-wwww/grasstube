@@ -1,5 +1,6 @@
 // fallback for browsers that don't support WebGL2
-import { colorMatrixConversionMap, IDENTITY_MATRIX, IS_FIREFOX, IS_SAFARI, SHOULD_REFERENCE_MEMORY } from "../util.js";
+import { IS_FIREFOX, IS_SAFARI, SHOULD_REFERENCE_MEMORY } from "../util.js";
+import { WebGLRendererBase } from "./webgl-base.js";
 // GLSL ES 3.0 Vertex Shader with Instancing
 const VERTEX_SHADER = /* glsl */ `#version 300 es
 precision highp float;
@@ -17,13 +18,15 @@ uniform vec2 u_resolution;
 
 // Instance attributes
 in vec4 a_destRect;  // x, y, w, h
+in vec2 a_srcXY;     // atlas x, y
 in vec4 a_color;     // r, g, b, a
-in float a_texLayer;
+in float a_layer;    // atlas layer
 
 flat out vec2 v_destXY;
 flat out vec4 v_color;
 flat out vec2 v_texSize;
-flat out float v_texLayer;
+flat out vec2 v_srcXY;
+flat out float v_layer;
 
 void main() {
   vec2 quadPos = QUAD_POSITIONS[gl_VertexID];
@@ -35,7 +38,8 @@ void main() {
   v_destXY = a_destRect.xy;
   v_color = a_color;
   v_texSize = a_destRect.zw;
-  v_texLayer = a_texLayer;
+  v_srcXY = a_srcXY;
+  v_layer = a_layer;
 }
 `;
 // GLSL ES 3.0 Fragment Shader - use texelFetch for pixel-perfect sampling
@@ -43,14 +47,15 @@ const FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 precision highp sampler2DArray;
 
-uniform sampler2DArray u_texArray;
+uniform sampler2DArray u_atlas;
 uniform mat3 u_colorMatrix;
 uniform vec2 u_resolution;
 
 flat in vec2 v_destXY;
 flat in vec4 v_color;
 flat in vec2 v_texSize;
-flat in float v_texLayer;
+flat in vec2 v_srcXY;
+flat in float v_layer;
 
 out vec4 fragColor;
 
@@ -71,7 +76,7 @@ void main() {
   }
 
   // texelFetch: integer coords, no interpolation, no precision issues
-  float mask = texelFetch(u_texArray, ivec3(texCoord, int(v_texLayer)), 0).r;
+  float mask = texelFetch(u_atlas, ivec3(ivec2(v_srcXY) + texCoord, int(v_layer)), 0).r;
 
   // Apply color matrix conversion (identity if no conversion needed)
   vec3 correctedColor = u_colorMatrix * v_color.rgb;
@@ -86,278 +91,221 @@ void main() {
   fragColor = vec4(correctedColor * a, a);
 }
 `;
-// Texture array configuration
-const TEX_ARRAY_SIZE = 64; // Fixed layer count
-const TEX_INITIAL_SIZE = 256; // Initial width/height
-const MAX_INSTANCES = 256; // Maximum instances per draw call
-export class WebGL2Renderer {
-    canvas = null;
-    gl = null;
-    program = null;
-    vao = null;
-    // Uniform locations
-    u_resolution = null;
-    u_texArray = null;
-    u_colorMatrix = null;
-    // Instance attribute buffers
-    instanceDestRectBuffer = null;
-    instanceColorBuffer = null;
-    instanceTexLayerBuffer = null;
-    // Instance data arrays
-    instanceDestRectData;
-    instanceColorData;
-    instanceTexLayerData;
-    texArray = null;
-    texArrayWidth = 0;
-    texArrayHeight = 0;
-    colorMatrix = IDENTITY_MATRIX;
-    constructor() {
-        this.instanceDestRectData = new Float32Array(MAX_INSTANCES * 4);
-        this.instanceColorData = new Float32Array(MAX_INSTANCES * 4);
-        this.instanceTexLayerData = new Float32Array(MAX_INSTANCES);
+const ATLAS_PADDING = 1;
+const INITIAL_INSTANCES = 256;
+// One instance is 4 floats (dest rect), 2 floats (atlas position), 4 normalized bytes (color) and 1 float (atlas layer)
+const INSTANCE_STRIDE = 32;
+export class WebGL2Renderer extends WebGLRendererBase {
+    vao;
+    u_atlas = null;
+    // Interleaved instance buffer: dest rect, atlas position, then color
+    instanceBuffer;
+    instanceData;
+    instanceFloats;
+    instanceBytes;
+    instanceCapacity = 0;
+    atlas = null;
+    maxTextureSize = 0;
+    maxArrayTextureLayers = 0;
+    uploadCache = new Set();
+    _createInstanceData() {
+        this.instanceData = new ArrayBuffer(this.instanceCapacity * INSTANCE_STRIDE);
+        this.instanceFloats = new Float32Array(this.instanceData);
+        this.instanceBytes = new Uint8Array(this.instanceData);
     }
-    _scheduledResize;
-    resizeCanvas(width, height) {
-        // WebGL2 doesn't allow 0-sized canvases
-        if (!width || !height)
+    ensureInstanceCapacity(count) {
+        if (count <= this.instanceCapacity)
             return;
-        if (this.canvas?.width === width && this.canvas?.height === height)
-            return;
-        this._scheduledResize = { width, height };
+        this.instanceCapacity = Math.max(count, this.instanceCapacity * 2, INITIAL_INSTANCES);
+        this._createInstanceData();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.instanceCapacity * INSTANCE_STRIDE, this.gl.DYNAMIC_DRAW);
     }
-    setCanvas(canvas) {
-        this.canvas = canvas;
-        this.gl = canvas.getContext('webgl2', {
+    constructor(canvas) {
+        super(canvas);
+        this._initGL();
+    }
+    _initGL() {
+        const gl = this.canvas.getContext('webgl2', {
             alpha: true,
             premultipliedAlpha: true,
             antialias: false,
             depth: false,
             preserveDrawingBuffer: false,
             stencil: false,
-            desynchronized: true,
-            powerPreference: 'high-performance'
+            desynchronized: false,
+            powerPreference: 'default'
         });
-        if (!this.gl) {
+        if (!gl) {
             throw new Error('Could not get WebGL2 context');
         }
-        // Create shaders
-        const vertexShader = this.createShader(this.gl.VERTEX_SHADER, VERTEX_SHADER);
-        const fragmentShader = this.createShader(this.gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-        if (!vertexShader || !fragmentShader) {
-            throw new Error('Failed to create shaders');
-        }
-        // Create program
-        this.program = this.gl.createProgram();
-        this.gl.attachShader(this.program, vertexShader);
-        this.gl.attachShader(this.program, fragmentShader);
-        this.gl.linkProgram(this.program);
-        if (!this.gl.getProgramParameter(this.program, this.gl.LINK_STATUS)) {
-            const info = this.gl.getProgramInfoLog(this.program);
-            throw new Error('Failed to link program: ' + info);
-        }
-        this.gl.deleteShader(vertexShader);
-        this.gl.deleteShader(fragmentShader);
+        this.gl = gl;
+        this.maxTextureSize = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE);
+        this.maxArrayTextureLayers = this.gl.getParameter(this.gl.MAX_ARRAY_TEXTURE_LAYERS);
+        this.atlas = null;
+        this.uploadCache.clear();
+        this.createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
         // Get uniform locations
         this.u_resolution = this.gl.getUniformLocation(this.program, 'u_resolution');
-        this.u_texArray = this.gl.getUniformLocation(this.program, 'u_texArray');
+        this.u_atlas = this.gl.getUniformLocation(this.program, 'u_atlas');
         this.u_colorMatrix = this.gl.getUniformLocation(this.program, 'u_colorMatrix');
-        // Create instance attribute buffers
-        this.instanceDestRectBuffer = this.gl.createBuffer();
-        this.instanceColorBuffer = this.gl.createBuffer();
-        this.instanceTexLayerBuffer = this.gl.createBuffer();
+        // Create the interleaved instance buffer
+        this.instanceBuffer = this.gl.createBuffer();
+        this.instanceCapacity = 0;
+        this.ensureInstanceCapacity(INITIAL_INSTANCES);
         // Create a VAO (required for WebGL2)
         this.vao = this.gl.createVertexArray();
         this.gl.bindVertexArray(this.vao);
         // Setup instance attributes
         const destRectLoc = this.gl.getAttribLocation(this.program, 'a_destRect');
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceDestRectBuffer);
         this.gl.enableVertexAttribArray(destRectLoc);
-        this.gl.vertexAttribPointer(destRectLoc, 4, this.gl.FLOAT, false, 0, 0);
+        this.gl.vertexAttribPointer(destRectLoc, 4, this.gl.FLOAT, false, INSTANCE_STRIDE, 0);
         this.gl.vertexAttribDivisor(destRectLoc, 1);
+        const srcXYLoc = this.gl.getAttribLocation(this.program, 'a_srcXY');
+        this.gl.enableVertexAttribArray(srcXYLoc);
+        this.gl.vertexAttribPointer(srcXYLoc, 2, this.gl.FLOAT, false, INSTANCE_STRIDE, 16);
+        this.gl.vertexAttribDivisor(srcXYLoc, 1);
         const colorLoc = this.gl.getAttribLocation(this.program, 'a_color');
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceColorBuffer);
         this.gl.enableVertexAttribArray(colorLoc);
-        this.gl.vertexAttribPointer(colorLoc, 4, this.gl.FLOAT, false, 0, 0);
+        this.gl.vertexAttribPointer(colorLoc, 4, this.gl.UNSIGNED_BYTE, true, INSTANCE_STRIDE, 24);
         this.gl.vertexAttribDivisor(colorLoc, 1);
-        const texLayerLoc = this.gl.getAttribLocation(this.program, 'a_texLayer');
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceTexLayerBuffer);
-        this.gl.enableVertexAttribArray(texLayerLoc);
-        this.gl.vertexAttribPointer(texLayerLoc, 1, this.gl.FLOAT, false, 0, 0);
-        this.gl.vertexAttribDivisor(texLayerLoc, 1);
-        // Set up blending for premultiplied alpha
-        this.gl.enable(this.gl.BLEND);
-        this.gl.blendFunc(this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA);
-        // Use the program
-        this.gl.useProgram(this.program);
-        // Set texture unit
-        this.gl.uniform1i(this.u_texArray, 0);
-        // Set initial color matrix
-        this.gl.uniformMatrix3fv(this.u_colorMatrix, false, this.colorMatrix);
-        // Set one-time GL state
-        this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 1);
-        this.gl.clearColor(0, 0, 0, 0);
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        // Create initial texture array
-        this.createTexArray(TEX_INITIAL_SIZE, TEX_INITIAL_SIZE);
+        const layerLoc = this.gl.getAttribLocation(this.program, 'a_layer');
+        this.gl.enableVertexAttribArray(layerLoc);
+        this.gl.vertexAttribPointer(layerLoc, 1, this.gl.FLOAT, false, INSTANCE_STRIDE, 28);
+        this.gl.vertexAttribDivisor(layerLoc, 1);
+        this.applyCommonState(this.u_atlas);
     }
-    createShader(type, source) {
-        const shader = this.gl.createShader(type);
-        this.gl.shaderSource(shader, source);
-        this.gl.compileShader(shader);
-        if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-            const info = this.gl.getShaderInfoLog(shader);
-            console.log(info);
-            this.gl.deleteShader(shader);
-            return null;
+    createAtlasTexture(size, depth) {
+        if (this.atlas) {
+            this.gl.deleteTexture(this.atlas.texture);
         }
-        return shader;
-    }
-    // Set the color matrix for color space conversion.
-    // Pass null or undefined to use identity (no conversion).
-    setColorMatrix(subtitleColorSpace, videoColorSpace) {
-        this.colorMatrix = (subtitleColorSpace && videoColorSpace && colorMatrixConversionMap[subtitleColorSpace]?.[videoColorSpace]) ?? IDENTITY_MATRIX;
-        if (this.gl && this.u_colorMatrix && this.program) {
-            this.gl.useProgram(this.program);
-            this.gl.uniformMatrix3fv(this.u_colorMatrix, false, this.colorMatrix);
-        }
-    }
-    createTexArray(width, height) {
-        if (this.texArray) {
-            this.gl.deleteTexture(this.texArray);
-        }
-        this.texArray = this.gl.createTexture();
-        this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, this.texArray);
-        // Allocate storage for texture array
-        this.gl.texImage3D(this.gl.TEXTURE_2D_ARRAY, 0, this.gl.R8, width, height, TEX_ARRAY_SIZE, 0, this.gl.RED, this.gl.UNSIGNED_BYTE, null // Firefox cries about uninitialized data, but is slower with zero initialized data...
+        const texture = this.gl.createTexture();
+        this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, texture);
+        // Allocate storage for texture
+        this.gl.texImage3D(this.gl.TEXTURE_2D_ARRAY, 0, this.gl.R8, size, size, depth, 0, this.gl.RED, this.gl.UNSIGNED_BYTE, null // Firefox cries about uninitialized data, but is slower with zero initialized data...
         );
         // Set texture parameters (no filtering needed for texelFetch, but set anyway)
         this.gl.texParameteri(this.gl.TEXTURE_2D_ARRAY, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
         this.gl.texParameteri(this.gl.TEXTURE_2D_ARRAY, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
         this.gl.texParameteri(this.gl.TEXTURE_2D_ARRAY, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
         this.gl.texParameteri(this.gl.TEXTURE_2D_ARRAY, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-        this.texArrayWidth = width;
-        this.texArrayHeight = height;
+        this.gl.texParameteri(this.gl.TEXTURE_2D_ARRAY, this.gl.TEXTURE_MAX_LEVEL, 0);
+        this.atlas = { texture, size, depth };
     }
     render(images, heap) {
-        if (!this.gl || !this.program || !this.vao || !this.texArray)
+        if (!this.gl || !this.beginFrame(images))
             return;
+        // Filter valid images and build atlas items in one pass
+        let maxDimension = 0;
+        const items = [];
+        for (const img of images) {
+            if (img.w <= 0 || img.h <= 0 || img.w > this.maxTextureSize || img.h > this.maxTextureSize)
+                continue;
+            items.push({
+                img,
+                x: 0,
+                y: 0,
+                layer: 0,
+                sourceKey: img.cache_id && `${img.cache_id}:${img.bitmap}:${img.w}:${img.h}:${img.stride}`
+            });
+            maxDimension = Math.max(maxDimension, img.w, img.h);
+        }
+        if (items.length === 0) {
+            this.gl.flush();
+            return;
+        }
+        const initialSize = Math.min(this.maxTextureSize, 2 ** Math.max(0, Math.ceil(Math.log2(maxDimension))));
+        let size = Math.max(this.atlas?.size ?? 0, initialSize);
+        const maxLayers = this.maxArrayTextureLayers || 256;
+        // Place tallest-first, keep original draw order.
+        const ordered = [...items].sort((a, b) => b.img.h - a.img.h);
+        let pageCount = this.packAtlas(ordered, size, ATLAS_PADDING, true);
+        // triggered when a LOT of small textures are created, so small atlas, a lot of images, somewhat cheap-ish to recalculate
+        while (pageCount > maxLayers && size < this.maxTextureSize) {
+            size = Math.min(this.maxTextureSize, size * 2);
+            pageCount = this.packAtlas(ordered, size, ATLAS_PADDING, true);
+        }
+        if (pageCount > maxLayers) {
+            console.warn('JASSUB: frame exceeds texture array capacity');
+            this.gl.flush();
+            return;
+        }
+        const oldCache = this.uploadCache;
+        // Resize atlas texture if needed
+        if (!this.atlas || this.atlas.size < size || this.atlas.depth < pageCount) {
+            this.createAtlasTexture(size, Math.max(this.atlas?.depth ?? 0, pageCount));
+            oldCache.clear();
+        }
+        this.ensureInstanceCapacity(items.length);
+        this.uploadCache = new Set();
+        let instanceCount = 0;
         // HACK 1 and 2 [see above for explanation]
         if ((self.HEAPU8RAW.buffer !== self.WASMMEMORY.buffer) || SHOULD_REFERENCE_MEMORY) {
             heap = self.HEAPU8RAW = new Uint8Array(self.WASMMEMORY.buffer);
         }
-        // we scheduled a resize because changing the canvas size clears it, and we don't want it to flicker
-        // so we do it here, right before rendering
-        if (this._scheduledResize) {
-            const { width, height } = this._scheduledResize;
-            this._scheduledResize = undefined;
-            this.canvas.width = width;
-            this.canvas.height = height;
-            // Update viewport and resolution uniform
-            this.gl.viewport(0, 0, width, height);
-            this.gl.uniform2f(this.u_resolution, width, height);
-        }
-        else {
-            // Clear canvas
-            this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-        }
-        // Find max dimensions needed and filter valid images
-        let maxW = this.texArrayWidth;
-        let maxH = this.texArrayHeight;
-        const validImages = [];
-        for (const img of images) {
-            if (img.w <= 0 || img.h <= 0)
-                continue;
-            validImages.push(img);
-            if (img.w > maxW)
-                maxW = img.w;
-            if (img.h > maxH)
-                maxH = img.h;
-        }
-        if (validImages.length === 0)
-            return;
-        // Resize texture array if needed
-        if (maxW > this.texArrayWidth || maxH > this.texArrayHeight) {
-            this.createTexArray(maxW, maxH);
-        }
-        // Process images in chunks that fit within texture array size
-        const batchSize = Math.min(TEX_ARRAY_SIZE, MAX_INSTANCES);
-        for (let batchStart = 0; batchStart < validImages.length; batchStart += batchSize) {
-            const batchEnd = Math.min(batchStart + batchSize, validImages.length);
-            let instanceCount = 0;
-            // Upload textures for this batch
-            for (let i = batchStart; i < batchEnd; i++) {
-                const img = validImages[i];
-                const layer = instanceCount;
+        // Upload textures
+        for (const { img, x, y, layer, sourceKey } of items) {
+            const key = sourceKey && `${sourceKey}:${x}:${y}:${layer}`;
+            let cached = false;
+            if (key) {
+                cached = oldCache.has(key) || this.uploadCache.has(key);
+                this.uploadCache.add(key);
+            }
+            if (!cached) {
                 // Upload bitmap data to texture array layer
                 this.gl.pixelStorei(this.gl.UNPACK_ROW_LENGTH, img.stride);
                 if (IS_FIREFOX || IS_SAFARI) {
                     // HACK 3 [see util.ts for explanation]
                     const sourceView = new Uint8Array(heap.buffer, img.bitmap, img.stride * img.h);
                     const bitmapData = new Uint8Array(sourceView);
-                    this.gl.texSubImage3D(this.gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, // x, y, z offset
+                    this.gl.texSubImage3D(this.gl.TEXTURE_2D_ARRAY, 0, x, y, layer, // x, y, z offset
                     img.w, img.h, 1, // depth (1 layer)
                     this.gl.RED, this.gl.UNSIGNED_BYTE, bitmapData);
                 }
                 else {
-                    this.gl.texSubImage3D(this.gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, // x, y, z offset
+                    this.gl.texSubImage3D(this.gl.TEXTURE_2D_ARRAY, 0, x, y, layer, // x, y, z offset
                     img.w, img.h, 1, // depth (1 layer)
                     this.gl.RED, this.gl.UNSIGNED_BYTE, heap, img.bitmap);
                 }
-                // Fill instance data
-                const idx = instanceCount * 4;
-                this.instanceDestRectData[idx] = img.dst_x;
-                this.instanceDestRectData[idx + 1] = img.dst_y;
-                this.instanceDestRectData[idx + 2] = img.w;
-                this.instanceDestRectData[idx + 3] = img.h;
-                this.instanceColorData[idx] = ((img.color >>> 24) & 0xFF) / 255;
-                this.instanceColorData[idx + 1] = ((img.color >>> 16) & 0xFF) / 255;
-                this.instanceColorData[idx + 2] = ((img.color >>> 8) & 0xFF) / 255;
-                this.instanceColorData[idx + 3] = (img.color & 0xFF) / 255;
-                this.instanceTexLayerData[instanceCount] = layer;
-                instanceCount++;
             }
-            this.gl.pixelStorei(this.gl.UNPACK_ROW_LENGTH, 0);
-            if (instanceCount === 0)
-                continue;
-            // Upload instance data to buffers
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceDestRectBuffer);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.instanceDestRectData.subarray(0, instanceCount * 4), this.gl.DYNAMIC_DRAW);
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceColorBuffer);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.instanceColorData.subarray(0, instanceCount * 4), this.gl.DYNAMIC_DRAW);
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceTexLayerBuffer);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.instanceTexLayerData.subarray(0, instanceCount), this.gl.DYNAMIC_DRAW);
+            // Fill the interleaved instance data
+            const f = instanceCount * 8;
+            this.instanceFloats[f] = img.dst_x;
+            this.instanceFloats[f + 1] = img.dst_y;
+            this.instanceFloats[f + 2] = img.w;
+            this.instanceFloats[f + 3] = img.h;
+            this.instanceFloats[f + 4] = x;
+            this.instanceFloats[f + 5] = y;
+            this.instanceFloats[f + 7] = layer;
+            const b = instanceCount * INSTANCE_STRIDE + 24;
+            this.instanceBytes[b] = (img.color >>> 24) & 0xFF;
+            this.instanceBytes[b + 1] = (img.color >>> 16) & 0xFF;
+            this.instanceBytes[b + 2] = (img.color >>> 8) & 0xFF;
+            this.instanceBytes[b + 3] = img.color & 0xFF;
+            instanceCount++;
+        }
+        this.gl.pixelStorei(this.gl.UNPACK_ROW_LENGTH, 0);
+        if (instanceCount !== 0) {
+            // Upload the instance data in one call
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.instanceBuffer);
+            this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, this.instanceBytes, 0, instanceCount * INSTANCE_STRIDE);
             // Single instanced draw call
             this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, instanceCount);
         }
+        // Submit the queued commands before the task ends, so the compositor picks
+        // up this frame.
+        this.gl.flush();
     }
     destroy() {
-        if (this.gl) {
-            if (this.texArray) {
-                this.gl.deleteTexture(this.texArray);
-                this.texArray = null;
-            }
-            if (this.instanceDestRectBuffer) {
-                this.gl.deleteBuffer(this.instanceDestRectBuffer);
-                this.instanceDestRectBuffer = null;
-            }
-            if (this.instanceColorBuffer) {
-                this.gl.deleteBuffer(this.instanceColorBuffer);
-                this.instanceColorBuffer = null;
-            }
-            if (this.instanceTexLayerBuffer) {
-                this.gl.deleteBuffer(this.instanceTexLayerBuffer);
-                this.instanceTexLayerBuffer = null;
-            }
-            if (this.vao) {
-                this.gl.deleteVertexArray(this.vao);
-                this.vao = null;
-            }
-            if (this.program) {
-                this.gl.deleteProgram(this.program);
-                this.program = null;
-            }
-            this.gl = null;
-        }
+        this.uploadCache.clear();
+        if (!this.gl)
+            return;
+        if (this.atlas)
+            this.gl.deleteTexture(this.atlas.texture);
+        this.gl.deleteBuffer(this.instanceBuffer);
+        this.gl.deleteVertexArray(this.vao);
+        this.gl.deleteProgram(this.program);
+        this.instanceBuffer = this.vao = this.program = this.gl = this.atlas = null;
     }
 }
 //# sourceMappingURL=webgl2-renderer.js.map

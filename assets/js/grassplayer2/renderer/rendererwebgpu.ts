@@ -11,16 +11,15 @@ import EffectLoad from "../effects/load"
 import EffectLut3d from "../effects/lut3d"
 
 import Effect from "../effects/_effect"
-import { FULLSCREEN_VERTEX, create_fullscreen_pipeline } from "../effects/_fullscreen"
 import GrassPlayer from "../grassplayer2"
 import SamplerDefault from "../samplers/default"
 import SamplerDefaultLinear from "../samplers/defaultlinear"
 import SamplerSphere from "../samplers/sphere"
 
 import rvfc_firefox from "./rvfc_firefox"
+import SubtitleOverlay from "./subtitle_overlay"
 
 import JASSUB from "../jassub"
-import SubtitlesOctopus from "../subtitles-octopus2"
 
 function create_element(
     tagname: string,
@@ -67,13 +66,11 @@ export default class RendererWebGPU implements Renderer {
         this.#frames_presented = -1
         this.#frames_dropped = 0
         this.#frames_late = 0
-        this.#frames_held = 0
         this.#frame_metadata = null
     }
 
     #e_video: HTMLVideoElement
     #e_canvas: HTMLCanvasElement
-    #e_subtitles: HTMLCanvasElement
     #e_videoinfo_catchup: HTMLElement
     #e_videoinfo_method: HTMLSelectElement
 
@@ -81,7 +78,6 @@ export default class RendererWebGPU implements Renderer {
     constructor(player: GrassPlayer, root: HTMLElement, root_settings: HTMLElement) {
         root.innerHTML = `
 <canvas class="video" width="1920" height="1080" style="width: 100%; height: 100%; object-fit: contain;"></canvas>
-<div class="subtitles"></div>
 `
 
         root_settings.innerHTML = `
@@ -92,7 +88,6 @@ export default class RendererWebGPU implements Renderer {
         <div><span>Fps</span><span class="fps"></span></div>
         <div><span>Dropped</span><span class="dropped"></span></div>
         <div><span>Late</span><span class="late"></span></div>
-        <div><span>Held</span><span class="held"></span></div>
         <div><span>Total time (ms)</span><span class="totaltime"></span></div>
         <div><span>JS (ms)</span><span class="jstime"></span></div>
         <div><span>GPU queue (ms)</span><span class="queuetime"></span></div>
@@ -130,18 +125,11 @@ export default class RendererWebGPU implements Renderer {
 <div>
     <div><span>Sampler</span><select class="select-sampler"></select></div>
 </div>
-<div>
-    <div><span>Double Buffering</span><input class="chk-double-buffer" type="checkbox"></input></div>
-</div>
-<div>
-    <div><span>Subtitles</span><select class="select-subtitles"></select></div>
-</div>
 `
 
         this.player = player
         this.#e_video = root_settings.querySelector("video")!
         this.#e_canvas = root.querySelector("canvas.video")!
-        this.#e_subtitles = root.querySelector("div.subtitles")!
         this.#e_videoinfo_catchup = root_settings.querySelector(".videoinfo-catchup")!
         this.#e_videoinfo_method = root_settings.querySelector(".videoinfo-method")!
 
@@ -182,14 +170,11 @@ export default class RendererWebGPU implements Renderer {
 
         this.#loaded = this.init(root, root_settings)
 
-        fetch("https://r2tube.grass.moe/fonts.json")
+        // set_subtitles waits on this so JASSUB starts once, with the full font list.
+        this.#fonts_ready = fetch("https://r2tube.grass.moe/fonts.json")
             .then(res => res.json())
             .then(fonts => {
-                for (const key of Object.keys(fonts)) {
-                    fonts[key] = fonts[key].map((f: any) => f)
-                }
                 this.#fonts = fonts
-                this.set_subtitles(this.#current_subtitles)
                 console.log("fonts:loaded")
             })
             .catch(err => {
@@ -198,54 +183,60 @@ export default class RendererWebGPU implements Renderer {
     }
 
     #fonts: Record<string, string[]> = {}
-    #sub_renderer: SubtitlesOctopus | JASSUB | null = null
+    #fonts_ready: Promise<void>
+    #sub_renderer: JASSUB | null = null
     #current_subtitles: string | null = null
+    #subtitles: SubtitleOverlay | null = null
+    #captions = true
     async set_subtitles(subtitles: string | null) {
         this.#current_subtitles = subtitles
 
-        this.#sub_renderer?.destroy()
+        this.#subtitles?.set_jassub(null)
+        // Rejects if it failed to start.
+        this.#sub_renderer?.destroy().catch(() => {})
         this.#sub_renderer = null
-
-        while (this.#e_subtitles.firstChild) {
-            this.#e_subtitles.removeChild(this.#e_subtitles.firstChild)
-        }
+        this.#have_frame = true
 
         if (subtitles == null || subtitles.length == 0) return
 
-        if (this.player.get_storage("subtitle-renderer") == "SubtitlesOctopus") {
-            this.#sub_renderer = new SubtitlesOctopus({
-                video: this.#e_video,
-                canvasParent: this.#e_subtitles,
-                proxyCanvas: this.#e_canvas,
-                subUrl: subtitles,
-                availableFonts: this.#fonts,
-                workerUrl: "/includes/subtitles-octopus-worker.js",
-            })
-        } else {
-            let fonts: Record<string, string> = {}
-            for (const k in this.#fonts) {
-                for (const v of this.#fonts[k]) {
-                    fonts[k] = v
-                }
+        await this.#fonts_ready
+        // Superseded while waiting.
+        if (this.#current_subtitles !== subtitles || this.#sub_renderer != null) return
+
+        // Whole families; the worker loads every face.
+        const fonts: Record<string, string | string[]> = {
+            ...this.#fonts,
+            "liberation sans": "/includes/default.woff2",
+        }
+
+        const jassub = new JASSUB({
+            video: this.#e_video,
+            manualPresent: true,
+            subUrl: subtitles,
+            workerUrl: "/includes/jassub/worker.js",
+            wasmUrl: "/includes/jassub/jassub-worker.wasm",
+            modernWasmUrl: "/includes/jassub/jassub-worker-modern.wasm",
+            fonts: [
+                "https://r2tube.grass.moe/fonts/vesta-bold.otf",
+                "https://r2tube.grass.moe/fonts/Roboto-Medium.ttf",
+            ],
+            availableFonts: fonts,
+        })
+
+        this.#sub_renderer = jassub
+        this.#subtitles?.set_jassub(jassub)
+        // Paused, nothing else requests this frame.
+        this.#have_frame = true
+
+        try {
+            await jassub.ready
+        } catch (e) {
+            console.error("subtitles: JASSUB failed to start", e)
+            if (this.#sub_renderer === jassub) {
+                this.#subtitles?.set_jassub(null)
+                this.#sub_renderer = null
             }
-            fonts["liberation sans"] = "/includes/default.woff2"
-
-            this.#sub_renderer = new JASSUB({
-                video: this.#e_video,
-                canvasParent: this.#e_subtitles,
-                proxy: this.#e_canvas,
-                subUrl: subtitles,
-                workerUrl: "/includes/jassub/worker.js",
-                wasmUrl: "/includes/jassub/jassub-worker.wasm",
-                modernWasmUrl: "/includes/jassub/jassub-worker-modern.wasm",
-                fonts: [
-                    "https://r2tube.grass.moe/fonts/vesta-bold.otf",
-                    "https://r2tube.grass.moe/fonts/Roboto-Medium.ttf",
-                ],
-                availableFonts: fonts,
-            })
-
-            await this.#sub_renderer.ready
+            jassub.destroy().catch(() => {})
         }
     }
 
@@ -265,227 +256,7 @@ export default class RendererWebGPU implements Renderer {
         return 0
     }
 
-    // Deferred presentation ("double buffering"): the filter chain renders into one of these
-    // two canvas-sized images, and the *next* animation frame copies the finished one into the
-    // swap chain in a separate, earlier submit. The compositor then only ever waits on a plain
-    // full-screen copy instead of on the whole chain, which is what keeps pacing even when a
-    // frame's filtering happens to overrun. It costs exactly one frame of extra latency.
-    #present_pipeline: GPURenderPipeline | null = null
-    #present_textures: GPUTexture[] = []
-    #present_views: GPUTextureView[] = []
-    #present_bindgroups: GPUBindGroup[] = []
-    #present_size: [number, number] = [0, 0]
-    #present_next = 0
-    #present_pending = -1
-    double_buffering = false
-
-    // ---- presentation clock -------------------------------------------------------------
-    //
-    // Presenting a buffered frame at whichever animation frame happens to come next inherits all
-    // of that callback's jitter, and quantises every frame to "the next rAF" regardless of when it
-    // was actually due. Instead each rendered frame gets a wall-clock deadline derived from its
-    // own mediaTime, and it is held until the refresh nearest that deadline.
-    //
-    // Because consecutive deadlines are separated by the exact media delta (41.708 ms for 23.976
-    // fps) rather than by however rAF happened to fire, a 24 fps source on a 60 Hz display settles
-    // into a true 3:2 pattern instead of drifting between 3:2 and 2:3.
-
-    // Lead the schedule keeps, in refresh intervals. A frame rendered during one callback can
-    // first reach the screen two refreshes later, so anything above 2 is slack the scheduler can
-    // spend holding a frame back to land it on the right vsync.
-    //
-    // That slack is exactly the tolerance for a late render, so it is also exactly the latency
-    // cost - which is why it adapts rather than sitting at the worst case. On a machine that is
-    // hitting every vsync there is nothing to absorb and it settles at the floor; missed callbacks
-    // raise it quickly, and it bleeds back down over about ten seconds of clean frames.
-    static #LEAD_MIN = 2.5
-    static #LEAD_MAX = 3.5
-
-    // Hard ceiling on how long any one frame may wait, as a duration rather than a callback
-    // count. At 60 Hz this works out to a single hold, which is exactly what the 3:2 cadence
-    // needs and bounds the whole path at three refreshes. Counting callbacks instead would make
-    // the ceiling shrink with the refresh interval: on a 240 Hz display one hold is only 4 ms,
-    // far too tight to reach the right vsync, and measurably worse than not scheduling at all.
-    static #MAX_HOLD_MS = 17
-
-    #lead = RendererWebGPU.#LEAD_MIN
-    #present_holds = 0
-
-    #refresh_ms = 1000 / 60
-    #refresh_samples: number[] = []
-    #last_raf = 0
-
-    #sched_media = 0
-    #sched_due = 0
-    #sched_valid = false
-    #frames_held = 0
-
-    #reset_present_clock() {
-        this.#sched_valid = false
-        this.#present_pending = -1
-    }
-
-    /**
-     * Rolling estimate of the display refresh interval, as the modal gap between callbacks.
-     *
-     * Deltas are quantised to the display clock, and a missed callback contributes a whole
-     * multiple of it. The mode picks out the single-refresh cluster and ignores the multiples,
-     * where a mean or median is dragged up by them and a percentile is dragged down by any wobble
-     * on the timestamps.
-     */
-    #update_refresh(t: number) {
-        const dt = t - this.#last_raf
-        this.#last_raf = t
-        if (dt < 1 || dt > 200) return
-
-        const samples = this.#refresh_samples
-        samples.push(dt)
-        if (samples.length > 240) samples.shift()
-        if (samples.length < 30) return
-
-        const BUCKET = 0.5
-        const counts = new Map<number, number>()
-        let best = -1
-        let best_count = 0
-        for (const sample of samples) {
-            const bucket = Math.round(sample / BUCKET)
-            const count = (counts.get(bucket) || 0) + 1
-            counts.set(bucket, count)
-            if (count > best_count) {
-                best_count = count
-                best = bucket
-            }
-        }
-
-        // Average the winning bucket and its neighbours so the result is not itself quantised.
-        let sum = 0
-        let n = 0
-        for (const sample of samples) {
-            if (Math.abs(Math.round(sample / BUCKET) - best) <= 1) {
-                sum += sample
-                n++
-            }
-        }
-
-        if (n > 0) this.#refresh_ms = Math.min(40, Math.max(4, sum / n))
-
-        // A gap of more than one refresh means a callback was missed: the render that would have
-        // happened in it is now late, and only lead above 2 can keep that off the screen.
-        const skipped = Math.round(dt / this.#refresh_ms) - 1
-        if (skipped > 0) {
-            this.#lead = Math.min(
-                RendererWebGPU.#LEAD_MAX,
-                this.#lead + 0.25 * Math.min(skipped, 4),
-            )
-        } else {
-            this.#lead += (RendererWebGPU.#LEAD_MIN - this.#lead) * 0.002
-        }
-    }
-
-    /** Give the frame about to be rendered a deadline, advancing the schedule by its media delta. */
-    #schedule_present(t: number, metadata: any) {
-        if (metadata == null) {
-            // No metadata (Firefox polyfill): fall back to presenting at the next opportunity.
-            this.#sched_valid = false
-            return
-        }
-
-        const refresh = this.#refresh_ms
-        const lead = refresh * this.#lead
-        const media = metadata.mediaTime
-        const rate = this.#e_video.playbackRate || 1
-
-        if (this.#sched_valid) {
-            const delta = ((media - this.#sched_media) * 1000) / rate
-
-            if (delta > 0 && delta < 1000) {
-                this.#sched_due += delta
-
-                const slack = this.#sched_due - t
-                const error = slack - lead
-
-                if (slack < -refresh || slack > 250) {
-                    // Seek, stall or a long tab throttle: the mapping is meaningless now.
-                    this.#sched_due = t + lead
-                } else if (Math.abs(error) > refresh) {
-                    // Only correct once the schedule has wandered more than a whole refresh, and
-                    // then only slightly. Chasing the per-frame error would re-anchor the deadline
-                    // to when frames happen to arrive, which is exactly the jitter being removed:
-                    // the deadlines have to keep advancing by the media delta and nothing else.
-                    this.#sched_due -= error * 0.05
-                }
-            } else {
-                this.#sched_due = t + lead
-            }
-        } else {
-            this.#sched_due = t + lead
-            this.#sched_valid = true
-        }
-
-        this.#sched_media = media
-    }
-
-    /** Whether the pending frame belongs on the screen at the refresh this callback feeds. */
-    #present_is_due(t: number) {
-        if (!this.#sched_valid) return true
-
-        // Content drawn in this callback reaches the screen at the next vsync; present at the
-        // refresh nearest the deadline rather than the first one at or after it.
-        return t + this.#refresh_ms >= this.#sched_due - this.#refresh_ms * 0.5
-    }
-
-    #present_target = {
-        view: null as GPUTextureView | null,
-        loadOp: "clear" as GPULoadOp,
-        storeOp: "store" as GPUStoreOp,
-        clearValue: [0, 0, 0, 1],
-    }
-    #present_desc: GPURenderPassDescriptor = {
-        label: "present",
-        colorAttachments: [this.#present_target as any],
-    }
-
-    /** Allocate (or reallocate) the deferred-present images for the current canvas size. */
-    #ensure_present_targets(w: number, h: number): boolean {
-        if (this.#present_size[0] == w && this.#present_size[1] == h) {
-            return this.#present_views.length == 2
-        }
-
-        const old = this.#present_textures
-        if (old.length) {
-            this.device!.queue.onSubmittedWorkDone().then(() => old.forEach(t => t.destroy()))
-        }
-
-        this.#present_textures = []
-        this.#present_views = []
-        this.#present_bindgroups = []
-        this.#present_pending = -1
-        this.#sched_valid = false
-        this.#present_next = 0
-        this.#present_size = [w, h]
-
-        if (this.#present_pipeline == null) return false
-
-        for (let i = 0; i < 2; i++) {
-            const texture = this.device!.createTexture({
-                label: `present ${i}`,
-                size: [w, h],
-                format: this.canvas_format,
-                usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-            })
-            const view = texture.createView()
-            this.#present_textures.push(texture)
-            this.#present_views.push(view)
-            this.#present_bindgroups.push(
-                this.device!.createBindGroup({
-                    layout: this.#present_pipeline.getBindGroupLayout(0),
-                    entries: [{ binding: 0, resource: view }],
-                }),
-            )
-        }
-
-        return true
-    }
+    #media_time = 0
 
     #clear?: () => void
     #sampler: any
@@ -617,26 +388,19 @@ export default class RendererWebGPU implements Renderer {
             device.queue.submit([commandEncoder.finish()])
         }
 
-        // Present pipeline for the deferred path: a 1:1 copy, so textureLoad rather than a
-        // sampler - the source and the swap chain always have identical dimensions.
         {
-            const module = device.createShaderModule({
-                label: "present",
-                code: /* wgsl */ `
-@group(0) @binding(0) var src: texture_2d<f32>;
-${FULLSCREEN_VERTEX}
-@fragment
-fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
-    return textureLoad(src, vec2<i32>(in.pos.xy), 0);
-}`,
-            })
-
-            this.#present_pipeline = create_fullscreen_pipeline(
-                device,
-                module,
-                this.canvas_format,
-                "present",
-            )
+            const subtitles = new SubtitleOverlay(device, this.canvas_format)
+            subtitles.visible = this.#captions
+            // Playing, the next frame picks them up.
+            subtitles.on_update = () => {
+                if (this.#e_video.paused) this.#have_frame = true
+            }
+            subtitles.lut = () => {
+                const lut3d = this.#effects.find(e => e instanceof EffectLut3d) as any
+                return lut3d?.lut_view ?? null
+            }
+            if (this.#sub_renderer) subtitles.set_jassub(this.#sub_renderer)
+            this.#subtitles = subtitles
         }
 
         // Create resizer
@@ -775,46 +539,6 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
             this.#sampler.init()
         }
 
-        // Double buffering
-        {
-            const check: HTMLInputElement = root_settings.querySelector(".chk-double-buffer")!
-
-            const apply = () => {
-                this.double_buffering = check.checked
-                // Anything already rendered ahead belongs to the other mode.
-                this.#reset_present_clock()
-                this.#have_frame = true
-            }
-
-            check.addEventListener("input", () => {
-                this.player.set_storage("webgpu-double-buffer", check.checked ? 1 : 0)
-                apply()
-            })
-
-            // Default on: the steadier pacing is worth one frame of latency for video playback.
-            const stored = this.player.get_storage("webgpu-double-buffer")
-            check.checked = stored == null ? false : stored == "1"
-            apply()
-        }
-
-        // Create subtitles option
-        {
-            const options = ["JASSUB", "SubtitlesOctopus"]
-            const select: HTMLSelectElement = root_settings.querySelector(".select-subtitles")!
-            options.forEach(e => {
-                const option = document.createElement("option")
-                option.textContent = e
-                select.appendChild(option)
-            })
-            select.addEventListener("change", () => {
-                this.player.set_storage("subtitle-renderer", options[select.selectedIndex])
-                this.set_subtitles(this.#current_subtitles)
-            })
-            select.selectedIndex = options.indexOf(
-                this.player.get_storage("subtitle-renderer") || "JASSUB",
-            )
-        }
-
         this.#effects.forEach(e => {
             if (!e.enabled) return
             try {
@@ -832,7 +556,6 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
         const txt_fps = root_settings.querySelector(".fps")!
         const txt_dropped = root_settings.querySelector(".dropped")!
         const txt_late = root_settings.querySelector(".late")!
-        const txt_held = root_settings.querySelector(".held")!
         const totaltime = root_settings.querySelector(".totaltime")!
         const jstime = root_settings.querySelector(".jstime")!
         const queuetime = root_settings.querySelector(".queuetime")!
@@ -880,51 +603,12 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
         // Reused across frames so the hot path does not allocate per frame.
         const canvas_res: [number, number] = [0, 0]
 
-        const present_frame = () => {
-            const present = device.createCommandEncoder()
-            this.#present_target.view = context.getCurrentTexture().createView()
-            const pass = present.beginRenderPass(this.#present_desc)
-            pass.setPipeline(this.#present_pipeline!)
-            pass.setBindGroup(0, this.#present_bindgroups[this.#present_pending])
-            pass.draw(3)
-            pass.end()
-            device.queue.submit([present.finish()])
-            this.#present_pending = -1
-        }
-
         const render = (t: number) => {
             requestAnimationFrame(render)
-            this.#update_refresh(t)
             if (this.#e_video.videoWidth == 0) return
 
             // We are using requestAnimationFrame in a busy loop to keep the gpu from going to sleep
-            if (!this.#have_frame && !this.double_buffering) {
-                device.queue.submit([device.createCommandEncoder().finish()])
-                return
-            }
-
-            // Deferred presentation: hand the compositor the frame finished last time round, in
-            // its own submit, before this frame's chain is queued behind it.
-            const deferred =
-                this.double_buffering &&
-                this.#ensure_present_targets(this.#e_canvas.width, this.#e_canvas.height)
-
-            if (deferred && this.#present_pending >= 0) {
-                const max_holds = Math.max(
-                    1,
-                    Math.floor(RendererWebGPU.#MAX_HOLD_MS / this.#refresh_ms),
-                )
-
-                if (this.#present_is_due(t) || this.#present_holds >= max_holds) {
-                    present_frame()
-                } else {
-                    this.#present_holds++
-                    this.#frames_held++
-                }
-            }
-
             if (!this.#have_frame) {
-                // Keep the busy submit going so the GPU does not clock down between video frames.
                 device.queue.submit([device.createCommandEncoder().finish()])
                 return
             }
@@ -950,26 +634,20 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
             this.#frame_metadata = null
             if (metadata != null && t > metadata.expectedDisplayTime) this.#frames_late++
 
-            if (deferred) {
-                // A frame is still waiting and a newer one is ready: show it now rather than
-                // overwrite the slot it is holding. Reaching this means the schedule is running
-                // behind the source, so pull the deadline back with it.
-                if (this.#present_pending >= 0) {
-                    present_frame()
-                    this.#sched_due = Math.min(this.#sched_due, t + this.#refresh_ms)
-                }
+            // No new metadata: a redraw of the same frame, or the polyfill, which never has any.
+            if (metadata != null) this.#media_time = metadata.mediaTime
+            else if (!this.#frame_metadata_available) this.#media_time = this.#e_video.currentTime
+            const media_time = this.#media_time
 
-                this.#schedule_present(t, metadata)
-            }
+            this.#subtitles?.resize(this.#e_canvas.width, this.#e_canvas.height)
+            this.#subtitles?.request(media_time, !this.#e_video.paused)
 
             const encoder = device.createCommandEncoder()
 
             canvas_res[0] = this.#e_canvas.width
             canvas_res[1] = this.#e_canvas.height
 
-            const texture_canvas = deferred
-                ? this.#present_views[this.#present_next]
-                : context.getCurrentTexture().createView()
+            const texture_canvas = context.getCurrentTexture().createView()
 
             timer.start(encoder)
 
@@ -990,16 +668,12 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
 
             timer.run(this.#sampler, video_time, last_tex, last_tex_res, texture_canvas, canvas_res)
 
+            this.#subtitles?.composite(encoder, texture_canvas, media_time)
+
             timer.finish()
 
             const t2 = performance.now()
             device.queue.submit([encoder.finish()])
-
-            if (deferred) {
-                this.#present_pending = this.#present_next
-                this.#present_next ^= 1
-                this.#present_holds = 0
-            }
 
             frame_n++
 
@@ -1037,11 +711,6 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
                 txt_dropped.textContent = "n/a"
                 txt_late.textContent = "n/a"
             }
-            txt_held.textContent = this.double_buffering
-                ? `${this.#frames_held} @ ${this.#refresh_ms.toFixed(2)}ms, lead ${(
-                    this.#lead * this.#refresh_ms
-                ).toFixed(1)}ms`
-                : "off"
 
             const t1 = performance.now()
             jstime.textContent = (t1 - t0).toFixed(4)
@@ -1218,10 +887,7 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
     set_video(video: string | null, subtitles: string | null) {
         this.#e_video.src = video || ""
         this.#reset_frame_stats()
-        this.#reset_present_clock()
         this.set_playing(false)
-        // Anything already rendered belongs to the previous video.
-        this.#present_pending = -1
         this.#clear?.()
 
         this.set_subtitles(subtitles)
@@ -1232,7 +898,9 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
     }
 
     set_captions(b: boolean) {
-        this.#e_subtitles.style.display = b ? "" : "none"
+        this.#captions = b
+        if (this.#subtitles) this.#subtitles.visible = b
+        this.#have_frame = true
     }
 
     playing() {

@@ -47,6 +47,7 @@ export interface ASSImage {
     stride: number;
     color: number;
     bitmap: number;
+    cache_id: number;
 }
 export declare const WEIGHT_MAP: readonly ["thin", "extralight", "light", "regular", "medium", "semibold", "bold", "extrabold", "black", "ultrablack"];
 export type WeightValue = typeof WEIGHT_MAP[number];
@@ -56,25 +57,7 @@ export declare const LIBASS_YCBCR_MAP: readonly [null, "BT601", null, "BT601", "
 export declare const _fetch: typeof fetch;
 export declare function fetchtext(url: string): Promise<string>;
 export declare const THREAD_COUNT: number;
-export declare const SUPPORTS_GROWTH: boolean;
+export declare const SUPPORTS_GROWTH = true;
 export declare const SHOULD_REFERENCE_MEMORY: boolean;
 export declare const IDENTITY_MATRIX: Float32Array<ArrayBuffer>;
-export declare const colorMatrixConversionMap: {
-    readonly BT601: {
-        readonly BT709: Float32Array<ArrayBuffer>;
-        readonly BT601: Float32Array<ArrayBuffer>;
-    };
-    readonly BT709: {
-        readonly BT601: Float32Array<ArrayBuffer>;
-        readonly BT709: Float32Array<ArrayBuffer>;
-    };
-    readonly FCC: {
-        readonly BT709: Float32Array<ArrayBuffer>;
-        readonly BT601: Float32Array<ArrayBuffer>;
-    };
-    readonly SMPTE240M: {
-        readonly BT709: Float32Array<ArrayBuffer>;
-        readonly BT601: Float32Array<ArrayBuffer>;
-    };
-};
-export type ColorSpace = keyof typeof colorMatrixConversionMap;
+export declare function resolveColorMatrix(subtitleColorSpace?: 'BT601' | 'BT709' | 'SMPTE240M' | 'FCC', videoColorSpace?: 'BT601' | 'BT709'): Float32Array<ArrayBuffer>;

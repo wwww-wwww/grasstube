@@ -12,8 +12,8 @@ export interface SubtitleCallbackMetadata {
     frameDelay: DOMHighResTimeStamp;
 }
 export declare class Debug {
-    fps: (delta: any) => number;
-    processingDuration: (delta: any) => number;
+    fps: any;
+    processingDuration: any;
     droppedFrames: number;
     presentedFrames: number;
     mistimedFrames: number;

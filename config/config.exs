@@ -44,6 +44,14 @@ config :esbuild,
       ~w(js/app.js js/grassplayer2/effects/lut3d-worker.js --bundle --target=es2022 --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+  ],
+  # Loads jassub-worker.js and the .wasm files from beside itself; copy those by hand from
+  # assets/js/grassplayer2/jassub/dist/wasm whenever JASSUB is updated.
+  jassub_worker: [
+    args:
+      ~w(js/grassplayer2/jassub/dist/worker/worker.js --bundle --format=esm --target=es2022 --outfile=../priv/static/includes/jassub/worker.js),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
 # config :bun,

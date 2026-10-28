@@ -31,6 +31,7 @@ export default class JASSUB {
     _lastDemandTime;
     _skipped = false;
     _worker;
+    _manualPresent;
     constructor(opts) {
         if (!globalThis.Worker)
             throw new Error('Worker not supported');
@@ -41,16 +42,21 @@ export default class JASSUB {
         JASSUB._test();
         this.timeOffset = opts.timeOffset ?? 0;
         this._video = opts.video;
-        this._proxy = opts.proxy ?? opts.video;
-        this._canvasParent = opts.canvasParent;
+        this._manualPresent = !!opts.manualPresent;
         this._canvas = opts.canvas ?? document.createElement('canvas');
-        if (this._video && !opts.canvas) {
+        if (this._video && !opts.canvas && !this._manualPresent) {
             this._canvas.className = 'JASSUB';
             this._canvas.style.position = 'absolute';
             this._canvas.style.pointerEvents = 'none';
-            this._canvasParent.appendChild(this._canvas)
+            if (opts.canvasParent) {
+                opts.canvasParent.appendChild(this._canvas);
+            }
+            else {
+                this._video.insertAdjacentElement('afterend', this._canvas);
+            }
         }
-        const ctrl = this._canvas.transferControlToOffscreen();
+        // manualPresent: the worker's canvas is never displayed.
+        const ctrl = this._manualPresent ? new OffscreenCanvas(1, 1) : this._canvas.transferControlToOffscreen();
         this.debug = opts.debug ? new Debug() : null;
         this.prescaleFactor = opts.prescaleFactor ?? 1.0;
         this.prescaleHeightLimit = opts.prescaleHeightLimit ?? 1080;
@@ -79,7 +85,7 @@ export default class JASSUB {
             libassMemoryLimit: opts.libassMemoryLimit ?? 0,
             libassGlyphLimit: opts.libassGlyphLimit ?? 0,
             queryFonts: opts.queryFonts ?? 'local'
-        }, proxy(font => this._getLocalFont(font)), transfer(ctrl, [ctrl])).then((renderer) => {
+        }, proxy(font => this._getLocalFont(font)), transfer(ctrl, [ctrl]), proxy(() => this._fontsChanged())).then((renderer) => {
             this.renderer = renderer;
         });
         if (this._video) {
@@ -88,14 +94,29 @@ export default class JASSUB {
         else {
             this._ro.observe(this._canvas);
         }
-        this._ro.observe(this._proxy)
     }
     static _supportsSIMD;
     static _test() {
         if (JASSUB._supportsSIMD != null)
             return;
         try {
-            JASSUB._supportsSIMD = WebAssembly.validate(Uint8Array.of(0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11));
+            JASSUB._supportsSIMD = WebAssembly.validate(Uint8Array.of(
+            // WASM magic number + version 1
+            0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 
+            // Type section: 1 type, func () -> v128
+            0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7b, 
+            // function section 1 function, type index 0
+            0x03, 0x02, 0x01, 0x00, 
+            // code section 1 body, 0 locals
+            0x0a, 0x2b, 0x01, 0x29, 0x00, 
+            // v128.const i32x4 0 0 0 0
+            0xfd, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+            // v128.const i32x4 0 0 0 0
+            0xfd, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+            // i8x16.relaxed_swizzle relaxed SIMD
+            0xfd, 0x80, 0x02, 
+            // end
+            0x0b));
         }
         catch (e) {
             JASSUB._supportsSIMD = false;
@@ -107,7 +128,7 @@ export default class JASSUB {
     async resize(forceRepaint = !!this._video?.paused, renderWidth = 0, renderHeight = 0) {
         const videoWidth = this._video?.videoWidth ?? this._videoWidth;
         const videoHeight = this._video?.videoHeight ?? this._videoHeight;
-        const videoSize = this._getElementBoundingBox(this._proxy ?? this._canvas, videoWidth, videoHeight);
+        const videoSize = this._getElementBoundingBox(this._video ?? this._canvas, videoWidth, videoHeight);
         if (!renderWidth || !renderHeight) {
             // || 1 for divide by zero safety
             const widthScale = (this._videoWidth / videoWidth) || 1;
@@ -122,7 +143,11 @@ export default class JASSUB {
             this._canvas.style.top = videoSize.y + 'px';
             this._canvas.style.left = videoSize.x + 'px';
         }
-        await this.renderer._resizeCanvas(renderWidth, renderHeight, this._videoWidth || renderWidth, this._videoHeight || renderHeight);
+        // The storage size is the video resolution. Do not set it for canvas-only
+        // rendering. If it is set to the render size, libass scales blur, borders
+        // and shadows by the render size instead of the script resolution
+        // (libass issue #591).
+        await this.renderer._resizeCanvas(renderWidth, renderHeight, this._video ? (this._videoWidth || renderWidth) : 0, this._video ? (this._videoHeight || renderHeight) : 0);
         if (this._lastDemandTime)
             await this._demandRender(forceRepaint);
     }
@@ -159,15 +184,35 @@ export default class JASSUB {
         height = newH;
         return { width, height };
     }
+    // Fonts were added after rendering began, so what is drawn may have used a fallback.
+    // Replaces the default redraw of the last frame.
+    onfontschange = null;
+    _fontsChanged() {
+        if (this.onfontschange)
+            return this.onfontschange();
+        if (this._lastDemandTime)
+            this._demandRender(true);
+    }
     async setVideo(target) {
         this._removeListeners();
         this._video = target;
+        if (!this._manualPresent)
+            this._ro.observe(target);
         if (typeof VideoFrame !== 'undefined') {
             target.addEventListener('loadedmetadata', this._boundUpdateColorSpace);
             this._updateColorSpace({ target });
         }
         await this.ready;
+        if (this._manualPresent)
+            return;
         this._video.requestVideoFrameCallback((now, data) => this._handleRVFC(data));
+    }
+    // manualPresent only. `times` are video times; timeOffset is added. See ASSRenderer._renderImages.
+    async renderImages(times, width, height, repaint = false) {
+        await this.ready;
+        const videoWidth = this._video?.videoWidth || width;
+        const videoHeight = this._video?.videoHeight || height;
+        return await this.renderer._renderImages(times.map(t => t + this.timeOffset), width, height, videoWidth, videoHeight, repaint);
     }
     async _getLocalFont(font, weight = 'regular') {
         // electron by default has all permissions enabled, and it doesn't have perm query
@@ -224,9 +269,10 @@ export default class JASSUB {
                 return;
             try {
                 const frame = new VideoFrame(this._video);
+                const colorSpace = webYCbCrMap[frame.colorSpace.matrix];
                 frame.close();
                 await this.ready;
-                await this.renderer._setColorSpace(webYCbCrMap[frame.colorSpace.matrix]);
+                await this.renderer._setColorSpace(colorSpace);
             }
             catch (e) {
                 // sources can be tainted
@@ -244,9 +290,13 @@ export default class JASSUB {
         this._destroyed = true;
         this._canvas.remove();
         this._removeListeners();
-        await this.ready;
-        await this.renderer?.[releaseProxy]();
-        this._worker.terminate();
+        try {
+            await this.ready;
+            await this.renderer?.[releaseProxy]();
+        }
+        finally {
+            this._worker.terminate();
+        }
     }
 }
 //# sourceMappingURL=jassub.js.map

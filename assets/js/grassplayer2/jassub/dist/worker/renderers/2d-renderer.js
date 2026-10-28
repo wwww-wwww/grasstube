@@ -1,52 +1,50 @@
-export class Canvas2DRenderer {
-    canvas = null;
-    ctx = null;
+// fallback for browsers that don't support GPU acceleration
+import { IDENTITY_MATRIX, resolveColorMatrix } from "../util.js";
+import { CanvasRendererBase } from "./canvas-base.js";
+// clamp to 0-255 with rounding, matching rgba8unorm GPU behaviour
+const clamp = (v) => (v < 0 ? 0 : v > 1 ? 255 : Math.round(v * 255));
+export class Canvas2DRenderer extends CanvasRendererBase {
+    ctx;
     bufferCanvas = new OffscreenCanvas(1, 1);
     bufferCtx = this.bufferCanvas.getContext('2d', {
         alpha: true,
-        desynchronized: true,
+        desynchronized: false,
         willReadFrequently: false
     });
-    _scheduledResize;
-    resizeCanvas(width, height) {
-        if (!width || !height)
-            return;
-        if (this.canvas?.width === width && this.canvas?.height === height)
-            return;
-        this._scheduledResize = { width, height };
-    }
-    setCanvas(canvas) {
-        this.canvas = canvas;
+    colorMatrix = IDENTITY_MATRIX;
+    constructor(canvas) {
+        super(canvas);
         this.ctx = canvas.getContext('2d', {
             alpha: true,
-            desynchronized: true,
+            desynchronized: false,
             willReadFrequently: false
         });
-        if (!this.ctx)
+        if (!this.ctx || !this.bufferCtx)
             throw new Error('Could not get 2D context');
     }
-    // not supported
+    // this should be an svg filter which is cheaper, but not supported
     // https://issues.chromium.org/u/1/issues/40910142
-    setColorMatrix(subtitleColorSpace, videoColorSpace) { }
+    setColorMatrix(subtitleColorSpace, videoColorSpace) {
+        this.colorMatrix = resolveColorMatrix(subtitleColorSpace, videoColorSpace);
+    }
     // this is horribly inefficient, but it's a fallback for systems without a GPU, this is the least of their problems
     render(images, heap) {
-        if (!this.ctx || !this.canvas)
-            return;
-        if (this._scheduledResize) {
-            const { width, height } = this._scheduledResize;
-            this._scheduledResize = undefined;
-            this.canvas.width = width;
-            this.canvas.height = height;
-        }
-        else {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        }
+        this.applyScheduledResize();
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         for (const img of images) {
             if (img.w <= 0 || img.h <= 0)
                 continue;
             const imageData = new ImageData(img.w, img.h);
             const pixels = new Uint32Array(imageData.data.buffer);
-            const color = ((img.color << 8) & 0xff0000) | ((img.color >> 8) & 0xff00) | ((img.color >> 24) & 0xff);
+            // libass 0xRRGGBBAA → ImageData little-endian RGBA, apply colour matrix per image
+            const m = this.colorMatrix;
+            const r = ((img.color >>> 24) & 0xff) / 255;
+            const g = ((img.color >>> 16) & 0xff) / 255;
+            const bl = ((img.color >>> 8) & 0xff) / 255;
+            const cr = clamp(m[0] * r + m[3] * g + m[6] * bl);
+            const cg = clamp(m[1] * r + m[4] * g + m[7] * bl);
+            const cb = clamp(m[2] * r + m[5] * g + m[8] * bl);
+            const color = (cb << 16) | (cg << 8) | cr;
             const alpha = (255 - (img.color & 255)) / 255;
             const stride = img.stride;
             const h = img.h;
@@ -55,10 +53,9 @@ export class Canvas2DRenderer {
                 for (let z = 0; z < w; ++z, ++res) {
                     const k = heap[pos + z];
                     if (k !== 0)
-                        pixels[res] = ((alpha * k) << 24) | color;
+                        pixels[res] = (Math.round(alpha * k) << 24) | color;
                 }
             }
-            // Draw the ImageData to canvas at the destination position
             this.bufferCanvas.width = w;
             this.bufferCanvas.height = h;
             this.bufferCtx.putImageData(imageData, 0, 0);
@@ -66,10 +63,7 @@ export class Canvas2DRenderer {
         }
     }
     destroy() {
-        this.ctx = null;
-        this.canvas = null;
-        this.bufferCtx = null;
-        this.bufferCanvas = null;
+        this.ctx = this.bufferCtx = this.bufferCanvas = null;
     }
 }
 //# sourceMappingURL=2d-renderer.js.map

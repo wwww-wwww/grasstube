@@ -28,6 +28,7 @@ config :grasstube, GrasstubeWeb.Endpoint,
     # bun: {Bun, :install_and_run, [:grasstube, ~w(--sourcemap=inline --watch)]},
     # tsc: {Bun, :install_and_run, [:tsc, ~w(--noEmit --watch)]},
     esbuild: {Esbuild, :install_and_run, [:grasstube, ~w(--sourcemap=inline --watch)]},
+    jassub_worker: {Esbuild, :install_and_run, [:jassub_worker, ~w(--sourcemap=inline --watch)]},
     sass: {
       DartSass,
       :install_and_run,

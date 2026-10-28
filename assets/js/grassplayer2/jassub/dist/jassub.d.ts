@@ -1,7 +1,7 @@
 import 'rvfc-polyfill';
 import { Debug } from './debug.ts';
 import type { WeightValue } from './worker/util.ts';
-import type { ASSRenderer } from './worker/worker';
+import type { ASSRenderer, RenderedImages } from './worker/worker';
 import type { Remote } from 'abslink';
 export declare const webYCbCrMap: {
     readonly rgb: "RGB";
@@ -19,13 +19,13 @@ export type JASSUBOptions = {
     wasmUrl?: string;
     modernWasmUrl?: string;
     fonts?: Array<string | Uint8Array>;
-    availableFonts?: Record<string, Uint8Array | string>;
+    availableFonts?: Record<string, Uint8Array | string | string[]>;
     defaultFont?: string;
     queryFonts?: 'local' | 'localandremote' | false;
     libassMemoryLimit?: number;
     libassGlyphLimit?: number;
-    proxy?: HTMLElement;
-    canvasParent: HTMLElement;
+    manualPresent?: boolean;
+    canvasParent?: HTMLElement;
 } & ({
     video: HTMLVideoElement;
     canvas?: HTMLCanvasElement;
@@ -58,6 +58,7 @@ export default class JASSUB {
     _lastDemandTime: Pick<VideoFrameCallbackMetadata, 'expectedDisplayTime' | 'width' | 'height' | 'mediaTime'>;
     _skipped: boolean;
     _worker: Worker;
+    _manualPresent: boolean;
     constructor(opts: JASSUBOptions);
     static _supportsSIMD?: boolean;
     static _test(): void;
@@ -72,8 +73,11 @@ export default class JASSUB {
         width: number;
         height: number;
     };
+    onfontschange: (() => void) | null;
+    _fontsChanged(): void;
     setVideo(target: HTMLVideoElement): Promise<void>;
-    _getLocalFont(font: string, weight?: WeightValue): Promise<Uint8Array<ArrayBuffer> | undefined>;
+    renderImages(times: number[], width: number, height: number, repaint?: boolean): Promise<RenderedImages>;
+    _getLocalFont(font: string, weight?: WeightValue): Promise<Uint8Array<any> | undefined>;
     _handleRVFC(data: VideoFrameCallbackMetadata): void;
     manualRender(data: Pick<VideoFrameCallbackMetadata, 'expectedDisplayTime' | 'width' | 'height' | 'mediaTime'>, repaint?: boolean): Promise<void>;
     _demandRender(repaint?: boolean): Promise<void>;

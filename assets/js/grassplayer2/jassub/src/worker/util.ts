@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 export interface ASSEvent {
   Start: number
   Duration: number
@@ -50,6 +49,7 @@ export interface ASSImage {
   stride: number
   color: number
   bitmap: number
+  cache_id: number
 }
 
 // offset by 1, 0 = 1, to match CSS font-weight values, but dividing by 100 gives the correct index
@@ -85,7 +85,7 @@ export async function fetchtext (url: string) {
   return await res.text()
 }
 
-export const THREAD_COUNT = !IS_FIREFOX && self.crossOriginIsolated ? Math.min(Math.max(1, navigator.hardwareConcurrency - 2), 8) : 1
+export const THREAD_COUNT = self.crossOriginIsolated ? Math.min(Math.max(1, navigator.hardwareConcurrency - 2), 8) : 1
 
 export const SUPPORTS_GROWTH = !!WebAssembly.Memory.prototype.toResizableBuffer
 
@@ -104,7 +104,7 @@ export const IDENTITY_MATRIX = new Float32Array([
 
 // Color matrix conversion map - mat3x3 for WebGL2
 // Each matrix converts FROM the key color space TO the nested key color space
-export const colorMatrixConversionMap = {
+const colorMatrixConversionMap = {
   BT601: {
     BT709: new Float32Array([
       1.0863, 0.0965, -0.01411,
@@ -147,4 +147,7 @@ export const colorMatrixConversionMap = {
   }
 } as const
 
-export type ColorSpace = keyof typeof colorMatrixConversionMap
+export function resolveColorMatrix (subtitleColorSpace?: 'BT601' | 'BT709' | 'SMPTE240M' | 'FCC', videoColorSpace?: 'BT601' | 'BT709') {
+  if (!subtitleColorSpace || !videoColorSpace) return IDENTITY_MATRIX
+  return colorMatrixConversionMap[subtitleColorSpace][videoColorSpace]
+}

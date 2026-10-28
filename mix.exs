@@ -77,9 +77,10 @@ defmodule Grasstube.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["bun.install --if-missing", "bun assets install"],
-      "assets.build": ["compile", "esbuild grasstube", "sass grasstube"],
+      "assets.build": ["compile", "esbuild grasstube", "esbuild jassub_worker", "sass grasstube"],
       "assets.deploy": [
         "esbuild grasstube --minify",
+        "esbuild jassub_worker --minify",
         "sass grasstube --no-source-map --style=compressed",
         "phx.digest"
       ],

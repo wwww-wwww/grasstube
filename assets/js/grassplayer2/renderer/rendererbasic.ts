@@ -2,7 +2,6 @@ import GrassPlayer from "../grassplayer2"
 import Renderer from "./renderer"
 
 import JASSUB from "../jassub"
-import SubtitlesOctopus from "../subtitles-octopus2"
 
 export default class RendererBasic implements Renderer {
     player
@@ -29,9 +28,6 @@ export default class RendererBasic implements Renderer {
         <div><span>Catchup</span><span class="videoinfo-catchup"></span></div>
     </div>
 </div>
-<div>
-    <div><span>Subtitles</span><select class="select-subtitles"></select></div>
-</div>
 `
 
         this.player = player
@@ -45,24 +41,6 @@ export default class RendererBasic implements Renderer {
                 this.on_timeupdate?.(this.current_time())
                 resolution.textContent = `${this.#e_video.videoWidth}x${this.#e_video.videoHeight}`
             })
-        }
-
-        // Create subtitles option
-        {
-            const options = ["JASSUB", "SubtitlesOctopus"]
-            const select: HTMLSelectElement = root_settings.querySelector(".select-subtitles")!
-            options.forEach(e => {
-                const option = document.createElement("option")
-                option.textContent = e
-                select.appendChild(option)
-            })
-            select.addEventListener("change", () => {
-                this.player.set_storage("subtitle-renderer", options[select.selectedIndex])
-                this.set_subtitles(this.#current_subtitles)
-            })
-            select.selectedIndex = options.indexOf(
-                this.player.get_storage("subtitle-renderer") || "JASSUB",
-            )
         }
 
         // video buffer
@@ -82,14 +60,11 @@ export default class RendererBasic implements Renderer {
             })
         }
 
-        fetch("https://r2tube.grass.moe/fonts.json")
+        // set_subtitles waits on this so JASSUB starts once, with the full font list.
+        this.#fonts_ready = fetch("https://r2tube.grass.moe/fonts.json")
             .then(res => res.json())
             .then(fonts => {
-                for (const key of Object.keys(fonts)) {
-                    fonts[key] = fonts[key].map((f: any) => f)
-                }
                 this.#fonts = fonts
-                this.set_subtitles(this.#current_subtitles)
                 console.log("fonts:loaded")
             })
             .catch(err => {
@@ -98,12 +73,14 @@ export default class RendererBasic implements Renderer {
     }
 
     #fonts: Record<string, string[]> = {}
-    #sub_renderer: SubtitlesOctopus | JASSUB | null = null
+    #fonts_ready: Promise<void>
+    #sub_renderer: JASSUB | null = null
     #current_subtitles: any
     async set_subtitles(subtitles: string | null) {
         this.#current_subtitles = subtitles
 
-        this.#sub_renderer?.destroy()
+        // Rejects if it failed to start.
+        this.#sub_renderer?.destroy().catch(() => {})
         this.#sub_renderer = null
 
         while (this.#e_subtitles.firstChild) {
@@ -112,39 +89,37 @@ export default class RendererBasic implements Renderer {
 
         if (subtitles == null || subtitles.length == 0) return
 
-        if (this.player.get_storage("subtitle-renderer") == "SubtitlesOctopus") {
-            this.#sub_renderer = new SubtitlesOctopus({
-                video: this.#e_video,
-                canvasParent: this.#e_subtitles,
-                proxyCanvas: this.#e_video,
-                subUrl: subtitles,
-                availableFonts: this.#fonts,
-                workerUrl: "/includes/subtitles-octopus-worker.js",
-            })
-        } else {
-            let fonts: Record<string, string> = {}
-            for (const k in this.#fonts) {
-                for (const v of this.#fonts[k]) {
-                    fonts[k] = v
-                }
-            }
-            fonts["liberation sans"] = "/includes/default.woff2"
+        await this.#fonts_ready
+        // Superseded while waiting.
+        if (this.#current_subtitles !== subtitles || this.#sub_renderer != null) return
 
-            this.#sub_renderer = new JASSUB({
-                video: this.#e_video,
-                canvasParent: this.#e_subtitles,
-                subUrl: subtitles,
-                workerUrl: "/includes/jassub/worker.js",
-                wasmUrl: "/includes/jassub/jassub-worker.wasm",
-                modernWasmUrl: "/includes/jassub/jassub-worker-modern.wasm",
-                fonts: [
-                    "https://r2tube.grass.moe/fonts/vesta-bold.otf",
-                    "https://r2tube.grass.moe/fonts/Roboto-Medium.ttf",
-                ],
-                availableFonts: fonts,
-            })
+        // Whole families; the worker loads every face.
+        const fonts: Record<string, string | string[]> = {
+            ...this.#fonts,
+            "liberation sans": "/includes/default.woff2",
+        }
 
-            await this.#sub_renderer.ready
+        const jassub = new JASSUB({
+            video: this.#e_video,
+            canvasParent: this.#e_subtitles,
+            subUrl: subtitles,
+            workerUrl: "/includes/jassub/worker.js",
+            wasmUrl: "/includes/jassub/jassub-worker.wasm",
+            modernWasmUrl: "/includes/jassub/jassub-worker-modern.wasm",
+            fonts: [
+                "https://r2tube.grass.moe/fonts/vesta-bold.otf",
+                "https://r2tube.grass.moe/fonts/Roboto-Medium.ttf",
+            ],
+            availableFonts: fonts,
+        })
+        this.#sub_renderer = jassub
+
+        try {
+            await jassub.ready
+        } catch (e) {
+            console.error("subtitles: JASSUB failed to start", e)
+            if (this.#sub_renderer === jassub) this.#sub_renderer = null
+            jassub.destroy().catch(() => {})
         }
     }
 

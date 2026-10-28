@@ -24,7 +24,7 @@ export async function fetchtext(url) {
     const res = await _fetch(url);
     return await res.text();
 }
-export const THREAD_COUNT = !IS_FIREFOX && self.crossOriginIsolated ? Math.min(Math.max(1, navigator.hardwareConcurrency - 2), 8) : 1;
+export const THREAD_COUNT = self.crossOriginIsolated ? Math.min(Math.max(1, navigator.hardwareConcurrency - 2), 8) : 1;
 export const SUPPORTS_GROWTH = !!WebAssembly.Memory.prototype.toResizableBuffer;
 // HACK: 3 memory hacks to support here:
 // 1. Chrome WASM Growable memory which can use a reference to the buffer to fix visual artifacts, which happen both with multithreading or without [fastest]
@@ -39,7 +39,7 @@ export const IDENTITY_MATRIX = new Float32Array([
 ]);
 // Color matrix conversion map - mat3x3 for WebGL2
 // Each matrix converts FROM the key color space TO the nested key color space
-export const colorMatrixConversionMap = {
+const colorMatrixConversionMap = {
     BT601: {
         BT709: new Float32Array([
             1.0863, 0.0965, -0.01411,
@@ -81,4 +81,9 @@ export const colorMatrixConversionMap = {
         ])
     }
 };
+export function resolveColorMatrix(subtitleColorSpace, videoColorSpace) {
+    if (!subtitleColorSpace || !videoColorSpace)
+        return IDENTITY_MATRIX;
+    return colorMatrixConversionMap[subtitleColorSpace][videoColorSpace];
+}
 //# sourceMappingURL=util.js.map

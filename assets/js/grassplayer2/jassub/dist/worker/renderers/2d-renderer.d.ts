@@ -1,15 +1,11 @@
-import type { ASSImage } from '../util.ts';
-export declare class Canvas2DRenderer {
-    canvas: OffscreenCanvas | null;
-    ctx: OffscreenCanvasRenderingContext2D | null;
+import { type ASSImage } from '../util.ts';
+import { CanvasRendererBase } from './canvas-base.ts';
+export declare class Canvas2DRenderer extends CanvasRendererBase {
+    ctx: OffscreenCanvasRenderingContext2D;
     bufferCanvas: OffscreenCanvas;
-    bufferCtx: OffscreenCanvasRenderingContext2D | null;
-    _scheduledResize?: {
-        width: number;
-        height: number;
-    };
-    resizeCanvas(width: number, height: number): void;
-    setCanvas(canvas: OffscreenCanvas): void;
+    bufferCtx: OffscreenCanvasRenderingContext2D;
+    colorMatrix: Float32Array;
+    constructor(canvas: OffscreenCanvas);
     setColorMatrix(subtitleColorSpace?: 'BT601' | 'BT709' | 'SMPTE240M' | 'FCC', videoColorSpace?: 'BT601' | 'BT709'): void;
     render(images: ASSImage[], heap: Uint8Array): void;
     destroy(): void;
