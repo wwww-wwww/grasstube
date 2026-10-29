@@ -1,4 +1,5 @@
 import Effect from "./_effect"
+import { Immediates } from "./_immediates"
 
 export default class EffectDeband extends Effect {
     enabled = true
@@ -36,15 +37,16 @@ export default class EffectDeband extends Effect {
 
     #pipeline
     #sampler
-    #uniformBuffer
-    #bindgroup_uniforms
+    #immediates
     init() {
         super.init()
+
+        this.#immediates = new Immediates(this.device, 16, 1)
 
         this.#pipeline = this.device.createComputePipeline({
             layout: "auto",
             compute: {
-                module: this.create_shader(/* wgsl */ `
+                module: this.create_shader(/* wgsl */ `${this.#immediates.directive()}
 struct Uniforms {
     grain: f32,
     threshold: f32,
@@ -60,7 +62,7 @@ struct AverageOut {
 @group(0) @binding(0) var inputTexture: texture_2d<f32>;
 @group(0) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(2) var samp: sampler;
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
+${this.#immediates.declare("uniforms", "Uniforms")}
 
 fn rgb_to_ycbcr_rec709(rgb: vec3<f32>) -> vec3<f32> {
     let rgb_to_ycbcr_mat = mat3x3<f32>(
@@ -150,15 +152,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
         this.#sampler = this.device.createSampler({ minFilter: "linear", magFilter: "linear" })
 
-        this.#uniformBuffer = this.device.createBuffer({
-            size: 16,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        })
-
-        this.#bindgroup_uniforms = this.device.createBindGroup({
-            layout: this.#pipeline.getBindGroupLayout(1),
-            entries: [{ binding: 0, resource: { buffer: this.#uniformBuffer } }],
-        })
+        this.#immediates.bind(this.#pipeline)
     }
 
     #compute_x
@@ -191,12 +185,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         }
 
         this.#uniformData[3] = video_time
-        this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
 
         const pass = encoder.beginComputePass(this.desc)
         pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
-        pass.setBindGroup(1, this.#bindgroup_uniforms)
+        this.#immediates.set(pass, this.#uniformData)
         pass.dispatchWorkgroups(this.#compute_x, this.#compute_y)
         pass.end()
 

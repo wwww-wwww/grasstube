@@ -1,12 +1,15 @@
 import EffectSampler from "./_sampler"
+import { Immediates } from "../effects/_immediates"
 
 export default class SamplerSphere extends EffectSampler {
     #pipeline
     #sampler
-    #uniformBuffer
-    #uniformData
+    #immediates
+    #uniformData = new Float32Array(4)
     init() {
-        const shader = this.create_shader(/* wgsl */ `
+        this.#immediates = new Immediates(this.device, 16, 1)
+
+        const shader = this.create_shader(/* wgsl */ `${this.#immediates.directive()}
 struct Uniforms {
     aspect: f32,
     time: f32,
@@ -16,7 +19,7 @@ struct Uniforms {
 
 @group(0) @binding(0) var tex: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
+${this.#immediates.declare("uniforms", "Uniforms")}
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -102,16 +105,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             addressModeU: "repeat", // Forces infinite looping horizontally
             addressModeV: "repeat", // Forces infinite looping vertically
         })
-        this.#uniformBuffer = this.device.createBuffer({
-            size: 16,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        })
-        this.#uniformData = new Float32Array(4)
-
-        this.#bindgroup_uniforms = this.device.createBindGroup({
-            layout: this.#pipeline.getBindGroupLayout(1),
-            entries: [{ binding: 0, resource: { buffer: this.#uniformBuffer } }],
-        })
+        this.#immediates.bind(this.#pipeline)
     }
 
     create_settings(el) {}
@@ -123,7 +117,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     #tex2_res
     #tex1
     #bindgroup
-    #bindgroup_uniforms
     #attachment = { view: null, clearValue: [0, 0, 0, 1], loadOp: "clear", storeOp: "store" }
     #pass_desc = { label: "SamplerSphere", colorAttachments: [this.#attachment] }
     run(encoder, video_time, tex1, tex1_res, tex2, tex2_res) {
@@ -145,7 +138,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
 
         this.#uniformData[1] = video_time
-        this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
 
         this.#attachment.view = tex2
 
@@ -153,7 +145,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
-        pass.setBindGroup(1, this.#bindgroup_uniforms)
+        this.#immediates.set(pass, this.#uniformData)
         pass.draw(3)
         pass.end()
     }

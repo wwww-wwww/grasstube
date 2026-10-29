@@ -1,5 +1,6 @@
 import Effect from "./_effect"
 import { FULLSCREEN_VERTEX, FullscreenTarget, create_fullscreen_pipeline } from "./_fullscreen"
+import { Immediates } from "./_immediates"
 
 export default class EffectDehalo extends Effect {
     enabled = true
@@ -29,10 +30,7 @@ export default class EffectDehalo extends Effect {
                 } else {
                     view.setFloat32(i * 4, t / scale, true)
                 }
-                if (this.#uniformBuffer == null) return
-
-                this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
-                this.on_update()
+                if (this.initialized) this.on_update()
             }
 
             update(val)
@@ -53,10 +51,11 @@ export default class EffectDehalo extends Effect {
     }
 
     #pipeline
-    #uniformBuffer = null
-    #bindgroup_uniforms
+    #immediates
     init() {
         super.init()
+
+        this.#immediates = new Immediates(this.device, 16, 1)
 
         // Deliberately a plain per-pixel gather rather than a workgroup-tiled compute shader.
         // Staging the (16+2r)^2 apron in workgroup storage cuts the texture fetches by ~16x on
@@ -65,7 +64,7 @@ export default class EffectDehalo extends Effect {
         // reuse, so the tile only adds shared-memory traffic, a barrier and lower occupancy.
         this.#pipeline = create_fullscreen_pipeline(
             this.device,
-            this.create_shader(/* wgsl */ `
+            this.create_shader(/* wgsl */ `${this.#immediates.directive()}
 struct Params {
     bright_strength: f32,
     dark_strength: f32,
@@ -74,7 +73,7 @@ struct Params {
 }
 
 @group(0) @binding(0) var input_tex: texture_2d<f32>;
-@group(1) @binding(0) var<uniform> params: Params;
+${this.#immediates.declare("params", "Params")}
 ${FULLSCREEN_VERTEX}
 @fragment
 fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
@@ -121,16 +120,7 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
             this.constructor.name,
         )
 
-        this.#uniformBuffer = this.device.createBuffer({
-            size: 16,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        })
-        this.device.queue.writeBuffer(this.#uniformBuffer, 0, this.#uniformData)
-
-        this.#bindgroup_uniforms = this.device.createBindGroup({
-            layout: this.#pipeline.getBindGroupLayout(1),
-            entries: [{ binding: 0, resource: { buffer: this.#uniformBuffer } }],
-        })
+        this.#immediates.bind(this.#pipeline)
     }
 
     #tex1
@@ -151,7 +141,7 @@ fn fs_main(in: FsVertexOutput) -> @location(0) vec4<f32> {
         const pass = this.#target.begin(encoder, tex2)
         pass.setPipeline(this.#pipeline)
         pass.setBindGroup(0, this.#bindgroup)
-        pass.setBindGroup(1, this.#bindgroup_uniforms)
+        this.#immediates.set(pass, this.#uniformData)
         pass.draw(3)
         pass.end()
 

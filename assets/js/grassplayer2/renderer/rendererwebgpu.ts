@@ -296,12 +296,15 @@ export default class RendererWebGPU implements Renderer {
         if (adapter.features.has("timestamp-query")) requiredFeatures.push("timestamp-query")
 
         const wanted_storage = Math.min(32768, adapter.limits.maxComputeWorkgroupStorageSize)
+        const requiredLimits: Record<string, number> = {
+            maxComputeWorkgroupStorageSize: wanted_storage,
+        }
+        // Unknown limit names reject requestDevice, so only where immediates exist.
+        const max_immediate = (adapter.limits as any).maxImmediateSize
+        if (max_immediate) requiredLimits.maxImmediateSize = max_immediate
 
         let device = await adapter
-            .requestDevice({
-                requiredFeatures,
-                requiredLimits: { maxComputeWorkgroupStorageSize: wanted_storage },
-            })
+            .requestDevice({ requiredFeatures, requiredLimits })
             .catch(() => null)
 
         if (!device) device = await adapter.requestDevice().catch(() => null)

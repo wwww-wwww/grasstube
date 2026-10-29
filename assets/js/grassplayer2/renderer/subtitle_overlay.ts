@@ -1,6 +1,7 @@
 import JASSUB from "../jassub"
 import type { ImageFrame, RenderedImages } from "../jassub/dist/worker/worker"
 import { colorMatrixConversionMap } from "../jassub/dist/worker/renderers/webgpu-renderer.js"
+import { Immediates } from "../effects/_immediates"
 
 // Draws JASSUB's output in the same submit as the video frame with the same media time, so both
 // reach the screen together; JASSUB's own canvas presents whenever its worker happens to finish.
@@ -27,7 +28,7 @@ const BATCH = 4
 
 const IDENTITY_MATRIX = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0])
 
-const SHADER = /* wgsl */ `
+const shader = (immediates: Immediates) => /* wgsl */ `${immediates.directive()}
 struct Uniforms {
     color_matrix: mat3x3<f32>,
     resolution: vec2<f32>,
@@ -40,7 +41,7 @@ struct Instance {
     color: vec4<f32>, // r, g, b, opacity
 }
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+${immediates.declare("u", "Uniforms")}
 @group(0) @binding(1) var<storage, read> instances: array<Instance>;
 @group(0) @binding(2) var atlas: texture_2d<f32>;
 @group(0) @binding(3) var lut: texture_3d<f32>;
@@ -95,7 +96,7 @@ export default class SubtitleOverlay {
     lut?: () => GPUTextureView | null
 
     #pipeline: GPURenderPipeline
-    #uniforms: GPUBuffer
+    #immediates: Immediates
     #uniform_data = new Float32Array(16)
     #atlas: GPUTexture | null = null
     #instances: GPUBuffer | null = null
@@ -144,7 +145,11 @@ export default class SubtitleOverlay {
     constructor(device: GPUDevice, format: GPUTextureFormat) {
         this.device = device
 
-        const module = device.createShaderModule({ label: "subtitles", code: SHADER })
+        this.#immediates = new Immediates(device, this.#uniform_data.byteLength, 1)
+        const module = device.createShaderModule({
+            label: "subtitles",
+            code: shader(this.#immediates),
+        })
 
         const blend: GPUBlendComponent = {
             srcFactor: "one",
@@ -164,11 +169,7 @@ export default class SubtitleOverlay {
             primitive: { topology: "triangle-list" },
         })
 
-        this.#uniforms = device.createBuffer({
-            label: "subtitles",
-            size: this.#uniform_data.byteLength,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        })
+        this.#immediates.bind(this.#pipeline)
         this.#uniform_data.set(IDENTITY_MATRIX)
 
         this.#lut_dummy = device.createTexture({
@@ -209,7 +210,6 @@ export default class SubtitleOverlay {
 
         this.#uniform_data[12] = width
         this.#uniform_data[13] = height
-        this.device.queue.writeBuffer(this.#uniforms, 0, this.#uniform_data)
     }
 
     // Call with the media time of each video frame as it is rendered.
@@ -260,12 +260,12 @@ export default class SubtitleOverlay {
             this.#lut_bound = lut
             this.#bindgroup = null
             this.#uniform_data[14] = lut ? 1 : 0
-            this.device.queue.writeBuffer(this.#uniforms, 0, this.#uniform_data)
         }
 
         if (!this.#upload(entry.frame)) return
 
         pass.setPipeline(this.#pipeline)
+        this.#immediates.set(pass, this.#uniform_data)
         pass.setBindGroup(0, this.#bind())
         pass.draw(6, entry.frame.count)
     }
@@ -396,7 +396,6 @@ export default class SubtitleOverlay {
                 colorMatrixConversionMap[subtitleColorSpace]?.[videoColorSpace]) ||
             IDENTITY_MATRIX
         this.#uniform_data.set(matrix)
-        this.device.queue.writeBuffer(this.#uniforms, 0, this.#uniform_data)
     }
 
     // At draw time, so one atlas serves the whole buffer; queue order keeps earlier submits
@@ -465,7 +464,6 @@ export default class SubtitleOverlay {
                 label: "subtitles",
                 layout: this.#pipeline.getBindGroupLayout(0),
                 entries: [
-                    { binding: 0, resource: { buffer: this.#uniforms } },
                     { binding: 1, resource: { buffer: this.#instances! } },
                     { binding: 2, resource: this.#atlas!.createView() },
                     { binding: 3, resource: this.#lut_bound ?? this.#lut_dummy.createView() },
